@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Junior Astronaut Mission Trainer — Level 1-1: Shackleton Outpost</title>
+<meta name="description" content="A pixel-art mission trainer for ages 7–12. Spend power cells to keep a lunar outpost breathing, shielded and fed for 10 sols. Built for the 2026 NASA Space Apps Challenge.">
+<meta name="theme-color" content="#070a1c">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&family=Press+Start+2P&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23070a1c'/%3E%3Ccircle cx='8' cy='8' r='5' fill='%23e6ebfa'/%3E%3Ccircle cx='6' cy='6.5' r='1.5' fill='%23a8b1d8'/%3E%3Ccircle cx='10' cy='10' r='1' fill='%23a8b1d8'/%3E%3C/svg%3E">
+</head>
+<body>
+<noscript><p class="noscript">This mission needs JavaScript to run. Please enable it and reload.</p></noscript>
+
+<div class="app">
+  <p class="topline">NASA Space Apps 2026 · Junior Astronaut Mission Trainer</p>
+
+  <div class="stage" id="stage">
+    <canvas id="scene" width="320" height="180" role="img"
+      aria-label="Pixel-art scene: an astronaut standing beside a dome habitat on the Moon, with Earth in the sky."></canvas>
+
+    <div class="hud" id="hud" hidden>
+      <div class="hearts" id="hud-hearts" role="img" aria-label="Crew hearts: 3 of 3"></div>
+      <div class="hud-right">
+        <span class="chip" id="hud-sol">Sol 1 / 10</span>
+        <button class="icon-btn" id="sound-btn" type="button" aria-label="Mute sound" title="Mute sound">🔊</button>
+      </div>
+    </div>
+
+    <div class="overlay overlay--welcome" id="overlay-welcome">
+      <p class="kicker">Level 1 · The Moon</p>
+      <h1 class="title">Junior<br><span>Astronaut</span></h1>
+      <p class="subtitle">Mission Trainer</p>
+      <p class="lede">It's 2087. You run <strong>Shackleton Outpost</strong> at the Moon's south pole.
+        Spend your power cells wisely — keep the crew breathing, shielded and fed for 10 sols.</p>
+      <div class="menu">
+        <button class="btn btn-primary btn-lg" id="start-btn" type="button">Start Mission ▶</button>
+        <div class="menu-row">
+          <button class="btn btn-sm" id="how-btn" type="button">How to Play</button>
+          <button class="btn btn-sm" id="science-btn" type="button">Mission Science</button>
+        </div>
+      </div>
+      <div class="levels" aria-label="Mission map">
+        <span class="level is-current">1-1 · Moon</span>
+        <span class="level" aria-disabled="true">1-2 · Moon 🔒</span>
+        <span class="level" aria-disabled="true">2 · Mars 🔒</span>
+      </div>
+    </div>
+
+    <div class="overlay overlay--end" id="overlay-end" hidden>
+      <div class="end-card" role="dialog" aria-modal="true" aria-labelledby="end-title">
+        <div class="end-hearts" id="end-hearts"></div>
+        <h2 class="end-title" id="end-title">Game Over</h2>
+        <p class="end-sub" id="end-sub">You are lost in space...</p>
+        <p class="end-note" id="end-note"></p>
+        <div class="menu-row">
+          <button class="btn" id="restart-btn" type="button">Restart</button>
+          <button class="btn btn-accent" id="revive-btn" type="button">Revive ✚</button>
+          <button class="btn" id="next-btn" type="button" disabled hidden>Next: Mars 🔒</button>
+        </div>
+        <button class="link-btn" id="home-btn" type="button">Back to title</button>
+      </div>
+    </div>
+  </div>
+
+  <section class="panel" id="panel" hidden aria-label="Outpost controls">
+    <div class="panel-head">
+      <div>
+        <p class="panel-kicker">Level 1-1 · Shackleton Outpost</p>
+        <h2 class="panel-title" id="panel-sol">Sol 1 of 10</h2>
+      </div>
+      <div class="budget">
+        <span class="budget-label">Cells left</span>
+        <span class="budget-value" id="cells-left">0</span>
+      </div>
+    </div>
+
+    <div class="forecast" id="forecast" data-tone="neutral">
+      <span class="forecast-icon" id="forecast-icon" aria-hidden="true">🌤️</span>
+      <div class="forecast-body">
+        <p class="forecast-label" id="forecast-label">Forecast · Sol 1</p>
+        <p class="forecast-text" id="forecast-text">Clear skies — no hazards expected.</p>
+      </div>
+    </div>
+
+    <div class="systems" id="systems"></div>
+
+    <div class="run-row" id="run-row">
+      <button class="btn btn-primary btn-lg" id="run-btn" type="button">Run the Sol ▶</button>
+      <p class="hint" id="run-hint">Spend all 6 cells, then run the sol.</p>
+    </div>
+
+    <ul class="log" id="log" aria-live="polite" aria-label="Mission log"></ul>
+  </section>
+
+  <footer class="foot">
+    <p>Built for the <a href="https://www.spaceappschallenge.org/" target="_blank" rel="noopener">2026 NASA Space Apps Challenge</a>
+      · Challenge: Build a Junior Astronaut Mission Trainer</p>
+    <p class="foot-note">All simulation numbers are simplified for ages 7–12. See
+      <button class="link-btn" id="science-btn-2" type="button">Mission Science</button> for the NASA data behind them.</p>
+  </footer>
+</div>
+
+<div class="modal" id="modal-how" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="how-title">
+    <button class="modal-close" data-close type="button" aria-label="Close">✕</button>
+    <h2 id="how-title">How to Play</h2>
+    <ol class="steps">
+      <li><strong>Read the forecast.</strong> Space is full of surprises — the forecast tells you what is coming this sol.</li>
+      <li><strong>Spend your 6 power cells.</strong> Tap <kbd>+</kbd> to send cells to Oxygen, Shielding or Food. You cannot spend more than 6.</li>
+      <li><strong>Run the sol.</strong> The outpost powers up, the hazard hits, and your meters change.</li>
+      <li><strong>Keep every meter above 20%.</strong> Drop below and the crew loses a heart. Lose all 3 hearts — or let any meter reach 0 — and the mission ends.</li>
+    </ol>
+    <p class="modal-note">You get <strong>one free Revive</strong> per mission. Keyboard: <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd>
+      add a cell to O₂ / Shield / Food, <kbd>Shift</kbd>+number removes one, <kbd>Space</kbd> runs the sol.</p>
+  </div>
+</div>
+
+<div class="modal" id="modal-science" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="science-title">
+    <button class="modal-close" data-close type="button" aria-label="Close">✕</button>
+    <h2 id="science-title">Mission Science</h2>
+    <p>Every number in this game comes from real space engineering — simplified so a 7-year-old can feel the trade-off.</p>
+    <table class="data-table">
+      <thead>
+        <tr><th>In-game rule</th><th>Real NASA science</th><th>How we simplified it</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Life support burns power</td>
+          <td>ISS ECLSS recycles about 90% of water and makes oxygen from electrolysis (NASA ECLSS)</td>
+          <td>1 power cell = +8 O₂; daily wear grows as the mission gets longer</td>
+        </tr>
+        <tr>
+          <td>Solar flares</td>
+          <td>Solar flares and radiation storms (NASA Space Weather)</td>
+          <td>Damage = 50 − 12 × shield cells, so shields matter</td>
+        </tr>
+        <tr>
+          <td>Lunar night</td>
+          <td>Most of the Moon gets 14 Earth-days of darkness (NASA Moon facts)</td>
+          <td>Greenhouse output halves and heaters cost +10 O₂</td>
+        </tr>
+        <tr>
+          <td>Cold soak</td>
+          <td>LRO's Diviner: about +120 °C by day, −170 °C at night, below −200 °C in polar craters</td>
+          <td>Abstracted into a "cold drain" that rises each sol</td>
+        </tr>
+        <tr>
+          <td>Micrometeoroids</td>
+          <td>Lunar dust and micrometeoroid research (NASA)</td>
+          <td>Hits wear shielding; with zero shield power the hull leaks O₂</td>
+        </tr>
+        <tr>
+          <td>Water ice</td>
+          <td>LRO and LCROSS found water ice in permanently shadowed polar craters</td>
+          <td>Ice events add +16 O₂ from electrolysis</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="modal-note">This is an educational model, not engineering-grade. Exact dataset names, URLs and formulas are listed in
+      <code>README.md</code> so judges can trace every rule.</p>
+  </div>
+</div>
+
+<script src="game.js" defer></script>
+</body>
+</html>
