@@ -190,12 +190,15 @@ def key_background(img: Image.Image, tol: int = 46) -> Image.Image:
     rgb = np.asarray(img).astype(np.int16)
     h, w, _ = rgb.shape
 
-    border = np.concatenate([
-        rgb[0:6].reshape(-1, 3), rgb[-6:].reshape(-1, 3),
-        rgb[:, 0:6].reshape(-1, 3), rgb[:, -6:].reshape(-1, 3),
+    # Use the four corner patches: catalog sections sit on slightly different
+    # backdrops (gray sheet, navy panels, black FX panels). Median beats the
+    # mode because JPEG noise means no colour repeats exactly.
+    k = 8
+    corners = np.concatenate([
+        rgb[0:k, 0:k].reshape(-1, 3), rgb[0:k, -k:].reshape(-1, 3),
+        rgb[-k:, 0:k].reshape(-1, 3), rgb[-k:, -k:].reshape(-1, 3),
     ])
-    vals, counts = np.unique(border, axis=0, return_counts=True)
-    bg = vals[counts.argmax()]
+    bg = np.median(corners, axis=0).astype(np.int16)
 
     dist = np.abs(rgb - bg).max(axis=2)
 
@@ -208,10 +211,18 @@ def key_background(img: Image.Image, tol: int = 46) -> Image.Image:
     background = np.isin(labels, list(edge_labels))
 
     # feather: 0 where background, ramp up for near-background fringe pixels
-    alpha = np.clip((dist.astype(np.float32) - 26.0) / 46.0, 0.0, 1.0) * 255.0
+    alpha = np.clip((dist.astype(np.float32) - 18.0) / 42.0, 0.0, 1.0) * 255.0
     alpha[background] = 0.0
 
     out = np.dstack([rgb.astype(np.uint8), alpha.astype(np.uint8)])
+    return Image.fromarray(out, "RGBA")
+
+
+def erode_alpha(img: Image.Image, px: int = 1) -> Image.Image:
+    a = np.asarray(img)[:, :, 3]
+    solid = ndimage.binary_erosion(a > 8, iterations=px)
+    out = np.array(img)
+    out[:, :, 3] = np.where(solid, out[:, :, 3], 0)
     return Image.fromarray(out, "RGBA")
 
 
@@ -260,10 +271,15 @@ def slice_all(preview: bool) -> None:
         x2, y2 = min(src.width, x + w), min(src.height, y + h)
         crop = src.crop((x, y, x2, y2))
 
-        if keyed:
+        # B15: key every *sprite* background (gray on img5, navy on img1-4),
+        # then erode one pixel so the JPG fringe leaves no dark halo.
+        # Terrain tiles are full-bleed ground art: keep them opaque.
+        is_tile = rel.startswith("terrain/")
+        if not is_tile:
             crop = key_background(crop)
+            crop = erode_alpha(crop, 1)
 
-        crop = trim(crop, keyed)
+        crop = trim(crop, not is_tile)
 
         if rel in TINT_GRAY:
             crop = tint_gray(crop)
@@ -276,10 +292,8 @@ def slice_all(preview: bool) -> None:
 
         dest = os.path.join(OUT, rel + ".png")
         os.makedirs(os.path.dirname(dest), exist_ok=True)
-        if keyed:
-            crop.save(dest, optimize=True)
-        else:
-            crop.convert("RGB").save(dest, optimize=True)
+        # every sprite is keyed now, so always keep the alpha channel
+        crop.save(dest, optimize=True)
 
         manifest[rel] = {"src": f"assets/sprites/{rel}.png", "w": crop.width, "h": crop.height}
         written.append((sheet, rel, crop.size))

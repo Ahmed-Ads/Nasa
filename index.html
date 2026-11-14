@@ -4,11 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Junior Astronaut Mission Trainer — Level 1: The Moon</title>
-<meta name="description" content="A pixel-art mission trainer for ages 7–12. Run a lunar outpost and balance oxygen, water, power and radiation shielding across three missions. Built for the 2026 NASA Space Apps Challenge.">
+<meta name="description" content="A pixel-art mission trainer for ages 7–12. Plan power, walk the lunar outpost, and keep the crew alive across three missions. Built for the 2026 NASA Space Apps Challenge.">
 <meta name="theme-color" content="#06070f">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&family=Press+Start+2P&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%2306070f'/%3E%3Ccircle cx='8' cy='8' r='5' fill='%23c2c6d4'/%3E%3Ccircle cx='6' cy='6.5' r='1.5' fill='%239a9fb2'/%3E%3Ccircle cx='10' cy='10' r='1' fill='%239a9fb2'/%3E%3C/svg%3E">
 </head>
@@ -16,8 +13,37 @@
 <noscript><p class="noscript">This mission needs JavaScript to run. Please enable it and reload.</p></noscript>
 
 <div class="app" id="app">
-  <canvas id="scene" width="640" height="360" role="img"
-    aria-label="Pixel-art view of a lunar outpost: a dome habitat, fenced yard, rover, radar dishes and crystals on the Moon, with an astronaut walking near a cave."></canvas>
+  <div class="viewport" id="viewport">
+    <canvas id="scene" width="640" height="360" role="img"
+      aria-label="Top-down pixel-art lunar outpost: a dome habitat, solar field, utility yard, comms dish, rover, ice patch and an astronaut walking."></canvas>
+    <canvas id="minimap" width="150" height="96" aria-label="Mini-map of the outpost"></canvas>
+  </div>
+
+  <div class="hud" id="hud" hidden>
+    <div class="hud-left">
+      <div class="hearts" id="hud-hearts" role="img" aria-label="Crew hearts: 3 of 3"></div>
+      <span class="chip" id="hud-level">1.1 · Moon</span>
+      <span class="chip chip-sol" id="hud-sol">Sol 1 / 5</span>
+    </div>
+    <div class="hud-center">
+      <span class="phase-chip" id="hud-phase">PLAN</span>
+      <span class="chip chip-eva" id="hud-eva" title="EVA minutes left this sol">EVA 3</span>
+      <span class="chip chip-dose" id="hud-dose" hidden>☢ 0</span>
+    </div>
+    <div class="hud-right">
+      <button class="icon-btn" id="map-btn-hud" type="button" aria-label="Mini-map" title="Mini-map">🗺</button>
+      <button class="icon-btn" id="science-btn-hud" type="button" aria-label="Mission Science" title="Mission Science">📖</button>
+      <button class="icon-btn" id="sound-btn" type="button" aria-label="Mute sound" title="Mute sound">🔊</button>
+    </div>
+  </div>
+
+  <!-- interaction prompt (hold to act) -->
+  <button class="interact" id="interact" type="button" hidden>
+    <span class="interact-key" id="interact-key">E</span>
+    <span class="interact-label" id="interact-label">Sweep dust</span>
+    <span class="interact-cost" id="interact-cost">1 min</span>
+    <span class="interact-progress" id="interact-progress"></span>
+  </button>
 
   <!-- ============================================================ title === -->
   <div class="overlay overlay--title" id="screen-title">
@@ -26,7 +52,7 @@
       <h1 class="title">Junior<br><span>Astronaut</span></h1>
       <p class="subtitle">Mission Trainer</p>
       <p class="lede">It's 2087. You run <strong>Shackleton Outpost</strong> at the Moon's south pole.
-        Balance power, water and oxygen across three missions — and keep the crew safe.</p>
+        Plan the power, walk the base, and keep the crew alive across three missions.</p>
       <div class="menu">
         <button class="btn btn-primary btn-lg" id="play-btn" type="button">Choose Mission ▶</button>
         <div class="menu-row">
@@ -55,57 +81,55 @@
         </div>
         <span class="chip chip-stars" id="total-stars">★ 0 / 9</span>
       </div>
-
       <div class="sector" id="sector">
         <img class="sector-art" id="sector-art" alt="" width="160" height="178">
         <div class="missions" id="mission-cards"></div>
       </div>
-
       <div class="locked-row" id="locked-cards"></div>
       <p class="select-note">Finish a mission to unlock the next one. Stars are saved on this device.</p>
     </div>
   </div>
 
-  <!-- ============================================================== hud === -->
-  <div class="hud" id="hud" hidden>
-    <div class="hearts" id="hud-hearts" role="img" aria-label="Crew hearts: 3 of 3"></div>
-    <div class="hud-center">
-      <span class="chip" id="hud-level">1.1 · Moon</span>
-      <span class="chip chip-sol" id="hud-sol">Sol 1 / 5</span>
-      <span class="chip chip-dose" id="hud-dose" hidden>☢ 0</span>
-    </div>
-    <div class="hud-right">
-      <button class="icon-btn" id="science-btn-hud" type="button" aria-label="Mission Science" title="Mission Science">📖</button>
-      <button class="icon-btn" id="sound-btn" type="button" aria-label="Mute sound" title="Mute sound">🔊</button>
-    </div>
-  </div>
-
   <!-- ========================================================== console === -->
   <section class="console" id="panel" hidden aria-label="Outpost controls">
+    <button class="console-toggle" id="console-toggle" type="button" aria-label="Show / hide controls">⌄</button>
+
     <div class="dock-left">
-      <div class="budget">
-        <span class="budget-label">Power cells left</span>
-        <span class="budget-value" id="cells-left">0</span>
+      <div class="phase-row">
+        <span class="phase-chip" id="panel-phase">PLAN</span>
+        <span class="phase-hint" id="phase-hint">Spend power cells</span>
+        <span class="budget-inline">Cells left <b id="cells-left">0</b></span>
       </div>
-      <div class="battery-line" id="battery-line" hidden>
+
+      <div class="battery-line" id="battery-line">
         <span class="battery-label">🔋 Battery <b id="battery-val">0/6</b></span>
         <button class="mini-btn" id="draw-btn" type="button">Draw +1</button>
       </div>
+
       <div class="systems" id="systems"></div>
+
+      <div class="patch" id="patch-box" hidden>
+        <div class="patch-head"><span>Leak repair</span><b id="patch-val">0/2</b></div>
+        <div class="patch-bar"><div class="patch-fill" id="patch-fill"></div></div>
+        <ol class="patch-steps" id="patch-steps"></ol>
+      </div>
+
       <div class="dose" id="dose-box" hidden>
         <div class="dose-head"><span>☢ Radiation dose</span><b id="dose-val">0</b></div>
         <div class="meter dose-meter"><div class="meter-fill" id="dose-bar"></div><div class="meter-risk dose-risk"></div></div>
         <p class="dose-note" id="dose-note">Stay below 60.</p>
       </div>
-      <div class="decision" id="decision" hidden>
-        <p class="decision-title" id="decision-title">Storm today — choose:</p>
-        <button class="btn btn-sm decision-btn" id="shelter-btn" type="button">Shelter in bunker</button>
-        <button class="btn btn-sm decision-btn" id="work-btn" type="button">Keep working</button>
-        <p class="hint" id="decision-hint">Shelter: safe dose, no work. Work: research, higher dose.</p>
+
+      <div class="eva-box" id="eva-box">
+        <div class="eva-head"><span>EVA minutes</span><b id="eva-val">3</b></div>
+        <div class="eva-pips" id="eva-pips"></div>
+        <p class="eva-hint" id="eva-hint">Walk to a station and hold <kbd>E</kbd> (or hold the prompt).</p>
+        <button class="mini-btn" id="shelter-btn" type="button" hidden>Order shelter</button>
       </div>
+
       <div class="run-block" id="run-row">
-        <button class="btn btn-primary btn-lg" id="run-btn" type="button">Run the Sol ▶</button>
-        <p class="hint" id="run-hint">Spend all cells, then run the sol.</p>
+        <button class="btn btn-primary btn-lg" id="run-btn" type="button">Start EVA ▶</button>
+        <p class="hint" id="run-hint">Leftover cells charge the battery.</p>
       </div>
     </div>
 
@@ -128,9 +152,7 @@
       <div class="debrief-stars" id="debrief-stars"></div>
       <h2 class="debrief-title" id="debrief-title">Mission Complete</h2>
       <p class="debrief-sub" id="debrief-sub"></p>
-
       <div class="debrief-score" id="debrief-score"></div>
-
       <div class="debrief-lists">
         <div>
           <p class="debrief-label good">What went well</p>
@@ -141,7 +163,6 @@
           <ul id="debrief-bad"></ul>
         </div>
       </div>
-
       <div class="learn-cards">
         <article class="learn learn--real">
           <p class="learn-label">Real NASA</p>
@@ -153,7 +174,7 @@
           <p class="learn-text" id="learn-assume"></p>
         </article>
       </div>
-
+      <p class="real-choice" id="real-choice"></p>
       <div class="debrief-actions">
         <button class="btn" id="retry-btn" type="button">Retry</button>
         <button class="btn btn-accent" id="revive-btn" type="button" hidden>Revive ✚</button>
@@ -164,20 +185,35 @@
   </div>
 </div>
 
-<!-- ================================================================ modals -->
+<!-- station mini-panel -->
+<div class="modal" id="modal-station" hidden>
+  <div class="modal-card station-card" role="dialog" aria-modal="true" aria-labelledby="station-title">
+    <button class="modal-close" data-close type="button" aria-label="Close">✕</button>
+    <h2 id="station-title">Oxygen generator</h2>
+    <p class="station-desc" id="station-desc"></p>
+    <div class="station-bars" id="station-bars"></div>
+    <div class="station-alloc">
+      <button class="step" id="station-minus" type="button" aria-label="One less cell">−</button>
+      <b id="station-cells">0</b>
+      <button class="step" id="station-plus" type="button" aria-label="One more cell">+</button>
+    </div>
+    <p class="station-note" id="station-note"></p>
+    <button class="btn btn-primary" id="station-done" type="button">Done</button>
+  </div>
+</div>
+
 <div class="modal" id="modal-how" hidden>
   <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="how-title">
     <button class="modal-close" data-close type="button" aria-label="Close">✕</button>
     <h2 id="how-title">How to Play</h2>
     <ol class="steps">
-      <li><strong>Read the forecast.</strong> It tells you what is coming this sol — dust, a long shadow, or a solar storm.</li>
-      <li><strong>Spend your power cells.</strong> Tap <kbd>+</kbd> to send cells to a system. You can never spend more than the budget.</li>
-      <li><strong>Run the sol.</strong> The outpost powers up, the hazard hits, and every meter changes.</li>
-      <li><strong>Keep meters above 20%.</strong> Drop below and the crew loses a heart. Lose all 3 hearts, or let a meter hit 0, and the mission ends. Retry is free — and you get one Revive.</li>
+      <li><strong>PLAN.</strong> Spend power cells on the systems you need. Leftover cells charge the battery.</li>
+      <li><strong>EVA.</strong> You have 3 EVA minutes. Walk with <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or tap the ground. Stand at a station and hold <kbd>E</kbd> (or hold the on-screen prompt).</li>
+      <li><strong>RESOLVE.</strong> End the EVA. The sol runs: production, crew use, hazards, then the story.</li>
+      <li><strong>Survive.</strong> Keep meters above 20% or lose a heart. Zero hearts or a zero meter ends the mission — retry is free, and you get one Revive.</li>
     </ol>
-    <p class="modal-note">Keyboard: <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> add a cell to that row, <kbd>Shift</kbd>+number removes one,
-      <kbd>Space</kbd> runs the sol, <kbd>B</kbd> draws battery, <kbd>R</kbd> toggles water rationing.
-      Walk with <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / <kbd>Arrows</kbd> or click the Moon.</p>
+    <p class="modal-note">Stations: solar field (sweep dust, deploy a panel), battery bank, O₂/CO₂/water units (adjust cells on the spot),
+      comms dish (detailed storm forecast), rover + ice patch (haul ice), bunker (shelter order), recycler (leak steps in 1.2).</p>
   </div>
 </div>
 
@@ -185,51 +221,24 @@
   <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="science-title">
     <button class="modal-close" data-close type="button" aria-label="Close">✕</button>
     <h2 id="science-title">Mission Science</h2>
-    <p>Every rule in this game starts from real space engineering. The numbers are simplified for ages 7–12 —
-      anything invented for play is labelled <em>game assumption</em>.</p>
+    <p>Every rule starts from real space engineering. Values we could verify on NASA pages are marked
+      <strong>real</strong>; everything tuned for play is marked <strong>game assumption</strong>.</p>
     <table class="data-table">
-      <thead>
-        <tr><th>In-game rule</th><th>Real NASA science</th><th>Simplification</th></tr>
-      </thead>
+      <thead><tr><th>In-game rule</th><th>Real NASA science</th><th>Simplification</th></tr></thead>
       <tbody>
-        <tr>
-          <td>O₂ cells use water</td>
-          <td>ISS oxygen comes from electrolysis of water (NASA ECLSS, Oxygen Generation Assembly)</td>
-          <td>Each O₂ cell costs 3 water points <em>(game assumption)</em></td>
-        </tr>
-        <tr>
-          <td>Water recycling restores water</td>
-          <td>ISS ECLSS recovers about 98% of water (2023 NASA ECLSS update)</td>
-          <td>1 cell = +9 water; no cell = water drains <em>(game assumption)</em></td>
-        </tr>
-        <tr>
-          <td>Leak repair</td>
-          <td>ISS leak response: close hatches, locate the leak, Kapton tape, then epoxy. The 2018 Soyuz leak was a drilled hole, not a micrometeoroid</td>
-          <td>Tape cuts the leak 60%; a permanent patch takes 3 repair cells</td>
-        </tr>
-        <tr>
-          <td>Solar storm shelter</td>
-          <td>Solar particle events: crews shelter in place; about 4 g/cm² of regolith is enough to get below 30-day exposure limits (NASA)</td>
-          <td>Bunker = safe dose; shielding cells reduce the rest</td>
-        </tr>
-        <tr>
-          <td>Cosmic rays</td>
-          <td>Extra shielding barely reduces galactic cosmic rays — they are very high energy (NASA radiation research)</td>
-          <td>Shielding only trims storm dose, never sets it to zero</td>
-        </tr>
-        <tr>
-          <td>Long Shadow</td>
-          <td>South-pole crater rims get near-constant sunlight, but terrain can shadow solar arrays (LRO / Diviner)</td>
-          <td>“Long Shadow” event removes 2 solar cells for a sol</td>
-        </tr>
-        <tr>
-          <td>Water ice events</td>
-          <td>Shackleton crater holds water ice in permanently shadowed regions (LRO, LCROSS)</td>
-          <td>Ice find = +12 water</td>
-        </tr>
+        <tr><td>O₂ from water</td><td>ISS oxygen comes from electrolysis of water (Oxygen Generation Assembly, ECLSS)</td><td>Game: 1 O₂ cell = +10 O₂ and uses 2 water</td></tr>
+        <tr><td>Water recycling</td><td>ISS ECLSS recovers about 98% of water (2023 NASA update)</td><td>Game: 1 water cell = +10 water</td></tr>
+        <tr><td>Crew use</td><td>NASA life-support baselines: crews need oxygen, water and food every day</td><td>Game: crew of 3 uses 10 O₂ and 6 water per sol</td></tr>
+        <tr><td>Leak response</td><td>ISS procedure: close hatches, find the leak, Kapton tape, then epoxy. The 2018 Soyuz leak was a drilled hole — not a micrometeoroid</td><td>Game: burst drains 30/sol → isolate (40%) → tape (15%) → 2 repair cells → reopen</td></tr>
+        <tr><td>Solar particle events</td><td>Crews shelter in place; ~4 g/cm² of regolith gets below 30-day limits. CMEs take about 1–4 days to arrive (NASA DONKI)</td><td>Game: arrival Sol 3–5; early shelter cuts 90%, late shelter 15%</td></tr>
+        <tr><td>Cosmic rays</td><td>Extra shielding barely reduces galactic cosmic rays</td><td>Game: shielding slows dose but never zeroes it</td></tr>
+        <tr><td>Long Shadow</td><td>South-pole crater rims get near-constant sunlight; terrain can still shadow arrays</td><td>Game: the event removes 2 solar cells for one sol</td></tr>
+        <tr><td>Lunar dust</td><td>Lunar dust is abrasive and degrades solar panels and seals (NASA lunar dust research)</td><td>Game: dust event → sweep EVA task restores output</td></tr>
+        <tr><td>Water ice</td><td>Shackleton crater holds ice in permanently shadowed regions (LRO, LCROSS)</td><td>Game: ice haul = +14 water, costs 2 EVA minutes</td></tr>
       </tbody>
     </table>
-    <p class="modal-note">Full dataset names, URLs and the level format are in <code>README.md</code>. This is an educational model, not engineering-grade.</p>
+    <p class="modal-note">Sources: NASA ECLSS / ISS, NASA Space Weather &amp; DONKI, NASA Moon (LRO/Diviner/LCROSS),
+      NASA radiation research. Full list in <code>README.md</code>. Educational model, not engineering-grade.</p>
   </div>
 </div>
 

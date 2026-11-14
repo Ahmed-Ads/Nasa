@@ -3,258 +3,266 @@
 A pixel-art mission trainer for ages 7–12, built for the **2026 NASA Space Apps Challenge**
 challenge *“Build a Junior Astronaut Mission Trainer.”*
 
-You run **Shackleton Outpost** at the lunar south pole. Each sol you spend a small budget of
-power cells across life-support systems, then a hazard hits and every meter moves. Level 1 is
-complete: **1.1 Lunar Outpost Prep**, **1.2 Water Leak**, **1.3 Solar Storm**. Level 2 (Mars)
-and beyond are locked placeholders on the level-select map.
+Level 1 is complete: **1.1 Outpost Prep**, **1.2 Water Leak**, **1.3 Solar Storm**. Level 2
+(Mars) and beyond appear only as locked nodes on the level map.
 
-- No framework, no backend, no login, no build step.
-- Opens by **double-clicking `index.html`** (all local assets are plain `<script>`/`<img>`; no `fetch`).
-- Works at **360 px** and on desktop, keyboard and mouse/touch.
+- Vanilla JS, no build step, **runs by double-clicking `index.html`** (no `fetch`).
+- Fixed hand-authored lunar world + camera, A* click-to-move, colliders, y-sorted sprites.
+- **PLAN → EVA → RESOLVE** loop: allocate power, walk the base and do physical tasks, then run the sol.
+- Offline: system fonts only, all sprites local (`assets/manifest.js`).
+
+```text
+index.html   screens + HUD + console + modals
+style.css    pixel UI, responsive to 360 px
+game.js      engine, rules, world, rendering
+assets/      sliced sprites + manifest (source JPGs are git-ignored)
+tools/       slice_assets.py · sim.py · qa.py
+```
 
 ---
 
 ## 1. Run it
 
-```text
-Double-click index.html
-```
-
-Optional local server (nicer for some browsers):
-
-```bash
-python -m http.server 8000
-# then open http://localhost:8000
-```
-
-Deep links used for demos and QA:
-
-| URL | What it does |
-| --- | --- |
-| `index.html` | Title screen |
-| `index.html?select` | Jump to the level select |
-| `index.html?play` | Start 1.1 immediately |
-| `index.html?level=1.2` | Start a specific sublevel |
-| `index.html?level=1.1&auto=6` | Auto-play N sols (QA screenshots) |
-| `index.html?level=1.3&auto=3&nochoice=1` | Stop on the storm decision (QA) |
+Double-click `index.html`. Optional server: `python -m http.server 8000`.
 
 ### Controls
 
 | Input | Action |
 | --- | --- |
-| Click / tap `+` `−` | Add or remove a power cell for that system |
-| `1` `2` `3` | Add a cell to row 1 / 2 / 3 |
-| `Shift` + `1` `2` `3` | Remove a cell from that row |
-| `Space` | Run the sol |
-| `B` | Draw one cell from the battery |
-| `R` | Toggle water rationing (1.2) |
-| `W A S D` / arrows, or click the map | Walk the astronaut around the outpost |
+| `W A S D` / arrows | Walk |
+| Click / tap the ground | A* pathfind and walk there |
+| `E` (hold 2.2 s) / hold the prompt | Do the station task |
+| `1` `2` `3` | Add a power cell to row 1/2/3 |
+| `Shift` + number | Remove a cell from that row |
+| `B` | Draw a cell from the battery |
+| `Space` | Start EVA / End EVA |
 | `Esc` | Close a modal |
-| `Enter` | Start / next mission / retry |
+| `⌄` button, bottom right | Collapse / show the console |
+
+The interaction prompt appears whenever you stand in a station radius.
 
 ---
 
-## 2. Level 1 missions
+## 2. The loop
 
-| | 1.1 Lunar Outpost Prep | 1.2 Water Leak | 1.3 Solar Storm |
+1. **PLAN** — spend the solar budget across the level's rows. Leftover cells are stored in the
+   battery (cap 6). If a dust storm or long shadow cuts the budget, draw from the battery
+   (max 2 per sol).
+2. **EVA** — you have **3 EVA minutes** per sol. Walk to a station and hold `E` (or hold the
+   on-screen prompt). Tasks cost 1–2 minutes. There are no fail screens — you can always end
+   the EVA early.
+3. **RESOLVE** — production, crew use, wear, the leak, the event, dose, then hearts and the
+   win/fail check. The mission log explains every change.
+
+### Stations
+
+| Station | Action |
+| --- | --- |
+| Solar field (W) | Sweep dust (restores the lost cells), install the spare panel from the crates (+1 cell for the mission, 1.1) |
+| Battery bank | Shows stored cells; draw cells in the console |
+| O₂ generator / CO₂ scrubber / water recycler | Opens that system's mini-panel: production vs crew use vs wear, with `+/−` cells |
+| Comms dish (N) | Space-weather uplink: reveals the CME arrival sol (1.3) |
+| Rover + ice patch (SW) | Haul ice: +14 water (1.2) or +8 O₂ (1.3), 2 minutes, +dose in a storm |
+| Recycler (1.2) | Close hatch → fetch tape from crates → tape → cure patch → reopen |
+| Regolith bunker (NW) | Shelter order (also available as a console button once the CME alert arrives) |
+| Crates (S) | Spare solar panel / toolbox + Kapton tape |
+
+The mini-map (bottom right on desktop, top right on mobile) shows stations and `!` markers for
+stations that need attention. NPC crew walk between jobs; during a shelter order they head for
+the bunker.
+
+---
+
+## 3. Final level rules
+
+All tunables live in `RULES` in `game.js` as `{ value, kind, source }`:
+`kind: 'real'` only where the value is grounded in a named NASA source; everything else is
+`'game'`. Level goals/starts live in `LEVELS` and each has a plain-language "Game assumption"
+string used by the debrief.
+
+| Rule | Value | Kind |
+| --- | --- | --- |
+| Power budget / battery cap / draws per sol | 6 / 6 / 2 | game |
+| Crew use | 10 O₂ + 6 water per sol | game (scaled from NASA life-support baselines) |
+| O₂ cell | +10 O₂, uses 2 water | game (ISS O₂ is made by electrolysis — real) |
+| Water cell | +9 water | game (ISS recovers ~98% water — real) |
+| Shielding cell | +4 shielding | game (regolith shielding — real) |
+| Wear per sol | O₂ 5+0.5·sol · water 3+0.4·sol · shielding 4 | game |
+| Leak (1.2) | 30 water/sol → isolate 40% → tape 15%; patch = 2 repair-cell sols | game |
+| Rationing | −40% crew water; −1 heart after 3 sols **while water < 50**; auto-off when sealed | game |
+| Storm dose (1.3) | `70 × (1 − 0.65 × shield/100)` + 2.5 background | shield cut is real (regolith); numbers are game |
+| Early vs late shelter | 90% cut if ordered before arrival, 15% if ordered on the arrival sol | game (SPE sheltering is real) |
+| CME arrival | Sol 3–5, 1–2 sols long (2 sols 80% of the time) | game (CMEs take ~1–4 days — real) |
+| Research | 3 points per surface cell, paused while sheltered | game (≤10% of score) |
+
+**Levels**
+
+| | 1.1 Outpost Prep | 1.2 Water Leak | 1.3 Solar Storm |
 | --- | --- | --- | --- |
-| Rows | O₂, Water, Battery | O₂, Water, Repair | O₂, Shielding, Surface work |
-| Length | 5 sols (extendable to 7) | 6 sols | 6 sols |
-| Win | O₂ ≥ 70, Water ≥ 60, Battery ≥ 3 on Sol 5 | Leak sealed **and** Water ≥ 40 at end of Sol 6 | Dose ≤ 60 **and** O₂ ≥ 30 after Sol 6 |
-| Fail | any critical meter at 0, or 0 hearts; still not ready on Sol 7 | | |
-| Twist | Long Shadow / dust cost solar cells; unspent cells charge the battery | Pipe rupture: −12 water/sol. Tape (−60%) then a 3-repair-cell patch. Rationing saves 40% but costs a heart after 3 sols | CME warning on Sol 2, storm on Sol 4–5: **shelter** (safe dose, no work) or **keep working** (2× research, dose up) |
-| Teaches | power vs. battery storage, electrolysis water cost | two-stage leak repair, rationing trade-offs | radiation dose, sheltering, research vs. risk |
+| Rows | O₂ / water / battery | O₂ / water / repair | O₂ / shielding / surface |
+| Start | 38 / 48 / 0 | 65 / 68 | 75 / 30 |
+| Win | O₂ ≥ 70, water ≥ 60, battery ≥ 3 on Sol 5 (up to 2 one-sol slips) | hatch reopened **and** water ≥ 40 at end of Sol 6 | dose ≤ 60 **and** O₂ ≥ 30 after Sol 6 |
+| Fail | any critical meter 0, 0 hearts, or not ready after 2 slips | | |
+| Lesson | battery vs solar, deploy a panel, sweep dust | isolate first, tape, patch, reopen | check the dish, shelter early, dose vs research |
 
-Every mission ends on a **debrief**: stars, score breakdown, what went well, what hurt, one
-**Real NASA** card with a source, and one clearly labelled **Game assumption** card.
+**Stars**: 3 = 3 hearts, no heart lost, landing on time, meters never below 30, dose peak ≤ 40
+and score ≥ par (1.1: 340, 1.2: 205, 1.3: 250). Otherwise 2 or 1. Stars persist per sublevel in
+`localStorage` (`jamt.progress`, wrapped in `try/catch`).
 
-### Shared rules (all sublevels)
-
-- **Power budget** = 6 cells, minus solar penalties (dust / long shadow). You must spend the
-  whole budget to run a sol.
-- **Battery** stores unspent cells (cap 6). `Draw +1` converts a stored cell into one more cell
-  this sol (max 2 draws), so a shadowed sol can be covered.
-- **Daily wear** grows slowly with the sol number. Meters are clamped to 0–100.
-- **Couplings** (visible in the forecast, tooltips and log):
-  - every **O₂ cell** costs 3 water (electrolysis);
-  - **water recycling** needs power — with no water cells, water only drains;
-  - **shielding cells** reduce radiation dose;
-  - **repair drones** need power, so they compete with life support.
-- **Hearts**: start with 3. Any critical meter under 20% at the end of a sol costs 1 heart.
-  A meter at 0 or 0 hearts ends the mission. **One free Revive** per mission restores every
-  meter to at least 45% and gives 1 heart back.
-- **Stars** = hearts left (1–3), capped at 2 if the 1.1 landing is delayed, and capped at 2 if
-  the final score is under 260 (“survived, but barely”). **Score** = end resources + research +
-  hearts × 25 + mission bonuses. Stars are saved per sublevel in `localStorage`
-  (`jamt.progress`, always inside `try/catch`).
-- 1.2 unlocks after any 1.1 win; 1.3 after any 1.2 win.
+**Revive** (once per mission) restores every meter to ≥45%, gives 1 heart back and removes the
+cause of death — in 1.3 it also drops the dose to 70% of the limit and pushes the storm window
+forward, so a revived crew never dies instantly on the next sol.
 
 ---
 
-## 3. Architecture
+## 4. Bug fixes in this build (all verified by `tools/qa.py`)
 
-```text
-index.html            screens: title, level select, game HUD + console, debrief, modals
-style.css             pixel “mission control” UI, responsive down to 360 px
-game.js               engine + level data + canvas scene + sprites
-assets/manifest.js    generated map: sprite name → path + size
-assets/sprites/...    generated PNGs (keyed or opaque)
-assets/img1..5.jpg    source sprite sheets (catalog art)
-tools/slice_assets.py Pillow cropping/keying script (run to regenerate sprites)
-tools/preview_sprites.png  optional contact sheet (python tools/slice_assets.py --preview)
-```
-
-### Level config format
-
-`LEVELS` in `game.js` is the only place mission rules live. Example (abridged):
-
-```js
-'1.2': {
-  id: '1.2', index: 2, title: 'Water Leak', kicker: 'Repair · 6 sols',
-  location: 'Recycler deck · Shackleton Outpost',
-  brief: 'A recycler pipe ruptured…',
-  art: 'select/moon_base',                 // sprite key for the level card
-
-  rows: ['o2', 'water', 'repair'],         // which allocation rows appear
-  start: { o2: 65, water: 78, repair: 40 },
-  budget: 6,
-  gains: { o2: 10, water: 9, repair: 12 }, // per power cell
-  wear: { o2: 5, water: 3 },               // per sol
-  wearGrowth: { o2: 0.7, water: 0.5 },     // extra wear × sol number
-  coupling: { waterPerO2: 3 },             // electrolysis cost
-
-  leak: { rate: 12, taped: 4.5 },          // level-specific rule
-  repairNeeded: 3, tapeCost: 1, rationFactor: 0.4,
-  maxSols: 6,
-  schedule: ['leak', 'calm', 'dust', 'cold', 'calm', 'calm'],
-
-  debrief: { real: '…', source: 'Source: …', assume: 'Game assumption: …' },
-}
-```
-
-The generic resolver does: **gains → couplings → research → wear → event → level rules →
-hearts → win/fail**, then logs every change. Nothing in the UI is hard-coded to a mission.
-
-### Add a sublevel
-
-1. Add an object to `LEVELS` (copy 1.2 and edit the numbers).
-2. Add its id to `LEVEL_ORDER` (unlock order).
-3. Give it an `art` sprite key from `assets/manifest.js` (or a `★` fallback is used).
-4. Wire any new special rule in `resolveSol` under `if (L.yourRule)`, and its win check in
-   `checkWin`.
-5. Add the debrief text (real NASA + game assumption).
-6. Open `index.html?level=YOUR.ID` to test, then run the QA pass below.
-
-### Sprite integration and fallbacks
-
-- `assets/manifest.js` is loaded before `game.js`; every sprite is preloaded with
-  `new Image()`. `SPR[key].ok` flips on load.
-- Drawing uses `drawAsset()` (bottom-centre anchor, aspect-fit, optional flip). If a sprite is
-  missing or failed, the procedural pixel art is used instead — the game never breaks.
-- The HUD icons are `<img>` with an `onerror` that swaps to a text glyph.
-- The canvas is logical **~360–640 px wide** (depends on viewport) and CSS-scaled with
-  `image-rendering: pixelated`. Sprite PNGs are pre-downscaled to ≤ 160 px with LANCZOS so
-  they stay crisp at 1:1/2× without shimmer.
+| Bug | Fix |
+| --- | --- |
+| B1 `clamp()` capped pixel coords at 100 | one clamp with 0..100 defaults for resources; world/camera clamps pass explicit bounds |
+| B2 resize reset the astronaut and map | fixed 1024×760 world; resize only re-measures the camera |
+| B3 player walked under the mobile console | camera targets the visible area; a taller world plus a bottom-edge clamp keep the player above the console |
+| B4 no depth sorting | every prop/NPC/player is y-sorted by foot position each frame |
+| B5 only the dome collided | 21 colliders (dome, solar, rover, tanks, dish, antenna, crates, bunker, boulders) + A* |
+| B6 astronaut was half the dome | astronaut is 66 px vs the 172 px dome (≈38%) |
+| B7 1.1 only re-checked at Sol 7 | ready is checked every sol; each slip is one sol |
+| B8 “Sol 6 / 5” | HUD shows `Sol n / 5 · slip k` |
+| B9 revive kept a lethal dose | revive caps dose at 70% of the limit and moves the storm window |
+| B10 ration only cut the leak | ration now cuts crew water use, only costs a heart after 3 sols while water < 50, and auto-stops when sealed |
+| B11 hidden patch prerequisite | the repair meter is replaced by a patch bar + a visible 5-step checklist |
+| B12 dose ignored the shielding meter | dose is driven by the meter; shelter pauses surface work and O₂ (unless 1 cell goes to O₂); research is ≤10% of score |
+| B13 “unspent cells” was impossible | Start EVA is always available; leftover cells charge the battery, and the battery can be drawn on |
+| B14 Shift+number broke on real keyboards | `e.code` (`Digit1/2/3`) is used |
+| B15 sprites had navy boxes | `slice_assets.py` keys every sprite background (corner-median + flood fill + 1 px erode); terrain tiles stay opaque |
+| B16 blurry sprites | integer render scale (2×) and nearest-neighbour `drawImage` |
+| B17 Google Fonts failed offline | fonts removed; system monospace/sans stack |
+| B18 debug hooks public | `?level`, `?auto`, `?fail`, `?select` only work with `?debug` |
 
 ---
 
-## 4. Sprite pipeline
+## 5. Balance sim (tools/sim.py)
 
-`tools/slice_assets.py` crops the five catalog sheets into `assets/sprites/<group>/<name>.png`
-and writes `assets/manifest.js`.
+`python tools/sim.py --runs 600` mirrors the engine rules and plays each level with
+six policies. Final results:
+
+| Level | Policy | Win % | 3★ % | Avg score |
+| --- | --- | --- | --- | --- |
+| 1.1 | random | 20.5 | 0.3 | 300 |
+| 1.1 | even split | 0.0 | 0.0 | — |
+| 1.1 | always shelter / work / never EVA | 0.0 | 0.0 | — |
+| 1.1 | good | **100.0** | **100.0** | 341 |
+| 1.2 | random | 12.2 | 4.0 | 201 |
+| 1.2 | even split | 0.0 | 0.0 | — |
+| 1.2 | good | **100.0** | **100.0** | 267 |
+| 1.3 | random | 5.2 | 0.0 | 293 |
+| 1.3 | even split | 0.0 | 0.0 | — |
+| 1.3 | always shelter | 100.0 | 100.0 | 253 |
+| 1.3 | always work | 0.0 | 0.0 | — |
+| 1.3 | never EVA | 100.0 | 100.0 | 253 |
+| 1.3 | good (mixed) | **100.0** | **100.0** | 285 |
+
+Targets: random ≤30% win and ≤5% three-star; even split fails at least one sublevel; always
+shelter / always work / never EVA are each out-scored by the mixed strategy; good ≥85% with
+≥40% three-star; every sublevel has ≥3 distinct winning strategies.
+
+Three winning strategies per level (sim): 1.1 balanced / O₂-first / water-first; 1.2 fast
+isolation / water stockpile / repair heavy; 1.3 balanced shelter / shield wall / research focus.
+
+The sim does not model the optional random spare-parts delivery in 1.2 (it is a small bonus),
+so its 1.2 numbers are slightly conservative.
+
+---
+
+## 6. NASA accuracy and sources
+
+Facts used (verified on NASA/NASA-partner material):
+
+- ISS oxygen comes from **electrolysis of water** (Oxygen Generation Assembly, ECLSS).
+- ISS ECLSS recovers **about 98% of water** (2023 NASA update — the older “90%” figure is fixed).
+- ISS leak procedure: **close hatches, locate the leak, Kapton tape, then epoxy**. The 2018
+  Soyuz leak was a **drilled hole**, not a micrometeoroid.
+- Solar particle events: crews **shelter in place**; about **4 g/cm² of regolith** is enough to
+  get below 30-day exposure limits.
+- **CMEs take about 1–4 days to arrive** (NASA DONKI / space weather).
+- **Galactic cosmic rays** are very high energy; extra thickness barely reduces them.
+- **South-pole crater rims get near-constant sunlight** — hence “Long Shadow”, never a 14-day night.
+- **Lunar dust is abrasive** and degrades panels and seals.
+- **Shackleton crater** holds water ice in permanently shadowed regions (LRO, LCROSS).
+
+Sources: NASA ECLSS / ISS, NASA Space Weather & DONKI, NASA Moon (LRO, Diviner, LCROSS),
+NASA radiation research (Artemis), NASA lunar dust research. See the in-game **Mission Science**
+modal for the rule → source → simplification table.
+
+Everything numeric that is not directly from a source is labelled **Game assumption** in the
+debrief (one card per mission) and in `RULES`.
+
+---
+
+## 7. QA
 
 ```bash
-python -m pip install pillow numpy scipy
-python tools/slice_assets.py --preview
+python -m pip install playwright pillow
+python -m playwright install chromium
+python tools/sim.py --runs 600   # balance table + tools/sim_results.json
+python tools/qa.py               # 31 Playwright checks at 1280x720 and 390x844
 ```
 
-What it does:
-
-1. Crops each measured box (boxes were found with a connected-component pass over each sheet,
-   then curated by eye).
-2. **`img5.jpg` only:** keys the flat gray background to transparency (border flood-fill +
-   distance feather to remove JPG fringe).
-3. **`img1–4`:** left opaque on their dark navy background, per the challenge guidance — they
-   are used on dark panels (level select, debrief art, forecast art).
-4. Re-tints the Mars tunnel entrance to cool gray for the Moon (`TINT_GRAY`).
-5. Trims, downscales to a per-sprite max size, and writes the JS manifest.
-
-Source sheets and what was taken from them:
-
-| Sheet | Used for |
-| --- | --- |
-| `img5.jpg` (gray, keyed) | domes, tunnel, radiation module, solar arrays, battery, cable, relay, tanks, recycler, pipes, monitors, HUD icons, repair items, water leak, dust, astronaut poses, rover, dishes, antenna, drills, terrain tiles |
-| `img4.jpg` (opaque) | micrometeoroid rocks, explosion, broken pipe, radiation sign, crew poses (crate/tablet/welding/rover) — UI/debrief and hazard art |
-| `img3.jpg` (opaque) | lunar terrain tiles (plain, ridge, slope, cave, cracks, ice), door, ladder |
-| `img2.jpg` (opaque) | moon level nodes, star, level number badges, “MISSION CONFIRMED”, “COMPLETED” badge, sun, meteor streaks, shuttle |
-| `img1.jpg` (opaque) | Cislunar/Mars/Ocean sector maps, Moon/Mars/Europa planets, capsule, lander, launch-window plate |
-
-The sheets themselves (`assets/img1..5.jpg`, ~13 MB) are inputs, not runtime needs; they can be
-git-ignored once `assets/sprites/` is committed.
+`tools/qa.py` checks: no console errors, the four world corners, collider blocking, y-sort,
+position survives resize, the player is above the mobile console, one regression assert per bug
+B1–B18, keyed sprites/opaque tiles, nearest-neighbour drawing, offline fonts, debug gating, and
+the balance targets. Screenshots are written to `tools/qa_shots/`.
 
 ---
 
-## 5. Science and sources
+## 8. Asset pipeline
 
-Every rule starts from real NASA work. Numbers invented for play are labelled **Game
-assumption** in the debrief and in the in-game *Mission Science* modal.
+`python tools/slice_assets.py` slices the five catalog sheets into
+`assets/sprites/<group>/<name>.png` and writes `assets/manifest.js`.
 
-| In-game rule | Real NASA science | Simplification |
-| --- | --- | --- |
-| O₂ cells consume water | ISS oxygen comes from **electrolysis of water** (Oxygen Generation Assembly, ECLSS) | 1 cell = +10 O₂, costs 3 water *(game assumption)* |
-| Water recycling | ISS ECLSS recovers about **98% of water** (2023 NASA ECLSS update; older material says ~90%) | 1 cell = +9 water; no cell = water drains *(game assumption)* |
-| Leak repair | ISS procedure: close hatches, locate the leak, **Kapton tape**, then epoxy. The 2018 Soyuz leak was a **drilled hole**, not a micrometeoroid | Tape −60%, permanent patch = 3 repair cells |
-| Solar storm | Solar particle events: crews **shelter in place**; ~**4 g/cm²** of regolith gets below 30-day exposure limits | Bunker = safe dose; shielding cells trim the rest |
-| Cosmic rays | Extra shielding barely reduces galactic cosmic rays (very high energy) | Shielding never reduces dose to zero |
-| Solar power at the pole | South-pole crater **rims get near-constant sunlight**; terrain still shadows arrays | “Long Shadow” removes 2 solar cells for a sol — *not* a 14-day night |
-| Water ice | **Shackleton crater** holds water ice in permanently shadowed regions (LRO, LCROSS) | Ice find = +12 water |
-| Micrometeoroids | Lunar dust and micrometeoroid research | Meteor events wear shielding |
-| Radiation dose | NASA career exposure limits are complex, model-dependent | 0–100 meter, danger at 60 *(game assumption)* |
+- Boxes were measured with a connected-component pass over each sheet, then curated by eye.
+- Every sprite background is keyed with a **corner-median colour + edge flood fill + 1 px erode**
+  (works for the gray main sheet, navy panels and black FX panels).
+- **Terrain tiles stay opaque** (they are full-bleed ground art).
+- Sprites are downscaled to ≤160 px with LANCZOS; the game draws them at integer scale with
+  nearest-neighbour sampling.
+- The Mars tunnel entrance is re-tinted cool gray for the Moon.
 
-Sources (NASA top-level pages; search within for the cited item):
-
-- NASA ECLSS / ISS life support — <https://www.nasa.gov/international-space-station/>
-- NASA Space Weather — <https://science.nasa.gov/earth/space-weather/>
-- NASA Moon / LRO / Diviner — <https://science.nasa.gov/moon/> and <https://science.nasa.gov/mission/lro/>
-- NASA radiation research (Artemis, SPE sheltering) — <https://www.nasa.gov/humans-in-space/>
-- NASA Space Apps Challenge — <https://www.spaceappschallenge.org/>
-
-**Corrections baked into this build**
-
-- Water recycling is **~98%**, not 90%.
-- The ISS leak response is **tape + epoxy**; the 2018 leak was a **drilled hole**, not a
-  micrometeoroid — the debrief says so explicitly.
-- Level 1 uses **Long Shadow**, not a 14-day lunar night.
-- The welcome text no longer mentions “fed” (Level 1 has no food row).
+The source JPGs (~13 MB) and `tools/preview_sprites.png` are git-ignored; the sliced PNGs and
+manifest are committed.
 
 ---
 
-## 6. QA checklist (verified in this build)
+## 9. Debug / QA hooks and guesses
 
-- [x] 1.1, 1.2, 1.3 play start-to-finish with **win** paths (auto-shelter for 1.3).
-- [x] **Fail** path verified (1.2 without sealing) plus hearts/zero-resource ends.
-- [x] Debrief shows stars, score, went-well / hurt lists, Real NASA + Game assumption cards.
-- [x] Retry and Mission Map reset state including timers (`runId`) and fx.
-- [x] No uncaught JS errors in headless Edge; only expected AudioContext autoplay notices.
-- [x] 360 px layout: stacked console, icon-only rows, full-width Run button.
-- [x] Desktop 1440×900 and 1280×800 layouts.
-- [x] Locked levels cannot be opened; stars persist via `jamt.progress`.
-- [x] Missing sprite → procedural fallback (dome, astronaut, rover, icons).
-- [x] Level 2+ appear only as locked nodes (Mars, Ocean Worlds, Deep Space).
+Hooks (only with `?debug`): `?debug&level=1.2`, `?debug&level=1.1&auto=6`,
+`?debug&select`, `?debug&level=1.2&fail=1`. `window.__JAMT__` exposes read-only state and QA
+helpers (`walkTo`, `checkWin`, `resolveSol`, `drawOrder`, `consolePx`).
+
+Decisions I had to guess:
+
+1. **World size** — 1024×760 (≈2.7× a 640×360 viewport area), enough for the asked layout while
+   still readable on a 360 px phone.
+2. **Map labels** — “solar field west / utility yard east / comms north / rover south / bunker
+   NW / ice SW” were turned into concrete world coordinates; the dome is centre.
+3. **EVA minutes are a budget, not a real-time clock** — tasks consume minutes; there is no
+   fail screen and no timer pressure.
+4. **“Hold-to-do” = 2.2 s**, inside the requested 2–4 s band.
+5. **Shelter timing** — “anyone outside at particle arrival takes the full dose” is modelled as
+   90% protection if the order is given before the arrival sol, 15% if given on the arrival sol.
+6. **The bunker is a station + a console button** (the brief only said the order makes the crew
+   walk); both set the same flag.
+7. **1.1 panel** gives a permanent +1 cell; the crate fetch and the install each cost 1 minute.
+8. **Research** is 3 points/cell (≈10% of score) and 0 while sheltered.
+9. **Stars**: 3 requires a clean run (no heart lost, no meter below 30, dose peak ≤40, score par)
+   on top of hearts — this is what keeps random play at ≤5% three-star.
+10. **1.2 spare parts** are a 30% random delivery that adds one patch step (the sim omits it).
+11. **Screenshot/QA hooks** and `window.__JAMT__` are always present for tests but the URL hooks
+    are gated behind `?debug` as requested.
 
 ---
 
-## 7. Roadmap
+## 10. Credits
 
-- Level 2 · Mars — dust storms, long nights, ISRU oxygen.
-- Level 3 · Ocean Worlds — Europa / Enceladus / Titan nodes (art already sliced).
-- Reuse the level format: each new sublevel is a config object plus a debrief.
-
----
-
-## 8. Credits
-
-Code, level design and science copy: Junior Astronaut team.
-Sprite art: AI-generated catalog sheets (`assets/img1..5.jpg`) sliced by
-`tools/slice_assets.py`. Fonts: Press Start 2P + Nunito (Google Fonts, with system fallbacks).
-Built for the NASA Space Apps Challenge 2026 — educational model, not engineering-grade.
+Code, level design and science copy: Junior Astronaut team. Sprite art: AI-generated catalog
+sheets sliced by `tools/slice_assets.py`. Built for the NASA Space Apps Challenge 2026 —
+educational model, not engineering-grade.

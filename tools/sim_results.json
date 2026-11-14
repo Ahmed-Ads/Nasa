@@ -1,0 +1,235 @@
+{
+ "runs": 600,
+ "table": {
+  "1.1": {
+   "random": {
+    "win": 20.5,
+    "three": 0.3,
+    "avg_score": 300.3
+   },
+   "even": {
+    "win": 0.0,
+    "three": 0.0,
+    "avg_score": 0
+   },
+   "always_shelter": {
+    "win": 0.0,
+    "three": 0.0,
+    "avg_score": 0
+   },
+   "always_work": {
+    "win": 0.0,
+    "three": 0.0,
+    "avg_score": 0
+   },
+   "never_eva": {
+    "win": 0.0,
+    "three": 0.0,
+    "avg_score": 0
+   },
+   "good": {
+    "win": 100.0,
+    "three": 100.0,
+    "avg_score": 341.0
+   }
+  },
+  "1.2": {
+   "random": {
+    "win": 12.2,
+    "three": 4.0,
+    "avg_score": 200.8
+   },
+   "even": {
+    "win": 0.0,
+    "three": 0.0,
+    "avg_score": 0
+   },
+   "always_shelter": {
+    "win": 0.0,
+    "three": 0.0,
+    "avg_score": 0
+   },
+   "always_work": {
+    "win": 0.0,
+    "three": 0.0,
+    "avg_score": 0
+   },
+   "never_eva": {
+    "win": 0.0,
+    "three": 0.0,
+    "avg_score": 0
+   },
+   "good": {
+    "win": 100.0,
+    "three": 100.0,
+    "avg_score": 267.0
+   }
+  },
+  "1.3": {
+   "random": {
+    "win": 5.2,
+    "three": 0.0,
+    "avg_score": 292.5
+   },
+   "even": {
+    "win": 0.0,
+    "three": 0.0,
+    "avg_score": 0
+   },
+   "always_shelter": {
+    "win": 100.0,
+    "three": 100.0,
+    "avg_score": 253.0
+   },
+   "always_work": {
+    "win": 0.0,
+    "three": 0.0,
+    "avg_score": 0
+   },
+   "never_eva": {
+    "win": 100.0,
+    "three": 100.0,
+    "avg_score": 253.0
+   },
+   "good": {
+    "win": 100.0,
+    "three": 100.0,
+    "avg_score": 285.3
+   }
+  }
+ },
+ "strategies": {
+  "1.1": {
+   "balanced": {
+    "win": 100.0,
+    "three": 100.0
+   },
+   "o2_first": {
+    "win": 100.0,
+    "three": 100.0
+   },
+   "water_first": {
+    "win": 100.0,
+    "three": 100.0
+   }
+  },
+  "1.2": {
+   "fast_isolation": {
+    "win": 100.0,
+    "three": 100.0
+   },
+   "water_stockpile": {
+    "win": 100.0,
+    "three": 100.0
+   },
+   "repair_heavy": {
+    "win": 100.0,
+    "three": 100.0
+   }
+  },
+  "1.3": {
+   "shelter_balanced": {
+    "win": 100.0,
+    "three": 100.0
+   },
+   "shield_wall": {
+    "win": 100.0,
+    "three": 100.0
+   },
+   "research_focus": {
+    "win": 100.0,
+    "three": 0.0
+   }
+  }
+ },
+ "checks": [
+  {
+   "label": "1.1 random win <= 30%",
+   "pass": true
+  },
+  {
+   "label": "1.1 random 3* <= 5%",
+   "pass": true
+  },
+  {
+   "label": "1.1 good win >= 85%",
+   "pass": true
+  },
+  {
+   "label": "1.1 good 3* >= 40%",
+   "pass": true
+  },
+  {
+   "label": "1.2 random win <= 30%",
+   "pass": true
+  },
+  {
+   "label": "1.2 random 3* <= 5%",
+   "pass": true
+  },
+  {
+   "label": "1.2 good win >= 85%",
+   "pass": true
+  },
+  {
+   "label": "1.2 good 3* >= 40%",
+   "pass": true
+  },
+  {
+   "label": "1.3 random win <= 30%",
+   "pass": true
+  },
+  {
+   "label": "1.3 random 3* <= 5%",
+   "pass": true
+  },
+  {
+   "label": "1.3 good win >= 85%",
+   "pass": true
+  },
+  {
+   "label": "1.3 good 3* >= 40%",
+   "pass": true
+  },
+  {
+   "label": "even split fails at least one sublevel",
+   "pass": true
+  },
+  {
+   "label": "always_shelter beaten by good",
+   "pass": true
+  },
+  {
+   "label": "always_work beaten by good",
+   "pass": true
+  },
+  {
+   "label": "never_eva beaten by good",
+   "pass": true
+  },
+  {
+   "label": "good out-scores always_shelter",
+   "pass": true
+  },
+  {
+   "label": "good out-scores always_work",
+   "pass": true
+  },
+  {
+   "label": "good out-scores never_eva",
+   "pass": true
+  },
+  {
+   "label": "1.1 has 3 winning strategies >=50%",
+   "pass": true
+  },
+  {
+   "label": "1.2 has 3 winning strategies >=50%",
+   "pass": true
+  },
+  {
+   "label": "1.3 has 3 winning strategies >=50%",
+   "pass": true
+  }
+ ]
+}
