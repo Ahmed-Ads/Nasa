@@ -2,35 +2,37 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Junior Astronaut Mission Trainer — Level 1-1: Shackleton Outpost</title>
 <meta name="description" content="A pixel-art mission trainer for ages 7–12. Spend power cells to keep a lunar outpost breathing, shielded and fed for 10 sols. Built for the 2026 NASA Space Apps Challenge.">
-<meta name="theme-color" content="#070a1c">
+<meta name="theme-color" content="#06070f">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&family=Press+Start+2P&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23070a1c'/%3E%3Ccircle cx='8' cy='8' r='5' fill='%23e6ebfa'/%3E%3Ccircle cx='6' cy='6.5' r='1.5' fill='%23a8b1d8'/%3E%3Ccircle cx='10' cy='10' r='1' fill='%23a8b1d8'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%2306070f'/%3E%3Ccircle cx='8' cy='8' r='5' fill='%23c2c6d4'/%3E%3Ccircle cx='6' cy='6.5' r='1.5' fill='%239a9fb2'/%3E%3Ccircle cx='10' cy='10' r='1' fill='%239a9fb2'/%3E%3C/svg%3E">
 </head>
 <body>
 <noscript><p class="noscript">This mission needs JavaScript to run. Please enable it and reload.</p></noscript>
 
-<div class="app">
-  <p class="topline">NASA Space Apps 2026 · Junior Astronaut Mission Trainer</p>
+<div class="app" id="app">
+  <canvas id="scene" width="320" height="200" role="img"
+    aria-label="Top-down pixel-art view of Shackleton Outpost: a dome habitat, fenced yard, rover, radar dishes and crystals on the lunar surface, with an astronaut beside a cave."></canvas>
 
-  <div class="stage" id="stage">
-    <canvas id="scene" width="320" height="180" role="img"
-      aria-label="Pixel-art scene: an astronaut standing beside a dome habitat on the Moon, with Earth in the sky."></canvas>
-
-    <div class="hud" id="hud" hidden>
-      <div class="hearts" id="hud-hearts" role="img" aria-label="Crew hearts: 3 of 3"></div>
-      <div class="hud-right">
-        <span class="chip" id="hud-sol">Sol 1 / 10</span>
-        <button class="icon-btn" id="sound-btn" type="button" aria-label="Mute sound" title="Mute sound">🔊</button>
-      </div>
+  <div class="hud" id="hud" hidden>
+    <div class="hearts" id="hud-hearts" role="img" aria-label="Crew hearts: 3 of 3"></div>
+    <div class="hud-center">
+      <span class="chip">1-1 · Moon</span>
+      <span class="chip chip-sol" id="hud-sol">Sol 1 / 10</span>
     </div>
+    <div class="hud-right">
+      <button class="icon-btn" id="science-btn-hud" type="button" aria-label="Mission Science" title="Mission Science">📖</button>
+      <button class="icon-btn" id="sound-btn" type="button" aria-label="Mute sound" title="Mute sound">🔊</button>
+    </div>
+  </div>
 
-    <div class="overlay overlay--welcome" id="overlay-welcome">
+  <div class="overlay overlay--welcome" id="overlay-welcome">
+    <div class="welcome-inner">
       <p class="kicker">Level 1 · The Moon</p>
       <h1 class="title">Junior<br><span>Astronaut</span></h1>
       <p class="subtitle">Mission Trainer</p>
@@ -49,28 +51,32 @@
         <span class="level" aria-disabled="true">2 · Mars 🔒</span>
       </div>
     </div>
+    <p class="credit">Built for the 2026 NASA Space Apps Challenge · Challenge: Build a Junior Astronaut Mission Trainer</p>
+  </div>
 
-    <div class="overlay overlay--end" id="overlay-end" hidden>
-      <div class="end-card" role="dialog" aria-modal="true" aria-labelledby="end-title">
-        <div class="end-hearts" id="end-hearts"></div>
-        <h2 class="end-title" id="end-title">Game Over</h2>
-        <p class="end-sub" id="end-sub">You are lost in space...</p>
-        <p class="end-note" id="end-note"></p>
-        <div class="menu-row">
-          <button class="btn" id="restart-btn" type="button">Restart</button>
-          <button class="btn btn-accent" id="revive-btn" type="button">Revive ✚</button>
-          <button class="btn" id="next-btn" type="button" disabled hidden>Next: Mars 🔒</button>
-        </div>
-        <button class="link-btn" id="home-btn" type="button">Back to title</button>
+  <div class="overlay overlay--end" id="overlay-end" hidden>
+    <div class="end-card" role="dialog" aria-modal="true" aria-labelledby="end-title">
+      <div class="end-hearts" id="end-hearts"></div>
+      <h2 class="end-title" id="end-title">Game Over</h2>
+      <p class="end-sub" id="end-sub">You are lost in space...</p>
+      <p class="end-note" id="end-note"></p>
+      <div class="menu-row">
+        <button class="btn" id="restart-btn" type="button">Restart</button>
+        <button class="btn btn-accent" id="revive-btn" type="button">Revive ✚</button>
+        <button class="btn" id="next-btn" type="button" disabled hidden>Next: Mars 🔒</button>
       </div>
+      <button class="link-btn" id="home-btn" type="button">Back to title</button>
     </div>
   </div>
 
-  <section class="panel" id="panel" hidden aria-label="Outpost controls">
-    <div class="panel-head">
-      <div>
-        <p class="panel-kicker">Level 1-1 · Shackleton Outpost</p>
-        <h2 class="panel-title" id="panel-sol">Sol 1 of 10</h2>
+  <section class="console" id="panel" hidden aria-label="Outpost controls">
+    <div class="console-head">
+      <div class="forecast" id="forecast" data-tone="neutral">
+        <span class="forecast-icon" id="forecast-icon" aria-hidden="true">🌤️</span>
+        <div class="forecast-body">
+          <p class="forecast-label" id="forecast-label">Forecast · Sol 1</p>
+          <p class="forecast-text" id="forecast-text">Clear skies — no hazards expected.</p>
+        </div>
       </div>
       <div class="budget">
         <span class="budget-label">Cells left</span>
@@ -78,30 +84,16 @@
       </div>
     </div>
 
-    <div class="forecast" id="forecast" data-tone="neutral">
-      <span class="forecast-icon" id="forecast-icon" aria-hidden="true">🌤️</span>
-      <div class="forecast-body">
-        <p class="forecast-label" id="forecast-label">Forecast · Sol 1</p>
-        <p class="forecast-text" id="forecast-text">Clear skies — no hazards expected.</p>
+    <div class="console-body" id="console-body">
+      <div class="systems" id="systems"></div>
+      <div class="run-block" id="run-row">
+        <button class="btn btn-primary btn-lg" id="run-btn" type="button">Run the Sol ▶</button>
+        <p class="hint" id="run-hint">Spend all 6 cells, then run the sol.</p>
       </div>
-    </div>
-
-    <div class="systems" id="systems"></div>
-
-    <div class="run-row" id="run-row">
-      <button class="btn btn-primary btn-lg" id="run-btn" type="button">Run the Sol ▶</button>
-      <p class="hint" id="run-hint">Spend all 6 cells, then run the sol.</p>
     </div>
 
     <ul class="log" id="log" aria-live="polite" aria-label="Mission log"></ul>
   </section>
-
-  <footer class="foot">
-    <p>Built for the <a href="https://www.spaceappschallenge.org/" target="_blank" rel="noopener">2026 NASA Space Apps Challenge</a>
-      · Challenge: Build a Junior Astronaut Mission Trainer</p>
-    <p class="foot-note">All simulation numbers are simplified for ages 7–12. See
-      <button class="link-btn" id="science-btn-2" type="button">Mission Science</button> for the NASA data behind them.</p>
-  </footer>
 </div>
 
 <div class="modal" id="modal-how" hidden>

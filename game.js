@@ -1,16 +1,16 @@
-/* ==========================================================================
+﻿/* ==========================================================================
    Junior Astronaut Mission Trainer
-   Level 1-1 · Shackleton Outpost (lunar south pole)
+   Level 1-1 آ· Shackleton Outpost (lunar south pole)
 
    Zero dependencies, zero build step. Open index.html and play.
 
    Design rules (2026 NASA Space Apps "Build a Junior Astronaut Mission
    Trainer" challenge):
-     · 2–3 coupled resources, one shared budget
-     · browser-only, no login, big readable UI for ages 7–12
-     · dynamic hazards with a kid-friendly forecast
-     · non-punitive failure (one free revive, explanations, instant retry)
-     · every rule traceable to real NASA data (see "Mission Science")
+     آ· 2â€“3 coupled resources, one shared budget
+     آ· browser-only, no login, big readable UI for ages 7â€“12
+     آ· dynamic hazards with a kid-friendly forecast
+     آ· non-punitive failure (one free revive, explanations, instant retry)
+     آ· every rule traceable to real NASA data (see "Mission Science")
    ========================================================================== */
 (() => {
   'use strict';
@@ -30,9 +30,9 @@
   const RES_KEYS = ['o2', 'shield', 'food'];
 
   const RES = {
-    o2: { name: 'Oxygen', icon: '🫁', hint: 'Life support', color: '#5ac8ff' },
-    shield: { name: 'Shielding', icon: '🛡️', hint: 'Radiation armor', color: '#ffb02e' },
-    food: { name: 'Food', icon: '🌱', hint: 'Greenhouse', color: '#7ce38b' },
+    o2: { name: 'Oxygen', icon: 'ًں«پ', hint: 'Life support', color: '#5ac8ff' },
+    shield: { name: 'Shielding', icon: 'ًں›،ï¸ڈ', hint: 'Radiation armor', color: '#ffb02e' },
+    food: { name: 'Food', icon: 'ًںŒ±', hint: 'Greenhouse', color: '#7ce38b' },
   };
 
   /* ------------------------------------------------------------------- state */
@@ -50,7 +50,6 @@
     revived: false,
     fx: null,                  // { type, t0 }
     winAt: 0,
-    lastEvent: null,
     runId: 0,
   };
 
@@ -74,7 +73,7 @@
 
   function starsHTML(n) {
     let out = '';
-    for (let i = 0; i < 3; i++) out += `<span class="star${i < n ? ' is-on' : ''}" aria-hidden="true">★</span>`;
+    for (let i = 0; i < 3; i++) out += `<span class="star${i < n ? ' is-on' : ''}" aria-hidden="true">âک…</span>`;
     return out;
   }
 
@@ -131,73 +130,73 @@
   /* ------------------------------------------------------------------ events */
   const EVENTS = {
     calm: {
-      name: 'Clear Skies', icon: '🌤️', tone: 'good',
-      hint: 'Clear skies. No hazards expected — a good sol to refill reserves.',
+      name: 'Clear Skies', icon: 'ًںŒ¤ï¸ڈ', tone: 'good',
+      hint: 'Clear skies. No hazards expected â€” a good sol to refill reserves.',
       apply() {
         return [{ t: 'Clear skies over Shackleton. The crew catches its breath.', tone: 'good' }];
       },
     },
 
     flare: {
-      name: 'Solar Flare', icon: '☀️', tone: 'bad',
-      hint: 'Solar flare detected! Radiation is spiking — <strong>shielding cells</strong> soak up the damage.',
+      name: 'Solar Flare', icon: 'âک€ï¸ڈ', tone: 'bad',
+      hint: 'Solar flare detected! Radiation is spiking â€” <strong>shielding cells</strong> soak up the damage.',
       apply(st) {
         const dmg = Math.max(0, 50 - st.alloc.shield * 12);
         st.res.o2 = clamp(st.res.o2 - dmg);
         st.res.shield = clamp(st.res.shield - dmg);
         return dmg > 0
-          ? [{ t: `A solar storm hit while shields ran on ${st.alloc.shield} cells — radiation cost <b>${dmg} O₂</b> and <b>${dmg} shielding</b>.`, tone: 'bad' }]
+          ? [{ t: `A solar storm hit while shields ran on ${st.alloc.shield} cells â€” radiation cost <b>${dmg} Oâ‚‚</b> and <b>${dmg} shielding</b>.`, tone: 'bad' }]
           : [{ t: 'A solar storm hit, but your shields soaked it all up. Crew safe!', tone: 'good' }];
       },
     },
 
     night: {
-      name: 'Lunar Night', icon: '🌑', tone: 'warn',
+      name: 'Lunar Night', icon: 'ًںŒ‘', tone: 'warn',
       hint: 'The Sun is setting for days. Grow-lights fade and heaters need extra oxygen.',
       apply(st) {
         const heat = 10;
         st.res.o2 = clamp(st.res.o2 - heat);
         const lost = Math.round(GAIN.food * st.alloc.food * 0.5);
         st.res.food = clamp(st.res.food - lost);
-        return [{ t: `Lunar night falls: greenhouse output halves (−${lost} food) and heaters burn <b>${heat} extra O₂</b>.`, tone: 'warn' }];
+        return [{ t: `Lunar night falls: greenhouse output halves (âˆ’${lost} food) and heaters burn <b>${heat} extra Oâ‚‚</b>.`, tone: 'warn' }];
       },
     },
 
     dust: {
-      name: 'Dust Storm', icon: '🌪️', tone: 'warn',
-      hint: 'Moon dust coats the solar panels — next sol you get <strong>1 fewer power cell</strong>.',
+      name: 'Dust Storm', icon: 'ًںŒھï¸ڈ', tone: 'warn',
+      hint: 'Moon dust coats the solar panels â€” next sol you get <strong>1 fewer power cell</strong>.',
       apply(st) {
         st.penalty = 1;
-        return [{ t: 'Dust coats the solar panels — tomorrow you get <b>1 fewer power cell</b>.', tone: 'warn' }];
+        return [{ t: 'Dust coats the solar panels â€” tomorrow you get <b>1 fewer power cell</b>.', tone: 'warn' }];
       },
     },
 
     meteor: {
-      name: 'Micrometeoroids', icon: '☄️', tone: 'warn',
-      hint: 'Tiny space rocks incoming — shielding takes the hits. With no shielding, the hull does.',
+      name: 'Micrometeoroids', icon: 'âک„ï¸ڈ', tone: 'warn',
+      hint: 'Tiny space rocks incoming â€” shielding takes the hits. With no shielding, the hull does.',
       apply(st) {
         const hit = 24;
         st.res.shield = clamp(st.res.shield - hit);
-        let msg = `Micrometeoroids sandblast the outpost: <b>−${hit} shielding</b>.`;
+        let msg = `Micrometeoroids sandblast the outpost: <b>âˆ’${hit} shielding</b>.`;
         if (st.alloc.shield === 0) {
           st.res.o2 = clamp(st.res.o2 - 14);
-          msg += ' With no shield power, the hull leaked <b>14 O₂</b>.';
+          msg += ' With no shield power, the hull leaked <b>14 Oâ‚‚</b>.';
         }
         return [{ t: msg, tone: 'warn' }];
       },
     },
 
     ice: {
-      name: 'Ice Vein Found', icon: '🧊', tone: 'good',
+      name: 'Ice Vein Found', icon: 'ًں§ٹ', tone: 'good',
       hint: 'Ground radar found water ice in a shadowed crater! Split it for oxygen.',
       apply(st) {
         st.res.o2 = clamp(st.res.o2 + 16);
-        return [{ t: 'Water ice found in a shadowed crater — electrolysis adds <b>+16 O₂</b>.', tone: 'good' }];
+        return [{ t: 'Water ice found in a shadowed crater â€” electrolysis adds <b>+16 Oâ‚‚</b>.', tone: 'good' }];
       },
     },
 
     supply: {
-      name: 'NASA Resupply', icon: '🛰️', tone: 'good',
+      name: 'NASA Resupply', icon: 'ًں›°ï¸ڈ', tone: 'good',
       hint: 'A cargo lander is on the way with spare shielding panels.',
       apply(st) {
         st.res.shield = clamp(st.res.shield + 20);
@@ -223,7 +222,6 @@
 
   /* --------------------------------------------------------------------- dom */
   const els = {
-    stage: $('#stage'),
     hud: $('#hud'),
     hudHearts: $('#hud-hearts'),
     hudSol: $('#hud-sol'),
@@ -239,7 +237,6 @@
     next: $('#next-btn'),
     home: $('#home-btn'),
     panel: $('#panel'),
-    panelSol: $('#panel-sol'),
     cellsLeft: $('#cells-left'),
     forecast: $('#forecast'),
     forecastIcon: $('#forecast-icon'),
@@ -273,8 +270,9 @@
         </div>
         <div class="alloc">
           <button class="step" type="button" data-act="minus" data-key="${key}"
-                  aria-label="Remove a power cell from ${meta.name}">−</button>
+                  aria-label="Remove a power cell from ${meta.name}">âˆ’</button>
           <div class="cells" id="cells-${key}" aria-hidden="true"></div>
+          <span class="alloc-num" id="alloc-${key}" aria-hidden="true">0</span>
           <button class="step" type="button" data-act="plus" data-key="${key}"
                   aria-label="Add a power cell to ${meta.name}">+</button>
         </div>`;
@@ -293,10 +291,8 @@
     const left = s.budget - totalAlloc();
 
     els.hudSol.textContent = `Sol ${sol} / ${s.maxSols}`;
-    els.panelSol.textContent = `Sol ${sol} of ${s.maxSols}`;
     els.hudHearts.innerHTML = heartsHTML(s.hearts);
     els.hudHearts.setAttribute('aria-label', `Crew hearts: ${s.hearts} of 3`);
-    els.hudHearts.setAttribute('role', 'img');
 
     els.cellsLeft.textContent = String(left);
     els.cellsLeft.classList.toggle('is-empty', left === 0);
@@ -313,6 +309,8 @@
       const bar = document.getElementById(`bar-${key}`);
       bar.style.width = `${v}%`;
       bar.style.backgroundColor = v < CRITICAL ? '#ff4d6d' : RES[key].color;
+
+      document.getElementById(`alloc-${key}`).textContent = String(s.alloc[key]);
 
       const cells = document.getElementById(`cells-${key}`);
       cells.innerHTML = '';
@@ -336,12 +334,12 @@
     els.run.disabled = !ready;
     els.hint.textContent = left > 0
       ? `Spend ${left} more cell${left === 1 ? '' : 's'} to power the outpost.`
-      : 'All cells spent — run the sol when you are ready.';
+      : 'All cells spent â€” run the sol when you are ready.';
     els.hint.classList.toggle('is-ready', ready);
 
     const ev = EVENTS[s.eventKey];
     els.forecastIcon.textContent = ev.icon;
-    els.forecastLabel.textContent = `Forecast · Sol ${sol}`;
+    els.forecastLabel.textContent = `Forecast آ· Sol ${sol}`;
     els.forecastText.innerHTML = ev.hint;
     els.forecast.dataset.tone = ev.tone || 'neutral';
   }
@@ -411,7 +409,7 @@
   function tryRun() {
     if (state.phase !== 'alloc' || totalAlloc() !== state.budget) {
       els.runRow.classList.remove('shake');
-      void els.runRow.offsetWidth; // restart the animation
+      void els.runRow.offsetWidth;
       els.runRow.classList.add('shake');
       Sound.warn();
       return;
@@ -429,12 +427,12 @@
     const sol = s.sol;
     const alloc = { ...s.alloc };
 
-    // 1 — spend the power cells
+    // 1 â€” spend the power cells
     for (const key of RES_KEYS) {
       s.res[key] = clamp(s.res[key] + GAIN[key] * alloc[key]);
     }
 
-    // 2 — daily wear (grows as the mission gets longer)
+    // 2 â€” daily wear (grows as the mission gets longer)
     const wear = {
       o2: BASE_DRAIN.o2 + Math.round(sol * 1.0),
       shield: BASE_DRAIN.shield + Math.round(sol * 0.8),
@@ -442,29 +440,28 @@
     };
     for (const key of RES_KEYS) s.res[key] = clamp(s.res[key] - wear[key]);
 
-    // 3 — the hazard
+    // 3 â€” the hazard
     const ev = EVENTS[s.eventKey];
     const lines = ev.apply(s) || [];
     for (const key of RES_KEYS) s.res[key] = clamp(s.res[key]);
 
-    addLog(`<b>Sol ${sol} · ${ev.name}</b> — cells ${alloc.o2}/${alloc.shield}/${alloc.food}`, 'head');
-    addLog(`Wear and tear: −${wear.o2} O₂ · −${wear.shield} shield · −${wear.food} food.`, 'muted');
+    addLog(`<b>Sol ${sol} آ· ${ev.name}</b> â€” cells ${alloc.o2}/${alloc.shield}/${alloc.food}`, 'head');
+    addLog(`Wear and tear: âˆ’${wear.o2} Oâ‚‚ آ· âˆ’${wear.shield} shield آ· âˆ’${wear.food} food.`, 'muted');
     for (const line of lines) addLog(line.t, line.tone);
 
-    // 4 — hearts
+    // 4 â€” hearts
     const lows = RES_KEYS.filter((key) => s.res[key] < CRITICAL);
     if (lows.length && s.hearts > 0) {
       s.hearts -= 1;
       const names = lows.map((key) => `${RES[key].icon} ${RES[key].name}`).join(' and ');
-      addLog(`⚠️ Critical: ${names} under ${CRITICAL}%. The crew loses a heart.`, 'bad');
+      addLog(`âڑ ï¸ڈ Critical: ${names} under ${CRITICAL}%. The crew loses a heart.`, 'bad');
       Sound.warn();
     }
-    addLog(`Status → ${RES_KEYS.map((key) => `${RES[key].icon} ${Math.round(s.res[key])}%`).join(' · ')}`, 'muted');
+    addLog(`Status â†’ ${RES_KEYS.map((key) => `${RES[key].icon} ${Math.round(s.res[key])}%`).join(' آ· ')}`, 'muted');
 
-    s.lastEvent = s.eventKey;
     setFx(s.eventKey);
 
-    // 5 — outcome
+    // 5 â€” outcome
     const stillCurrent = () => s.runId === runId;
     const empty = RES_KEYS.filter((key) => s.res[key] <= 0);
     if (empty.length) {
@@ -500,7 +497,7 @@
       els.endHearts.setAttribute('aria-label', `Mission rating: ${s.hearts} of 3 stars`);
       els.endTitle.textContent = 'Level 1-1 Complete!';
       els.endSub.textContent = 'Shackleton Outpost survived all 10 sols.';
-      els.endNote.textContent = `Crew hearts left: ${s.hearts} · Mars is next on the mission map.`;
+      els.endNote.textContent = `Crew hearts left: ${s.hearts} آ· Mars is next on the mission map.`;
       els.restart.textContent = 'Replay Level';
       els.revive.hidden = true;
       els.next.hidden = false;
@@ -531,7 +528,7 @@
     els.hud.hidden = false;
     els.panel.hidden = false;
 
-    addLog('🚑 <b>Revive!</b> NASA air-drops emergency supplies — every meter is back to at least 55%.', 'good');
+    addLog('ًںڑ‘ <b>Revive!</b> NASA air-drops emergency supplies â€” every meter is back to at least 55%.', 'good');
     Sound.revive();
     render();
   }
@@ -556,31 +553,45 @@
     render();
   }
 
-  /* ----------------------------------------------------------- canvas scene */
-  const canvas = document.getElementById('scene');
+  /* ========================================================== pixel scene === */
+  const canvas = $('#scene');
   const ctx = canvas.getContext('2d');
-  const W = canvas.width;
-  const H = canvas.height;
-  ctx.imageSmoothingEnabled = false;
+  let W = 320;
+  let H = 200;
+  let U = 1;
+  let baseR = 30;
+  let astroScale = 2;
 
-  const COL = {
-    star: '#dfe6ff',
-    ground: '#98a1c4',
-    groundTop: '#c9d0e9',
-    groundDark: '#7b85ab',
-    crater: '#6b7599',
-    dome: '#e6ebfa',
-    domeShade: '#b9c2df',
-    domeLine: '#7f8ab0',
-    glass: '#ffcf6b',
-    metal: '#586187',
-    panel: '#2b4f9c',
-    panelLight: '#7fb2ff',
-    accent: '#ffb02e',
-    red: '#ff5d73',
+  let stars = [];
+  let speckles = [];
+  let craters = [];
+  let boulders = [];
+  let crystals = [];
+  let dishes = [];
+  let rocks = [];
+
+  let terrainPath = null;
+  let basaltPath = null;
+  let basinPath = null;
+  let patches = [];
+  let base = { x: 0, y: 0 };
+  let cave = { x: 0, y: 0 };
+  let astro = { x: 0, y: 0 };
+  let rocket = { x: 0, y: 0 };
+  let rover = { x: 0, y: 0 };
+
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const SUIT = {
+    B: '#0d1430', // outline
+    w: '#f4f7ff', // suit
+    v: '#101a3d', // visor
+    h: '#7ad9ff', // visor shine
+    b: '#2f6fe0', // blue accents
+    o: '#ffb02e', // orange accents
   };
 
-  // chibi astronaut, 16 × 19 pixels
+  // chibi astronaut, 16 أ— 20 pixels
   const ASTRONAUT = [
     '.....BBBBBB.....',
     '....BBwwwwBB....',
@@ -603,15 +614,6 @@
     '....bbb..bbb....',
     '....ooo..ooo....',
   ];
-  const SUIT = {
-    B: '#0d1430', // outline
-    w: '#f4f7ff', // suit
-    v: '#101a3d', // visor
-    h: '#7ad9ff', // visor shine
-    b: '#2f6fe0', // blue accents
-    o: '#ffb02e', // orange accents
-    d: '#c3cbe8',
-  };
 
   function drawSprite(rows, x, y, scale) {
     for (let r = 0; r < rows.length; r++) {
@@ -634,33 +636,721 @@
     };
   }
 
-  const rand = mulberry32(20260214);
-  const stars = Array.from({ length: 96 }, () => ({
-    x: Math.floor(rand() * W),
-    y: Math.floor(rand() * 124),
-    s: rand() < 0.14 ? 2 : 1,
-    p: rand() * Math.PI * 2,
-  }));
-  const rocks = [
-    { x: 148, y: 140, w: 4, h: 2 },
-    { x: 232, y: 150, w: 5, h: 3 },
-    { x: 40, y: 156, w: 3, h: 2 },
-    { x: 286, y: 142, w: 3, h: 2 },
-    { x: 175, y: 166, w: 6, h: 3 },
-  ];
-  const craters = [
-    { x: 62, y: 152, rx: 13, ry: 4 },
-    { x: 252, y: 162, rx: 17, ry: 5 },
-    { x: 160, y: 146, rx: 9, ry: 3 },
-    { x: 118, y: 170, rx: 11, ry: 4 },
-  ];
-  const speckles = Array.from({ length: 70 }, () => ({
-    x: Math.floor(rand() * W),
-    y: 133 + Math.floor(rand() * 44),
-    s: rand() < 0.18 ? 2 : 1,
+  function ellipse(x, y, rx, ry, color) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.ellipse(x, y, Math.max(0.1, rx), Math.max(0.1, ry), 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  /* --------------------------------------------------------------- layout --- */
+  function resizeScene() {
+    const vw = Math.max(320, window.innerWidth);
+    const vh = Math.max(320, window.innerHeight);
+    const S = Math.min(6, Math.max(2, Math.min(vw, vh) / 190));
+
+    W = Math.round(vw / S);
+    H = Math.round(vh / S);
+    canvas.width = W;
+    canvas.height = H;
+    ctx.imageSmoothingEnabled = false;
+
+    U = Math.max(0.72, Math.min(1.8, W / 330));
+    baseR = Math.round(30 * U);
+    astroScale = U > 1.5 ? 2 : 1;
+
+    buildLayout();
+  }
+
+  function buildLayout() {
+    const rnd = mulberry32((W * 73856093) ^ (H * 19349663) ^ 0x9e3779b9);
+
+    stars = Array.from({ length: 110 }, () => ({
+      x: Math.floor(rnd() * W),
+      y: Math.floor(rnd() * H),
+      s: rnd() < 0.16 ? 2 : 1,
+      p: rnd() * Math.PI * 2,
+    }));
+
+    speckles = Array.from({ length: Math.round(W * H / 620) }, () => ({
+      x: Math.floor(rnd() * W),
+      y: Math.floor(rnd() * H),
+      s: rnd() < 0.14 ? 2 : 1,
+      light: rnd() < 0.5,
+    }));
+
+    craters = [
+      { x: W * 0.09, y: H * 0.16, r: 10 * U },
+      { x: W * 0.19, y: H * 0.68, r: 13 * U },
+      { x: W * 0.5, y: H * 0.09, r: 7 * U },
+      { x: W * 0.71, y: H * 0.7, r: 9 * U },
+      { x: W * 0.87, y: H * 0.55, r: 12 * U },
+      { x: W * 0.33, y: H * 0.87, r: 10 * U },
+      { x: W * 0.94, y: H * 0.82, r: 8 * U },
+    ];
+
+    boulders = [
+      { x: W * 0.12, y: H * 0.42, r: 5 * U },
+      { x: W * 0.3, y: H * 0.74, r: 4 * U },
+      { x: W * 0.66, y: H * 0.33, r: 6 * U },
+      { x: W * 0.9, y: H * 0.7, r: 4.5 * U },
+      { x: W * 0.47, y: H * 0.26, r: 3.5 * U },
+      { x: W * 0.24, y: H * 0.22, r: 3 * U },
+      { x: W * 0.56, y: H * 0.78, r: 3.5 * U },
+      { x: W * 0.4, y: H * 0.62, r: 2.6 * U },
+    ];
+
+    crystals = [
+      { x: W * 0.73, y: H * 0.4, s: 6.5 * U, c: '#6fe3ff' },
+      { x: W * 0.79, y: H * 0.32, s: 4.5 * U, c: '#b06cff' },
+      { x: W * 0.67, y: H * 0.23, s: 5 * U, c: '#5be0a0' },
+      { x: W * 0.9, y: H * 0.46, s: 5.5 * U, c: '#b06cff' },
+      { x: W * 0.63, y: H * 0.72, s: 4.5 * U, c: '#6fe3ff' },
+    ];
+
+    patches = Array.from({ length: 10 }, () => ({
+      x: rnd() * W,
+      y: rnd() * H,
+      rx: (14 + rnd() * 42) * U,
+      ry: (8 + rnd() * 24) * U,
+      light: rnd() < 0.5,
+    }));
+
+    dishes = [
+      { x: W * 0.85, y: H * 0.28, r: 9 * U, a: -0.5 },
+      { x: W * 0.94, y: H * 0.12, r: 6 * U, a: 0.4 },
+    ];
+
+    base = { x: W * 0.6, y: H * 0.55 };
+    cave = { x: W * 0.27, y: H * 0.35 };
+    astro = { x: W * 0.42, y: H * 0.5 };
+    rocket = { x: W * 0.55, y: H * 0.17 };
+    rover = { x: W * 0.13, y: H * 0.59 };
+
+    rocks = [
+      { x: W * 0.05, y: H * 0.9, s: 1.2 },
+      { x: W * 0.36, y: H * 0.3, s: 0.8 },
+      { x: W * 0.58, y: H * 0.44, s: 0.7 },
+      { x: W * 0.79, y: H * 0.62, s: 0.9 },
+      { x: W * 0.22, y: H * 0.86, s: 0.8 },
+    ];
+
+    // dark, irregular basin around the cave mouth
+    basinPath = new Path2D();
+    const bcx = cave.x + 2 * U;
+    const bcy = cave.y + 4 * U;
+    const brx = 38 * U;
+    const bry = 33 * U;
+    const bpts = [];
+    for (let i = 0; i < 14; i++) {
+      const a = (i / 14) * Math.PI * 2;
+      const j = 0.74 + rnd() * 0.34;
+      bpts.push([bcx + Math.cos(a) * brx * j, bcy + Math.sin(a) * bry * j]);
+    }
+    basinPath.moveTo(bpts[0][0], bpts[0][1]);
+    for (let i = 1; i < bpts.length; i++) basinPath.lineTo(bpts[i][0], bpts[i][1]);
+    basinPath.closePath();
+
+    // terrain outline: space shows in the top-right corner
+    const edge = [
+      [W * 0.5, 0],
+      [W * 0.58, H * 0.03],
+      [W * 0.56, H * 0.07],
+      [W * 0.66, H * 0.1],
+      [W * 0.72, H * 0.16],
+      [W * 0.8, H * 0.14],
+      [W * 0.88, H * 0.22],
+      [W, H * 0.25],
+    ];
+    terrainPath = new Path2D();
+    terrainPath.moveTo(0, 0);
+    for (const [x, y] of edge) terrainPath.lineTo(x, y);
+    terrainPath.lineTo(W, H);
+    terrainPath.lineTo(0, H);
+    terrainPath.closePath();
+
+    // jagged boundary between pale regolith and dark basalt
+    basaltPath = new Path2D();
+    let bx = W * 0.62;
+    basaltPath.moveTo(bx, 0);
+    for (let y = 0; y <= H; y += 9) {
+      bx += (rnd() - 0.5) * W * 0.07;
+      bx = Math.max(W * 0.52, Math.min(W * 0.76, bx));
+      basaltPath.lineTo(bx, y);
+    }
+    basaltPath.lineTo(W, H);
+    basaltPath.lineTo(W, 0);
+    basaltPath.closePath();
+  }
+
+  /* --------------------------------------------------------------- helpers -- */
+  function drawSpace(time, night) {
+    const sky = ctx.createLinearGradient(0, 0, W, H);
+    sky.addColorStop(0, night ? '#03030a' : '#05060f');
+    sky.addColorStop(1, night ? '#080a1a' : '#0b0d1d');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+
+    for (const star of stars) {
+      const tw = reduceMotion ? 1 : 0.4 + 0.6 * Math.abs(Math.sin(time * 0.9 + star.p));
+      ctx.globalAlpha = 0.5 + 0.5 * tw;
+      ctx.fillStyle = '#e8eeff';
+      ctx.fillRect(star.x, star.y, star.s, star.s);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawEarth(x, y, r) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.fillStyle = '#2f6fe0';
+    ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    ctx.fillStyle = '#5fd08a';
+    ctx.beginPath();
+    ctx.ellipse(x - r * 0.3, y - r * 0.2, r * 0.45, r * 0.34, 0.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(x + r * 0.35, y + r * 0.42, r * 0.32, r * 0.24, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#eaf3ff';
+    ctx.globalAlpha = 0.7;
+    ctx.fillRect(x - r * 0.6, y - r * 0.55, r * 1.1, r * 0.16);
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#0d1430';
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  function drawCrater(c) {
+    ellipse(c.x, c.y, c.r, c.r * 0.68, 'rgba(0,0,0,.16)');
+    ellipse(c.x, c.y - c.r * 0.04, c.r * 0.78, c.r * 0.48, 'rgba(0,0,0,.2)');
+    ctx.strokeStyle = 'rgba(255,255,255,.16)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.ellipse(c.x, c.y, c.r, c.r * 0.68, 0, Math.PI * 0.86, Math.PI * 1.95);
+    ctx.stroke();
+  }
+
+  function drawBoulder(b) {
+    ellipse(b.x + 1, b.y + b.r * 0.35, b.r * 1.05, b.r * 0.6, 'rgba(0,0,0,.28)');
+    ellipse(b.x, b.y, b.r, b.r * 0.78, '#6f7180');
+    ellipse(b.x - b.r * 0.2, b.y - b.r * 0.25, b.r * 0.6, b.r * 0.42, '#8b8d9c');
+  }
+
+  function drawCave(time, night) {
+    const x = cave.x;
+    const y = cave.y;
+    const r = 17 * U;
+
+    ellipse(x, y + r * 0.55, r * 1.35, r * 0.6, 'rgba(0,0,0,.3)');
+
+    ctx.fillStyle = '#3a3948';
+    ctx.beginPath();
+    ctx.moveTo(x - r * 1.18, y + r * 0.75);
+    ctx.quadraticCurveTo(x - r * 1.12, y - r * 0.95, x, y - r * 0.95);
+    ctx.quadraticCurveTo(x + r * 1.12, y - r * 0.95, x + r * 1.18, y + r * 0.75);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#4c4b5d';
+    for (let i = 0; i < 9; i++) {
+      const a = Math.PI + (i / 8) * Math.PI;
+      const px = x + Math.cos(a) * r * 1.02;
+      const py = y + Math.sin(a) * r * 0.75 - r * 0.15;
+      ctx.fillRect(Math.round(px) - 2, Math.round(py) - 2, 5, 4);
+    }
+
+    ctx.fillStyle = '#07070d';
+    ctx.beginPath();
+    ctx.moveTo(x - r * 0.62, y + r * 0.72);
+    ctx.quadraticCurveTo(x - r * 0.66, y - r * 0.38, x, y - r * 0.38);
+    ctx.quadraticCurveTo(x + r * 0.66, y - r * 0.38, x + r * 0.62, y + r * 0.72);
+    ctx.closePath();
+    ctx.fill();
+
+    const pulse = 0.14 + 0.09 * Math.sin(time * 1.6);
+    ctx.globalAlpha = night ? pulse * 2 : pulse;
+    ellipse(x, y + r * 0.45, r * 0.3, r * 0.16, '#3d7ef0');
+    ctx.globalAlpha = 1;
+  }
+
+  function drawCrystalShard(x, y, h, color) {
+    const w = h * 0.3;
+    ctx.beginPath();
+    ctx.moveTo(x, y - h);
+    ctx.lineTo(x + w, y - h * 0.15);
+    ctx.lineTo(x, y + h * 0.2);
+    ctx.lineTo(x - w, y - h * 0.15);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.6)';
+    ctx.fillRect(Math.round(x - w * 0.32), Math.round(y - h * 0.8), 1, Math.max(2, Math.round(h * 0.45)));
+  }
+
+  function drawCrystalCluster(c, time, night) {
+    const pulse = 0.5 + 0.5 * Math.sin(time * 2 + c.x * 0.08);
+    ctx.globalAlpha = (night ? 0.3 : 0.16) + pulse * 0.12;
+    ellipse(c.x, c.y, c.s * 1.4, c.s * 0.65, c.c);
+    ctx.globalAlpha = 1;
+
+    ctx.fillStyle = 'rgba(0,0,0,.3)';
+    ellipse(c.x, c.y + 1, c.s * 0.9, c.s * 0.28, '#000');
+
+    drawCrystalShard(c.x - c.s * 0.5, c.y, c.s * 0.85, c.c);
+    drawCrystalShard(c.x, c.y, c.s * 1.3, c.c);
+    drawCrystalShard(c.x + c.s * 0.55, c.y, c.s * 0.7, c.c);
+  }
+
+  function drawRocks() {
+    for (const r of rocks) {
+      const s = r.s * U * 3;
+      ctx.fillStyle = '#5f6170';
+      ctx.fillRect(Math.round(r.x), Math.round(r.y), Math.round(s), Math.round(s * 0.6));
+      ctx.fillStyle = '#868896';
+      ctx.fillRect(Math.round(r.x), Math.round(r.y), Math.round(s), Math.round(s * 0.22));
+    }
+  }
+
+  function drawRover(x, y, s) {
+    const r = (v) => Math.round(v);
+
+    ctx.globalAlpha = 0.3;
+    ellipse(x + 2, y + 5 * s, 9 * s, 3 * s, '#000');
+    ctx.globalAlpha = 1;
+
+    ctx.fillStyle = '#3a3b47';
+    ctx.fillRect(r(x - 6 * s), r(y + 1 * s), r(3 * s), r(3 * s));
+    ctx.fillRect(r(x + 3 * s), r(y + 1 * s), r(3 * s), r(3 * s));
+
+    ctx.fillStyle = '#aeb3c4';
+    ctx.fillRect(r(x - 7 * s), r(y - 2 * s), r(14 * s), r(4 * s));
+    ctx.fillStyle = '#82869a';
+    ctx.fillRect(r(x - 7 * s), r(y + 1 * s), r(14 * s), r(1 * s));
+
+    ctx.fillStyle = '#c9cede';
+    ctx.fillRect(r(x - 1 * s), r(y - 7 * s), r(1.2 * s), r(5 * s));
+    ctx.fillRect(r(x - 2.2 * s), r(y - 8 * s), r(2.4 * s), r(2 * s));
+
+    ctx.fillStyle = '#ffd27a';
+    ctx.fillRect(r(x + 6 * s), r(y - 1.6 * s), r(1.2 * s), r(1.2 * s));
+  }
+
+  function drawDish(d, time) {
+    const angle = d.a + (reduceMotion ? 0 : Math.sin(time * 0.5 + d.x * 0.02) * 0.16);
+    const x = d.x;
+    const y = d.y;
+    const r = d.r;
+
+    ctx.strokeStyle = '#9aa0b4';
+    ctx.lineWidth = Math.max(1, Math.round(U));
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x - r * 0.75, y + r * 1.5);
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + r * 0.75, y + r * 1.5);
+    ctx.moveTo(x, y);
+    ctx.lineTo(x, y + r * 1.6);
+    ctx.stroke();
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ellipse(0, 0, r, r * 0.52, '#b9becd');
+    ellipse(0, r * 0.08, r * 0.72, r * 0.32, '#878ca0');
+    ctx.fillStyle = '#5f6478';
+    ctx.fillRect(-1, -r * 0.1, 2, Math.round(r * 0.55));
+    ctx.fillStyle = '#6fe3ff';
+    ctx.fillRect(-1, -r * 0.16, 2, 2);
+    ctx.restore();
+  }
+
+  function drawRocket(x, y, s) {
+    const r = (v) => Math.round(v);
+
+    ctx.globalAlpha = 0.3;
+    ellipse(x + 2 * s, y + 5 * s, 8 * s, 3 * s, '#000');
+    ctx.globalAlpha = 1;
+
+    ctx.strokeStyle = '#8d92a6';
+    ctx.lineWidth = Math.max(1, Math.round(s));
+    ctx.beginPath();
+    ctx.moveTo(x - 3 * s, y);
+    ctx.lineTo(x - 6 * s, y + 5 * s);
+    ctx.moveTo(x + 3 * s, y);
+    ctx.lineTo(x + 6 * s, y + 5 * s);
+    ctx.stroke();
+
+    ctx.fillStyle = '#9aa0b4';
+    ctx.fillRect(r(x - 5 * s), r(y - 4 * s), r(2 * s), r(4 * s));
+    ctx.fillRect(r(x + 3 * s), r(y - 4 * s), r(2 * s), r(4 * s));
+
+    ctx.fillStyle = '#dfe2ee';
+    ctx.fillRect(r(x - 3 * s), r(y - 13 * s), r(6 * s), r(13 * s));
+
+    ctx.beginPath();
+    ctx.moveTo(x - 3 * s, y - 13 * s);
+    ctx.lineTo(x, y - 18 * s);
+    ctx.lineTo(x + 3 * s, y - 13 * s);
+    ctx.closePath();
+    ctx.fillStyle = '#eef1fa';
+    ctx.fill();
+
+    ctx.fillStyle = '#3d7ef0';
+    ctx.fillRect(r(x - 1 * s), r(y - 10 * s), r(2 * s), r(2 * s));
+    ctx.fillStyle = '#ffb02e';
+    ctx.fillRect(r(x - 3 * s), r(y - 7 * s), r(6 * s), r(1.4 * s));
+    ctx.fillStyle = '#7d8195';
+    ctx.fillRect(r(x - 4 * s), r(y), r(8 * s), r(1.4 * s));
+  }
+
+  function drawTank(x, y, r) {
+    ellipse(x + 1, y + 2, r * 1.1, r * 0.75, 'rgba(0,0,0,.3)');
+    ellipse(x, y, r, r * 0.72, '#aeb2c2');
+    ellipse(x - r * 0.18, y - r * 0.2, r * 0.55, r * 0.32, 'rgba(255,255,255,.35)');
+    ctx.strokeStyle = '#7d8195';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.ellipse(x, y, r, r * 0.72, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  function drawYard(x, y, w, h) {
+    ctx.strokeStyle = '#8d92a6';
+    ctx.lineWidth = Math.max(1, Math.round(U));
+    ctx.strokeRect(x + 0.5, y + 0.5, w, h);
+    ctx.strokeStyle = '#6f7488';
+    ctx.strokeRect(x + 3.5, y + 3.5, w - 6, h - 6);
+
+    ctx.fillStyle = '#9aa0b4';
+    const posts = 5;
+    for (let i = 0; i < posts; i++) {
+      const px = Math.round(x + (w / (posts - 1)) * i);
+      ctx.fillRect(px - 1, Math.round(y) - 3, 3, 4);
+      ctx.fillRect(px - 1, Math.round(y + h) - 1, 3, 4);
+    }
+
+    ctx.fillStyle = '#7d8195';
+    ctx.fillRect(Math.round(x + w * 0.6), Math.round(y + h * 0.52), 9, 7);
+    ctx.fillStyle = '#9aa0b4';
+    ctx.fillRect(Math.round(x + w * 0.6), Math.round(y + h * 0.52), 9, 2);
+  }
+
+  function drawBase(time, night) {
+    const x = base.x;
+    const y = base.y;
+    const r = baseR;
+
+    ctx.globalAlpha = 0.32;
+    ellipse(x + 4, y + 6, r * 1.25, r * 0.9, '#000');
+    ctx.globalAlpha = 1;
+
+    drawYard(x + r * 1.05, y - r * 0.62, r * 1.9, r * 1.3);
+
+    drawTank(x - r * 1.55, y + r * 0.1, r * 0.4);
+    drawTank(x - r * 0.95, y + r * 0.42, r * 0.3);
+
+    // dome foundation ring
+    ellipse(x, y + r * 0.12, r * 1.08, r * 0.94, '#5d6072');
+
+    // dome shell
+    ellipse(x, y, r, r * 0.84, '#bcc1cf');
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(x, y, r, r * 0.84, 0, 0, Math.PI * 2);
+    ctx.clip();
+
+    // alternating panel wedges
+    ctx.translate(x, y);
+    ctx.scale(1, 0.84);
+    for (let i = 0; i < 8; i++) {
+      if (i % 2) continue;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, r, (i / 8) * Math.PI * 2, ((i + 1) / 8) * Math.PI * 2);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(0,0,0,.07)';
+      ctx.fill();
+    }
+
+    // panel seams
+    ctx.strokeStyle = '#8b90a3';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * r * 0.26, Math.sin(a) * r * 0.26);
+      ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.64, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.32, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+
+    // shell highlight + rim
+    ellipse(x - r * 0.28, y - r * 0.3, r * 0.4, r * 0.22, 'rgba(255,255,255,.45)');
+    ctx.strokeStyle = '#787c90';
+    ctx.lineWidth = Math.max(1, Math.round(U));
+    ctx.beginPath();
+    ctx.ellipse(x, y, r, r * 0.84, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // portholes
+    ctx.fillStyle = '#2f3a5c';
+    for (const a of [-0.55, 0.5, 2.3, 3.7]) {
+      ctx.fillRect(Math.round(x + Math.cos(a) * r * 0.72) - 1, Math.round(y + Math.sin(a) * r * 0.6) - 1, 3, 2);
+    }
+
+    // hatch
+    ctx.fillStyle = '#6f7286';
+    ctx.fillRect(Math.round(x - r * 0.12), Math.round(y + r * 0.56), Math.round(r * 0.24), Math.round(r * 0.3));
+    ctx.fillStyle = '#ffd27a';
+    ctx.fillRect(Math.round(x - r * 0.02), Math.round(y + r * 0.68), 2, 2);
+
+    // rim lights
+    const glow = night ? 1 : 0.55;
+    ctx.globalAlpha = glow;
+    ctx.fillStyle = '#7ce38b';
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2 + 0.2;
+      ctx.fillRect(Math.round(x + Math.cos(a) * r * 0.94) - 1, Math.round(y + Math.sin(a) * r * 0.78) - 1, 2, 2);
+    }
+    ctx.globalAlpha = 1;
+
+    if (Math.sin(time * 3) > 0) {
+      ctx.fillStyle = '#ff5d73';
+      ctx.fillRect(Math.round(x + r * 0.5), Math.round(y - r * 0.62), 2, 2);
+    }
+  }
+
+  function drawAstronaut(time, night) {
+    const scale = astroScale;
+    const w = ASTRONAUT[0].length * scale;
+    const h = ASTRONAUT.length * scale;
+    const bob = reduceMotion ? 0 : Math.round(Math.sin(time * 2.2));
+    const jump = state.phase === 'win' && !reduceMotion ? Math.abs(Math.sin(time * 3)) * 5 * U : 0;
+
+    const x = Math.round(astro.x - w / 2);
+    const y = Math.round(astro.y - h + bob - jump);
+
+    ctx.globalAlpha = 0.35;
+    ellipse(astro.x + 1, astro.y + 1, w * 0.42, h * 0.1, '#000');
+    ctx.globalAlpha = 1;
+
+    if (night) {
+      ctx.globalAlpha = 0.16;
+      ellipse(astro.x, astro.y - h * 1.4, w * 0.8, h * 0.5, '#ffe9a8');
+      ctx.globalAlpha = 1;
+    }
+
+    drawSprite(ASTRONAUT, x, y, scale);
+  }
+
+  function drawFx(time) {
+    const fx = state.fx;
+    if (!fx) return;
+    const age = time - fx.t0;
+
+    if (fx.type === 'flare' && age < 3.2) {
+      ctx.globalAlpha = 0.12 + 0.07 * Math.sin(time * 6);
+      ctx.fillStyle = '#ff9a3c';
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalAlpha = 1;
+
+      ctx.strokeStyle = 'rgba(255, 200, 110, .75)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 5; i++) {
+        ctx.globalAlpha = 0.55 - i * 0.09;
+        ctx.beginPath();
+        ctx.arc(W * 0.95, H * 0.06, (12 + i * 9 + (age * 30) % 18) * U, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    if (fx.type === 'meteor') {
+      const tx = base.x;
+      const ty = base.y;
+      if (age < 0.7) {
+        const p = age / 0.7;
+        const sx = W * 0.95;
+        const sy = -H * 0.1;
+        const x = sx + (tx - sx) * p;
+        const y = sy + (ty - sy) * p;
+        ctx.strokeStyle = '#ffd27a';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x - 14, y - 9);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        ctx.fillStyle = '#fff3c4';
+        ctx.fillRect(Math.round(x) - 1, Math.round(y) - 1, 2, 2);
+      } else if (age < 1.7) {
+        const p = (age - 0.7) / 1.0;
+        ctx.globalAlpha = 1 - p;
+        ellipse(tx, ty, (6 + p * 14) * U, (4 + p * 8) * U, '#d8c48f');
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    if (fx.type === 'dust' && age < 4.5) {
+      ctx.fillStyle = 'rgba(216, 196, 143, .6)';
+      for (let i = 0; i < 34; i++) {
+        const px = ((i * 53 + age * 30) % (W + 20)) - 10;
+        const py = (i * 37) % H;
+        ctx.fillRect(Math.round(px), Math.round(py), 2, 1);
+      }
+    }
+
+    if (fx.type === 'sparkle' && age < 2.2) {
+      const spots = [
+        [cave.x, cave.y - 10 * U],
+        [cave.x + 8 * U, cave.y + 2 * U],
+        [base.x - baseR, base.y - baseR * 0.4],
+        [astro.x, astro.y - 18 * U],
+        [rover.x, rover.y - 8 * U],
+      ];
+      ctx.fillStyle = '#bff5ff';
+      for (let i = 0; i < spots.length; i++) {
+        const a = Math.max(0, 1 - age / 2.2) * (0.4 + 0.6 * Math.abs(Math.sin(time * 5 + i)));
+        ctx.globalAlpha = a;
+        const [sx, sy] = spots[i];
+        ctx.fillRect(Math.round(sx) - 1, Math.round(sy) - 3, 2, 7);
+        ctx.fillRect(Math.round(sx) - 3, Math.round(sy) - 1, 7, 2);
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function drawFloating(time) {
+    const scale = Math.max(2, Math.round(2 * U)) + 1;
+    const x = W * 0.72;
+    const y = H * 0.62 + Math.sin(time * 1.4) * 5;
+
+    ctx.globalAlpha = 0.14;
+    ellipse(x, y, 34 * U, 22 * U, '#7fbdff');
+    ctx.globalAlpha = 1;
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(Math.sin(time * 0.8) * 0.22);
+    const cols = ASTRONAUT[0].length;
+    drawSprite(ASTRONAUT, (-cols * scale) / 2, (-ASTRONAUT.length * scale) / 2, scale);
+    ctx.restore();
+  }
+
+  const confetti = Array.from({ length: 50 }, (_, i) => ({
+    x: (i * 97) % 320,
+    y: (i * 53) % 200,
+    speed: 12 + ((i * 17) % 24),
+    color: ['#ffb02e', '#7fbdff', '#7ce38b', '#ff4d6d', '#e6ebfa'][i % 5],
   }));
 
-  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function drawConfetti(time) {
+    const since = Math.min(8, Math.max(0, time - state.winAt));
+    if (since > 8) return;
+    for (const p of confetti) {
+      const y = (p.y + time * p.speed) % (H + 10);
+      const x = (p.x / 320) * W + Math.sin(time * 2 + p.y) * 6;
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = p.color;
+      ctx.fillRect(Math.round(x), Math.round(y), 2, 2);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawMap(time, night) {
+    ctx.save();
+    ctx.clip(terrainPath);
+
+    // pale regolith
+    ctx.fillStyle = '#b7b8c3';
+    ctx.fill(terrainPath);
+
+    // dark basalt half
+    ctx.fillStyle = '#2b2b38';
+    ctx.fill(basaltPath);
+
+    // soft regolith mottling
+    for (const p of patches) {
+      ctx.globalAlpha = 0.055;
+      ellipse(p.x, p.y, p.rx, p.ry, p.light ? '#ffffff' : '#000000');
+    }
+    ctx.globalAlpha = 1;
+
+    // dark irregular basin around the cave mouth
+    ctx.fillStyle = '#34333f';
+    ctx.fill(basinPath);
+    ctx.strokeStyle = 'rgba(18,18,28,.5)';
+    ctx.lineWidth = 2;
+    ctx.stroke(basinPath);
+
+    // regolith speckle
+    for (const sp of speckles) {
+      ctx.fillStyle = sp.light ? 'rgba(255,255,255,.13)' : 'rgba(0,0,0,.12)';
+      ctx.fillRect(sp.x, sp.y, sp.s, sp.s);
+    }
+    ctx.restore();
+
+    ctx.strokeStyle = 'rgba(16,16,28,.8)';
+    ctx.lineWidth = 2;
+    ctx.stroke(terrainPath);
+
+    for (const c of craters) drawCrater(c);
+    drawRocks();
+    drawCave(time, night);
+
+    for (const b of boulders) drawBoulder(b);
+    for (const c of crystals) drawCrystalCluster(c, time, night);
+
+    drawRover(rover.x, rover.y, U);
+    for (const d of dishes) drawDish(d, time);
+    drawRocket(rocket.x, rocket.y, U * 1.2);
+    drawBase(time, night);
+    drawAstronaut(time, night);
+
+    if (night) {
+      ctx.fillStyle = 'rgba(10, 18, 60, .4)';
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.globalAlpha = 0.16;
+      ellipse(base.x, base.y, baseR * 2.4, baseR * 1.8, '#ffd27a');
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function drawScene(time) {
+    const s = state;
+    const night = s.eventKey === 'night';
+
+    drawSpace(time, night);
+
+    if (s.phase === 'over') {
+      drawEarth(W * 0.78, H * 0.26, 14 * U);
+      drawFloating(time);
+      return;
+    }
+
+    drawMap(time, night);
+    drawFx(time);
+    if (s.phase === 'win') drawConfetti(time);
+  }
+
+  function frame(now) {
+    drawScene(now / 1000);
+    requestAnimationFrame(frame);
+  }
 
   function setFx(type) {
     const map = {
@@ -670,392 +1360,7 @@
     state.fx = map[type] ? { type: map[type], t0: performance.now() / 1000 } : null;
   }
 
-  function ellipse(x, y, rx, ry, color) {
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  function drawStars(time, night) {
-    for (const star of stars) {
-      const twinkle = reduceMotion ? 1 : 0.45 + 0.55 * Math.abs(Math.sin(time * 0.9 + star.p));
-      ctx.globalAlpha = (night ? 0.95 : 0.75) * twinkle;
-      ctx.fillStyle = COL.star;
-      ctx.fillRect(star.x, star.y, star.s, star.s);
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  function drawSun(time) {
-    const cx = 48;
-    const cy = 30;
-
-    const glow = ctx.createRadialGradient(cx, cy, 2, cx, cy, 26);
-    glow.addColorStop(0, 'rgba(255, 236, 170, .45)');
-    glow.addColorStop(1, 'rgba(255, 236, 170, 0)');
-    ctx.fillStyle = glow;
-    ctx.beginPath();
-    ctx.arc(cx, cy, 26, 0, Math.PI * 2);
-    ctx.fill();
-
-    ellipse(cx, cy, 8, 8, '#ffe07a');
-    ellipse(cx - 2, cy - 2, 3.5, 3.5, '#fff6cf');
-
-    if (!reduceMotion) {
-      ctx.globalAlpha = 0.4 + 0.2 * Math.sin(time * 2);
-      ctx.fillStyle = '#ffe9a8';
-      for (let i = 0; i < 4; i++) {
-        const a = (i / 4) * Math.PI * 2 + time * 0.4;
-        ctx.fillRect(Math.round(cx + Math.cos(a) * 14), Math.round(cy + Math.sin(a) * 14), 2, 2);
-      }
-      ctx.globalAlpha = 1;
-    }
-  }
-
-  function drawEarth() {
-    const cx = 258;
-    const cy = 38;
-    const r = 12;
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.clip();
-
-    ctx.fillStyle = '#2f6fe0';
-    ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
-    ctx.fillStyle = '#5fd08a';
-    ctx.beginPath();
-    ctx.ellipse(cx - 4, cy - 2, 5, 4, 0.4, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(cx + 5, cy + 5, 4, 3, -0.3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#eaf3ff';
-    ctx.globalAlpha = 0.75;
-    ctx.beginPath();
-    ctx.ellipse(cx + 2, cy - 7, 6, 2, 0.2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-    ctx.restore();
-
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = '#0d1430';
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-
-  function drawGround() {
-    ctx.fillStyle = '#79839f';
-    ellipse(42, 130, 72, 12);
-    ellipse(202, 132, 92, 14);
-    ellipse(298, 130, 62, 10);
-
-    ctx.fillStyle = COL.ground;
-    ctx.fillRect(0, 126, W, H - 126);
-    ctx.fillStyle = COL.groundTop;
-    ctx.fillRect(0, 126, W, 3);
-    ctx.fillStyle = COL.groundDark;
-    ctx.fillRect(0, 129, W, 2);
-
-    for (const crater of craters) {
-      ellipse(crater.x, crater.y, crater.rx, crater.ry, COL.crater);
-      ctx.globalAlpha = 0.35;
-      ellipse(crater.x, crater.y - 1, crater.rx * 0.7, crater.ry * 0.6, '#8b93b6');
-      ctx.globalAlpha = 1;
-    }
-
-    for (const speck of speckles) {
-      ctx.globalAlpha = 0.5;
-      ctx.fillStyle = speck.x % 2 ? '#a7b0cd' : '#8790b1';
-      ctx.fillRect(speck.x, speck.y, speck.s, speck.s);
-    }
-    ctx.globalAlpha = 1;
-
-    for (const rock of rocks) {
-      ctx.fillStyle = COL.crater;
-      ctx.fillRect(rock.x, rock.y, rock.w, rock.h);
-      ctx.fillStyle = '#aab2cf';
-      ctx.fillRect(rock.x, rock.y, rock.w, 1);
-    }
-  }
-
-  function drawBase(time, night) {
-    const cx = 96;
-    const baseY = 130;
-
-    // --- solar panels
-    for (const panel of [{ x: 16, y: 112, w: 26, h: 11 }, { x: 46, y: 114, w: 22, h: 9 }]) {
-      ctx.fillStyle = COL.metal;
-      ctx.fillRect(panel.x + 2, panel.y + panel.h, 2, baseY - panel.y - panel.h);
-      ctx.fillRect(panel.x + panel.w - 4, panel.y + panel.h, 2, baseY - panel.y - panel.h);
-      ctx.fillStyle = COL.panel;
-      ctx.fillRect(panel.x, panel.y, panel.w, panel.h);
-      ctx.strokeStyle = COL.panelLight;
-      ctx.lineWidth = 1;
-      ctx.strokeRect(panel.x + 0.5, panel.y + 0.5, panel.w - 1, panel.h - 1);
-      ctx.fillStyle = COL.panelLight;
-      for (let i = 1; i < 3; i++) ctx.fillRect(panel.x, panel.y + (panel.h / 3) * i, panel.w, 1);
-      for (let i = 1; i < 4; i++) ctx.fillRect(panel.x + (panel.w / 4) * i, panel.y, 1, panel.h);
-    }
-
-    // --- antenna
-    ctx.strokeStyle = '#c3cbe8';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(cx + 26, baseY - 26);
-    ctx.lineTo(cx + 30, baseY - 48);
-    ctx.stroke();
-    const blink = Math.sin(time * 3) > 0;
-    ctx.fillStyle = blink ? COL.red : '#5a2a3a';
-    ctx.fillRect(cx + 29, baseY - 51, 3, 3);
-
-    // --- dome shell
-    ctx.beginPath();
-    ctx.moveTo(cx - 34, baseY);
-    ctx.arc(cx, baseY, 34, Math.PI, 0);
-    ctx.closePath();
-    ctx.fillStyle = COL.dome;
-    ctx.fill();
-
-    ctx.save();
-    ctx.clip();
-    ctx.fillStyle = COL.domeShade;
-    ctx.fillRect(cx + 12, baseY - 40, 30, 40);
-    ctx.fillStyle = 'rgba(255,255,255,.5)';
-    ctx.fillRect(cx - 24, baseY - 30, 9, 3);
-    ctx.restore();
-
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = COL.domeLine;
-    ctx.beginPath();
-    ctx.arc(cx, baseY, 34, Math.PI, 0);
-    ctx.stroke();
-
-    // --- windows
-    const glow = night ? 0.55 : 0.22;
-    ctx.globalAlpha = glow;
-    ellipse(cx - 12, baseY - 17, 11, 9, COL.accent);
-    ellipse(cx + 15, baseY - 13, 8, 7, COL.accent);
-    ctx.globalAlpha = 1;
-    ellipse(cx - 12, baseY - 17, 5, 5, night ? '#ffe6a5' : COL.glass);
-    ellipse(cx + 15, baseY - 13, 3.5, 3.5, night ? '#ffe6a5' : COL.glass);
-
-    // --- door
-    ctx.beginPath();
-    ctx.moveTo(cx - 7, baseY);
-    ctx.lineTo(cx - 7, baseY - 9);
-    ctx.arc(cx, baseY - 9, 7, Math.PI, 0);
-    ctx.lineTo(cx + 7, baseY);
-    ctx.closePath();
-    ctx.fillStyle = '#2b3a6b';
-    ctx.fill();
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = '#4a5891';
-    ctx.stroke();
-
-    // --- foundation
-    ctx.fillStyle = COL.metal;
-    ctx.fillRect(cx - 40, baseY - 2, 80, 7);
-    ctx.fillStyle = '#6c7599';
-    ctx.fillRect(cx - 40, baseY - 2, 80, 2);
-  }
-
-  function drawAstronaut(time, night) {
-    const scale = 3;
-    const spriteW = ASTRONAUT[0].length * scale;
-    const spriteH = ASTRONAUT.length * scale;
-    const x = state.phase === 'title' ? 252 : state.phase === 'win' ? 246 : 182;
-    const feetY = 132;
-    const bob = reduceMotion ? 0 : Math.round(Math.sin(time * 2.2) * 1);
-    const jump = state.phase === 'win' && !reduceMotion
-      ? Math.abs(Math.sin(time * 3)) * 5
-      : 0;
-
-    ctx.globalAlpha = 0.28;
-    ellipse(x + spriteW / 2, feetY + 1, 13, 3.5, '#2a3055');
-    ctx.globalAlpha = 1;
-
-    // little headlamp beam at night
-    if (night) {
-      ctx.globalAlpha = 0.16;
-      ctx.fillStyle = '#ffe9a8';
-      ctx.beginPath();
-      ctx.moveTo(x + spriteW, feetY - spriteH + 14);
-      ctx.lineTo(x + spriteW + 30, feetY - spriteH + 4);
-      ctx.lineTo(x + spriteW + 30, feetY - spriteH + 26);
-      ctx.closePath();
-      ctx.fill();
-      ctx.globalAlpha = 1;
-    }
-
-    drawSprite(ASTRONAUT, x, feetY - spriteH + bob - jump, scale);
-  }
-
-  function drawFx(time, night) {
-    const fx = state.fx;
-    if (!fx) {
-      if (night) dimNight();
-      return;
-    }
-    const age = time - fx.t0;
-
-    if (fx.type === 'flare' && age < 3.2) {
-      ctx.globalAlpha = 0.1 + 0.06 * Math.sin(time * 6);
-      ctx.fillStyle = '#ff9a3c';
-      ctx.fillRect(0, 0, W, H);
-      ctx.globalAlpha = 1;
-      ctx.strokeStyle = 'rgba(255,190,90,.7)';
-      ctx.lineWidth = 1;
-      for (let i = 0; i < 5; i++) {
-        ctx.globalAlpha = 0.5 - i * 0.08;
-        ctx.beginPath();
-        ctx.arc(48, 30, 14 + i * 6 + (age * 6) % 6, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-      ctx.globalAlpha = 1;
-    }
-
-    if (fx.type === 'meteor') {
-      if (age < 0.7) {
-        const p = age / 0.7;
-        const x0 = 66, y0 = 10, x1 = 178, y1 = 128;
-        const x = x0 + (x1 - x0) * p;
-        const y = y0 + (y1 - y0) * p;
-        ctx.strokeStyle = '#ffd27a';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(x - 12, y - 7);
-        ctx.lineTo(x, y);
-        ctx.stroke();
-        ctx.fillStyle = '#fff3c4';
-        ctx.fillRect(x - 1, y - 1, 2, 2);
-      } else if (age < 1.6) {
-        const p = (age - 0.7) / 0.9;
-        ctx.globalAlpha = 1 - p;
-        ellipse(178, 128, 4 + p * 10, 2 + p * 4, '#d8c48f');
-        ctx.globalAlpha = 1;
-      }
-    }
-
-    if (fx.type === 'dust' && age < 4) {
-      ctx.fillStyle = 'rgba(216, 196, 143, .55)';
-      for (let i = 0; i < 26; i++) {
-        const px = ((i * 47 + age * 26) % (W + 20)) - 10;
-        const py = 118 + ((i * 13) % 34) + Math.sin(time * 2 + i) * 2;
-        ctx.fillRect(Math.round(px), Math.round(py), 2, 1);
-      }
-    }
-
-    if (fx.type === 'sparkle' && age < 2.2) {
-      const spots = [
-        [96, 100], [80, 118], [114, 122], [210, 108], [228, 124],
-      ];
-      ctx.fillStyle = '#bff5ff';
-      for (let i = 0; i < spots.length; i++) {
-        const a = Math.max(0, 1 - age / 2.2) * (0.4 + 0.6 * Math.abs(Math.sin(time * 5 + i)));
-        ctx.globalAlpha = a;
-        const [sx, sy] = spots[i];
-        ctx.fillRect(sx - 1, sy - 3, 2, 7);
-        ctx.fillRect(sx - 3, sy - 1, 7, 2);
-      }
-      ctx.globalAlpha = 1;
-    }
-
-    if (night) dimNight();
-  }
-
-  function dimNight() {
-    ctx.fillStyle = 'rgba(8, 12, 38, .3)';
-    ctx.fillRect(0, 0, W, H);
-    // dome light spill
-    ctx.globalAlpha = 0.14;
-    ellipse(96, 124, 46, 20, '#ffd27a');
-    ctx.globalAlpha = 1;
-  }
-
-  function drawFloating(time) {
-    const scale = 3;
-    const x = W / 2;
-    const y = 142 + Math.sin(time * 1.4) * 4;
-
-    ctx.globalAlpha = 0.16;
-    ellipse(x, y + 4, 30, 20, '#7fbdff');
-    ctx.globalAlpha = 1;
-
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(Math.sin(time * 0.8) * 0.22);
-    const cols = ASTRONAUT[0].length;
-    drawSprite(ASTRONAUT, (-cols * scale) / 2, (-ASTRONAUT.length * scale) / 2, scale);
-    ctx.restore();
-
-    // tether drifting away
-    ctx.strokeStyle = 'rgba(200, 214, 255, .35)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(x + 18, y + 10);
-    ctx.quadraticCurveTo(x + 40, y + 26 + Math.sin(time) * 4, x + 58, y + 12);
-    ctx.stroke();
-  }
-
-  const confetti = Array.from({ length: 46 }, () => ({
-    x: rand() * W,
-    y: rand() * H,
-    speed: 12 + rand() * 22,
-    color: ['#ffb02e', '#7fbdff', '#7ce38b', '#ff4d6d', '#e6ebfa'][Math.floor(rand() * 5)],
-  }));
-
-  function drawConfetti(time) {
-    const since = Math.min(6, Math.max(0, time - state.winAt));
-    if (since > 6) return;
-    for (const p of confetti) {
-      const y = (p.y + time * p.speed) % (H + 10);
-      const x = p.x + Math.sin(time * 2 + p.y) * 6;
-      ctx.globalAlpha = 0.9;
-      ctx.fillStyle = p.color;
-      ctx.fillRect(Math.round(x), Math.round(y), 2, 2);
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  function drawScene(time) {
-    const s = state;
-    const night = s.eventKey === 'night';
-
-    const sky = ctx.createLinearGradient(0, 0, 0, H);
-    sky.addColorStop(0, night ? '#03040f' : '#080b23');
-    sky.addColorStop(0.6, night ? '#0a0f2c' : '#161a44');
-    sky.addColorStop(1, night ? '#131838' : '#2a2456');
-    ctx.fillStyle = sky;
-    ctx.fillRect(0, 0, W, H);
-
-    drawStars(time, night);
-
-    if (s.phase === 'over') {
-      drawEarth();
-      drawFloating(time);
-      return;
-    }
-
-    if (!night) drawSun(time);
-    drawEarth();
-    drawGround();
-    drawBase(time, night);
-    drawAstronaut(time, night);
-    drawFx(time, night);
-
-    if (s.phase === 'win') drawConfetti(time);
-  }
-
-  function frame(now) {
-    drawScene(now / 1000);
-    requestAnimationFrame(frame);
-  }
-
-  /* ----------------------------------------------------------------- inputs */
+  /* ================================================================ inputs == */
   els.systems.addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-act]');
     if (!btn || btn.disabled || state.phase !== 'alloc') return;
@@ -1097,7 +1402,7 @@
 
   els.sound.addEventListener('click', () => {
     const muted = Sound.toggle();
-    els.sound.textContent = muted ? '🔇' : '🔊';
+    els.sound.textContent = muted ? 'ًں”‡' : 'ًں”ٹ';
     els.sound.setAttribute('aria-label', muted ? 'Unmute sound' : 'Mute sound');
     els.sound.title = muted ? 'Unmute sound' : 'Mute sound';
     if (!muted) Sound.click();
@@ -1119,7 +1424,7 @@
 
   $('#how-btn').addEventListener('click', () => openModal('modal-how'));
   $('#science-btn').addEventListener('click', () => openModal('modal-science'));
-  $('#science-btn-2').addEventListener('click', () => openModal('modal-science'));
+  $('#science-btn-hud').addEventListener('click', () => openModal('modal-science'));
 
   for (const btn of document.querySelectorAll('[data-close]')) {
     btn.addEventListener('click', closeModals);
@@ -1176,29 +1481,17 @@
   });
 
   /* ------------------------------------------------------------------- init */
+  resizeScene();
+  window.addEventListener('resize', resizeScene);
+  window.addEventListener('orientationchange', () => setTimeout(resizeScene, 120));
+
   buildSystems();
-  els.sound.textContent = Sound.muted ? '🔇' : '🔊';
+  els.sound.textContent = Sound.muted ? 'ًں”‡' : 'ًں”ٹ';
   els.sound.setAttribute('aria-label', Sound.muted ? 'Unmute sound' : 'Mute sound');
   els.hudHearts.innerHTML = heartsHTML(3);
   render();
   requestAnimationFrame(frame);
 
   // Handy for demos ("?play" jumps straight into the mission)
-  const q = new URLSearchParams(location.search);
-  if (q.has('play')) startRun();
-  if (q.has('over')) { startRun(); setTimeout(() => endMission('over', 'The outpost ran out of oxygen.'), 60); }
-  if (q.has('win')) { startRun(); state.hearts = 2; endMission('win'); }
-  if (q.has('modal')) openModal(`modal-${q.get('modal')}`);
-  if (q.has('debug')) {
-    setTimeout(() => {
-      const out = document.createElement('pre');
-      out.style.cssText = 'position:fixed;inset:auto 0 0 0;z-index:999;margin:0;background:#000;color:#0f0;font:11px monospace;padding:6px;white-space:pre-wrap';
-      const cw = document.documentElement.clientWidth;
-      const bad = [...document.querySelectorAll('body *')]
-        .filter((el) => el.getBoundingClientRect().right > cw + 1)
-        .map((el) => `${el.tagName}.${el.className} r=${Math.round(el.getBoundingClientRect().right)}`);
-      out.textContent = `scrollW=${document.documentElement.scrollWidth} clientW=${cw}\n` + bad.slice(0, 14).join('\n');
-      document.body.appendChild(out);
-    }, 400);
-  }
+  if (new URLSearchParams(location.search).has('play')) startRun();
 })();
