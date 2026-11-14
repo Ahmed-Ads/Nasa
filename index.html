@@ -6,13 +6,24 @@
 <title>Junior Astronaut Mission Trainer — Level 1: The Moon</title>
 <meta name="description" content="A pixel-art mission trainer for ages 7–12. Plan power, walk the lunar outpost, and keep the crew alive across three missions. Built for the 2026 NASA Space Apps Challenge.">
 <meta name="theme-color" content="#06070f">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=2.0.0">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%2306070f'/%3E%3Ccircle cx='8' cy='8' r='5' fill='%23c2c6d4'/%3E%3Ccircle cx='6' cy='6.5' r='1.5' fill='%239a9fb2'/%3E%3Ccircle cx='10' cy='10' r='1' fill='%239a9fb2'/%3E%3C/svg%3E">
 </head>
 <body>
 <noscript><p class="noscript">This mission needs JavaScript to run. Please enable it and reload.</p></noscript>
 
 <div class="app" id="app">
+  <div class="loading" id="screen-loading">
+    <div class="loading-card">
+      <p class="kicker">NASA Space Apps 2026</p>
+      <h1 class="loading-title">JUNIOR ASTRONAUT</h1>
+      <div class="load-track"><div class="load-bar" id="load-bar"></div></div>
+      <p class="load-count" id="load-count">Loading outpost…</p>
+      <p class="load-tip" id="load-tip"></p>
+      <button class="btn btn-primary btn-lg gate" id="start-gate" type="button" disabled>PRESS TO START</button>
+      <p class="loading-version">v2.0.0 · no data leaves your device</p>
+    </div>
+  </div>
   <div class="viewport" id="viewport">
     <canvas id="scene" width="640" height="360" role="img"
       aria-label="Top-down pixel-art lunar outpost: a dome habitat, solar field, utility yard, comms dish, rover, ice patch and an astronaut walking."></canvas>
@@ -31,6 +42,7 @@
       <span class="chip chip-dose" id="hud-dose" hidden>☢ 0</span>
     </div>
     <div class="hud-right">
+      <button class="icon-btn" id="pause-btn" type="button" aria-label="Pause" title="Pause">⏸</button>
       <button class="icon-btn" id="map-btn-hud" type="button" aria-label="Mini-map" title="Mini-map">🗺</button>
       <button class="icon-btn" id="science-btn-hud" type="button" aria-label="Mission Science" title="Mission Science">📖</button>
       <button class="icon-btn" id="sound-btn" type="button" aria-label="Mute sound" title="Mute sound">🔊</button>
@@ -54,12 +66,17 @@
       <p class="lede">It's 2087. You run <strong>Shackleton Outpost</strong> at the Moon's south pole.
         Plan the power, walk the base, and keep the crew alive across three missions.</p>
       <div class="menu">
-        <button class="btn btn-primary btn-lg" id="play-btn" type="button">Choose Mission ▶</button>
+        <button class="btn btn-primary btn-lg" id="play-btn" type="button">START GAME ▶</button>
         <div class="menu-row">
-          <button class="btn btn-sm" id="how-btn" type="button">How to Play</button>
-          <button class="btn btn-sm" id="science-btn" type="button">Mission Science</button>
+          <button class="btn btn-sm" id="menu-settings" type="button">SETTINGS</button>
+          <button class="btn btn-sm" id="menu-credits" type="button">CREDITS</button>
+        </div>
+        <div class="menu-row">
+          <button class="btn btn-sm" id="how-btn" type="button">HOW TO PLAY</button>
+          <button class="btn btn-sm" id="menu-quit" type="button">QUIT</button>
         </div>
       </div>
+      <p class="title-version" id="title-version">v2.0.0</p>
       <div class="level-chips" aria-hidden="true">
         <span class="level is-current">1.1 Prep</span>
         <span class="level">1.2 Leak</span>
@@ -87,6 +104,36 @@
       </div>
       <div class="locked-row" id="locked-cards"></div>
       <p class="select-note">Finish a mission to unlock the next one. Stars are saved on this device.</p>
+    </div>
+  </div>
+
+  <!-- ========================================================= briefing === -->
+  <div class="overlay overlay--brief" id="screen-brief" hidden>
+    <div class="brief-card">
+      <button class="link-btn brief-back" id="brief-back" type="button">◀ LEVEL MAP</button>
+      <p class="kicker" id="brief-kicker">Mission 1.1 · The Moon</p>
+      <h2 class="brief-title" id="brief-title">Lunar Outpost Prep</h2>
+      <p class="brief-goal" id="brief-goal"></p>
+      <div class="brief-why">
+        <p class="learn-label">Why this matters for real astronauts</p>
+        <p id="brief-why"></p>
+      </div>
+      <table class="brief-table" id="brief-table"></table>
+      <div class="brief-controls" id="brief-controls"></div>
+      <div class="menu-row brief-actions">
+        <button class="btn btn-primary" id="brief-start" type="button">START ▶</button>
+        <button class="btn" id="brief-back2" type="button">BACK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================== goodbye == -->
+  <div class="overlay overlay--goodbye" id="screen-goodbye" hidden>
+    <div class="title-card">
+      <p class="kicker">Mission control signing off</p>
+      <h1 class="title">See you<br><span>next sol</span></h1>
+      <p class="lede">Your progress is saved on this device. Close the tab whenever you are ready.</p>
+      <button class="btn btn-primary btn-lg" id="goodbye-back" type="button">BACK TO START ▶</button>
     </div>
   </div>
 
@@ -145,6 +192,21 @@
       <ul class="log" id="log" aria-live="polite" aria-label="Mission log"></ul>
     </div>
   </section>
+
+  <aside class="tracker" id="tracker" hidden>
+    <button class="tracker-head" id="tracker-toggle" type="button">
+      <span>OBJECTIVES</span><span id="tracker-count">0/0</span><span class="tracker-chev">▾</span>
+    </button>
+    <ul class="tracker-list" id="tracker-list"></ul>
+    <button class="tracker-info" id="tracker-info" type="button">ⓘ Mission briefing</button>
+  </aside>
+
+  <div class="touch" id="touch-controls" hidden>
+    <div class="stick" id="stick"><div class="stick-knob" id="stick-knob"></div></div>
+    <button class="act-btn" id="act-btn" type="button" aria-label="Interact">
+      <span id="act-icon">E</span><span id="act-label">ACT</span>
+    </button>
+  </div>
 
   <!-- ========================================================== debrief === -->
   <div class="overlay overlay--debrief" id="screen-debrief" hidden>
@@ -242,7 +304,55 @@
   </div>
 </div>
 
-<script src="assets/manifest.js"></script>
-<script src="game.js" defer></script>
+<div class="modal" id="modal-pause" hidden>
+  <div class="modal-card pause-card" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+    <h2 id="pause-title">PAUSED</h2>
+    <div class="pause-menu">
+      <button class="btn btn-primary" id="pause-continue" type="button">CONTINUE</button>
+      <button class="btn" id="pause-restart" type="button">RESTART</button>
+      <button class="btn" id="pause-map" type="button">LEVEL MAP</button>
+      <button class="btn" id="pause-menu" type="button">MAIN MENU</button>
+    </div>
+    <p class="modal-note">Esc / browser Back opens this menu. Progress autosaves on this device.</p>
+  </div>
+</div>
+
+<div class="modal" id="modal-confirm" hidden>
+  <div class="modal-card confirm-card" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+    <h2 id="confirm-title">Are you sure?</h2>
+    <p id="confirm-text">This will end the current mission.</p>
+    <div class="menu-row">
+      <button class="btn btn-accent" id="confirm-yes" type="button">YES</button>
+      <button class="btn" id="confirm-no" type="button">NO</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="modal-settings" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <button class="modal-close" data-close type="button" aria-label="Close">✕</button>
+    <h2 id="settings-title">SETTINGS</h2>
+    <div class="setting-row"><span>Sound</span><button class="mini-btn" id="set-sound" type="button">ON</button></div>
+    <div class="setting-row"><span>Touch controls</span><button class="mini-btn" id="set-touch" type="button">AUTO</button></div>
+    <div class="setting-row"><span>Reduced motion</span><button class="mini-btn" id="set-motion" type="button">OFF</button></div>
+    <div class="setting-row"><span>Unlock all missions (judge mode)</span><button class="mini-btn" id="set-unlock" type="button">OFF</button></div>
+    <p class="modal-note">No data leaves your device. Progress and settings are saved only in this browser.</p>
+  </div>
+</div>
+
+<div class="modal" id="modal-credits" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="credits-title">
+    <button class="modal-close" data-close type="button" aria-label="Close">✕</button>
+    <h2 id="credits-title">CREDITS</h2>
+    <p><strong>Junior Astronaut Mission Trainer</strong> — NASA Space Apps Challenge 2026, Level 1.</p>
+    <p>Science sources: NASA ECLSS / ISS, NASA Space Weather &amp; DONKI, NASA Moon (LRO, Diviner, LCROSS), NASA space-radiation research, NASA lunar-dust research.</p>
+    <p>Art is AI-generated catalog art, sliced locally with <code>tools/slice_assets.py</code>. Fonts are system fonts.</p>
+    <p><strong>Privacy:</strong> no third-party scripts, no analytics, no cookies. No data leaves your device; progress is saved on this device only.</p>
+    <p class="credits-version" id="credits-version">Version 2.0.0</p>
+  </div>
+</div>
+
+<script src="assets/manifest.js?v=2.0.0"></script>
+<script src="game.js?v=2.0.0" defer></script>
 </body>
 </html>

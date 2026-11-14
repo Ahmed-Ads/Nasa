@@ -15,11 +15,13 @@
   /* ====================================================== asset preloading == */
   const SPR = {};
   const manifest = window.JAMT_ASSETS || {};
+  window.__jamtLoad = { total: Object.keys(manifest).length || 1, done: 0 };
+  const bumpLoad = () => { window.__jamtLoad.done += 1; };
   for (const [key, info] of Object.entries(manifest)) {
     const img = new Image();
     SPR[key] = { img, ok: false, w: info.w, h: info.h };
-    img.onload = () => { SPR[key].ok = true; if (window.__jamtOnAsset) window.__jamtOnAsset(); };
-    img.onerror = () => { SPR[key].ok = false; };
+    img.onload = () => { SPR[key].ok = true; bumpLoad(); if (window.__jamtOnAsset) window.__jamtOnAsset(); };
+    img.onerror = () => { SPR[key].ok = false; bumpLoad(); };
     img.src = info.src;
   }
 
@@ -200,10 +202,34 @@
   function safeSet(key, value) {
     try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* private mode */ }
   }
-  const progress = safeGet('jamt.progress', {});
+  // Save schema v2: keep stars, drop anything corrupt, never crash on old data.
+  const SAVE_VERSION = 2;
+  const progress = (() => {
+    let p = safeGet('jamt.progress', {});
+    if (!p || typeof p !== 'object' || Array.isArray(p)) p = {};
+    const clean = {};
+    for (const id of ['1.1', '1.2', '1.3']) {
+      const n = Number(p[id]);
+      if (Number.isFinite(n)) clean[id] = Math.max(0, Math.min(3, Math.round(n)));
+    }
+    if (safeGet('jamt.save', {}).v !== SAVE_VERSION) safeSet('jamt.save', { v: SAVE_VERSION });
+    return clean;
+  })();
+  const settings = (() => {
+    const d = { sound: true, touch: 'auto', motion: false, unlock: false };
+    const raw = safeGet('jamt.settings', {});
+    if (!raw || typeof raw !== 'object') return d;
+    if (typeof raw.sound === 'boolean') d.sound = raw.sound;
+    if (['auto', 'on', 'off'].includes(raw.touch)) d.touch = raw.touch;
+    if (typeof raw.motion === 'boolean') d.motion = raw.motion;
+    if (typeof raw.unlock === 'boolean') d.unlock = raw.unlock;
+    return d;
+  })();
+  function saveSettings() { safeSet('jamt.settings', settings); }
   const starsFor = (id) => Number(progress[id] || 0);
   const totalStars = () => LEVEL_ORDER.reduce((n, id) => n + starsFor(id), 0);
   const isUnlocked = (id) => {
+    if (settings.unlock) return true;
     const i = LEVEL_ORDER.indexOf(id);
     return i <= 0 || starsFor(LEVEL_ORDER[i - 1]) > 0;
   };
@@ -305,12 +331,25 @@
     els.title.hidden = name !== 'title';
     els.select.hidden = name !== 'select';
     els.debrief.hidden = name !== 'debrief';
+    const brief = document.getElementById('screen-brief');
+    if (brief) brief.hidden = name !== 'brief';
+    const goodbye = document.getElementById('screen-goodbye');
+    if (goodbye) goodbye.hidden = name !== 'goodbye';
     els.hud.hidden = name !== 'game';
     els.panel.hidden = name !== 'game';
     els.interact.hidden = name !== 'game';
+    const tracker = document.getElementById('tracker');
+    if (tracker) tracker.hidden = name !== 'game';
+    updateHash();
   }
   function goTitle() {
     state.runId += 1; state.phase = 'plan'; showScreen('title'); state.fx = null;
+  }
+  function updateHash() {
+    const map = { title: '#/title', select: '#/map', brief: '#/brief', game: '#/level', debrief: '#/debrief', goodbye: '#/goodbye' };
+    const h = map[state.screen];
+    if (!h) return;
+    try { if (location.hash !== h) history.pushState({ screen: state.screen }, '', h); } catch { /* file:// */ }
   }
   function goSelect() {
     state.runId += 1; state.phase = 'plan'; state.fx = null;
@@ -346,7 +385,7 @@
     for (const card of els.missionCards.querySelectorAll('.mission-card')) {
       card.addEventListener('click', () => {
         if (card.classList.contains('is-locked')) return;
-        Sound.init(); Sound.click(); startLevel(card.dataset.level);
+        Sound.init(); Sound.click(); openBriefing(card.dataset.level);
       });
     }
   }
@@ -1270,6 +1309,7 @@
 
     // console height for the prompt
     requestAnimationFrame(measureConsole);
+    renderTracker();
   }
 
   function forecastFor(s) {
@@ -1353,6 +1393,8 @@
   function startLevel(id) {
     const L = LEVELS[id];
     if (!L) return;
+    const loadEl = document.getElementById('screen-loading');
+    if (loadEl) loadEl.hidden = true;
     const s = state;
     s.runId += 1;
     s.levelId = id; s.level = L;
@@ -1398,6 +1440,7 @@
     showScreen('game');
     els.panel.classList.remove('is-collapsed');
     resize();
+    renderTracker();
     addLog(`<b>Mission ${L.id} · ${L.title}</b> — ${L.location}`, 'head');
     startSol(true);
     render();
@@ -1928,7 +1971,7 @@
   els.stationPlus.addEventListener('click', () => { if (stationRow) addCell(stationRow); });
   els.stationDone.addEventListener('click', closeStationPanel);
 
-  $('#play-btn').addEventListener('click', () => { Sound.init(); Sound.click(); goSelect(); });
+  $('#play-btn')?.addEventListener('click', () => { Sound.init(); Sound.click(); goSelect(); });
   $('#select-back').addEventListener('click', () => { Sound.click(); goTitle(); });
   els.retry.addEventListener('click', () => { Sound.click(); startLevel(state.levelId); });
   els.revive.addEventListener('click', () => { if (!els.revive.disabled) reviveMission(); });
@@ -1945,7 +1988,7 @@
     els.sound.setAttribute('aria-label', muted ? 'Unmute sound' : 'Mute sound');
     if (!muted) Sound.click();
   });
-  $('#map-btn-hud').addEventListener('click', () => document.body.classList.toggle('no-minimap'));
+  $('#map-btn-hud')?.addEventListener('click', () => document.body.classList.toggle('no-minimap'));
 
   function closeModals() { for (const m of document.querySelectorAll('.modal')) m.hidden = true; }
   function openModal(id) {
@@ -1954,9 +1997,9 @@
     m.hidden = false; Sound.click();
     const c = m.querySelector('[data-close]'); if (c) c.focus();
   }
-  $('#how-btn').addEventListener('click', () => openModal('modal-how'));
-  $('#science-btn').addEventListener('click', () => openModal('modal-science'));
-  $('#science-btn-hud').addEventListener('click', () => openModal('modal-science'));
+  $('#how-btn')?.addEventListener('click', () => openModal('modal-how'));
+  $('#science-btn')?.addEventListener('click', () => openModal('modal-science'));
+  $('#science-btn-hud')?.addEventListener('click', () => openModal('modal-science'));
   for (const b of document.querySelectorAll('[data-close]')) b.addEventListener('click', () => { closeModals(); closeStationPanel(); });
   for (const m of document.querySelectorAll('.modal')) m.addEventListener('click', (e) => { if (e.target === m) { closeModals(); closeStationPanel(); } });
 
@@ -2060,6 +2103,277 @@
     if (q.has('select')) goSelect();
     else if (q.has('play')) startLevel('1.1');
   }
+
+
+  /* ============ iteration 2: loading, menus, briefing, pause, touch ====== */
+  const BUILD_VERSION = '2.0.0';
+  const TIPS = [
+    'Did you know? ISS life support recovers about 98% of the crew’s water (NASA ECLSS).',
+    'Did you know? Water ice hides in permanently shadowed craters at the lunar south pole (LRO/LCROSS).',
+    'Did you know? Crews shelter in place during solar particle events (NASA space weather).',
+    'Did you know? About 4 g/cm² of regolith is enough to get below 30-day radiation limits.',
+    'Did you know? Coronal mass ejections take about 1–4 days to reach Earth (NASA DONKI).',
+  ];
+  const BRIEFS = {
+    '1.1': {
+      goal: 'Get the outpost ready before the crew lands: O₂ ≥ 70%, water ≥ 60% and battery ≥ 3 by Sol 5.',
+      why: 'ISS life support makes oxygen from water and electricity. South-pole crater rims stay sunlit, but terrain still shadows solar arrays.',
+      rows: [
+        ['icons/o2', 'O₂ cells', 'Switchboard (battery bank)', 'O₂ generator', 'Breathing air; uses water'],
+        ['icons/water', 'Ice', 'Shaded crater (SW)', 'Water tank', 'Only source of new water'],
+        ['icons/battery', 'Battery canisters', 'Cargo crates', 'Battery bank', 'Stored power for shadows'],
+        ['power/solar_a', 'Spare panel', 'Crates', 'Solar field', '+1 solar cell per sol'],
+      ],
+    },
+    '1.2': {
+      goal: 'Seal the burst recycler pipe and keep water ≥ 40% at the end of Sol 6.',
+      why: 'ISS crews close hatches, locate the leak, seal it with Kapton tape, then cure epoxy. The 2018 Soyuz leak was a drilled hole, not a meteoroid.',
+      rows: [
+        ['icons/water', 'Water', 'Recycler + ice', 'Crew', 'Drinking and food; rationing cuts use'],
+        ['repair/toolbox', 'Toolbox + tape', 'Crates', 'Leak site', 'Stage A: cut the leak to 15%'],
+        ['repair/gears', 'Repair cells', 'Switchboard', 'Patch', 'Stage B: 2 sols to cure'],
+      ],
+    },
+    '1.3': {
+      goal: 'Keep radiation dose ≤ 60 and O₂ ≥ 30% after Sol 6.',
+      why: 'Crews shelter from solar particle events; ~4 g/cm² of regolith gets below 30-day limits, but extra thickness barely stops cosmic rays.',
+      rows: [
+        ['icons/shield', 'Regolith bags', 'Bunker wall (NW)', 'Bunker', '+shielding, lowers storm dose'],
+        ['icons/o2', 'O₂ canisters', 'Cargo crates', 'O₂ rack', '+25 O₂ (game assumption)'],
+        ['icons/battery', 'Battery canisters', 'Crates', 'Battery bank', 'Power through a long shadow'],
+        ['fx/sun', 'Space weather', 'Comms dish (N)', 'Forecast', 'Reveals the exact storm sol'],
+      ],
+    },
+  };
+
+  const flowEls = {
+    loading: $('#screen-loading'), gate: $('#start-gate'), bar: $('#load-bar'),
+    count: $('#load-count'), tip: $('#load-tip'),
+    brief: $('#screen-brief'), briefTitle: $('#brief-title'), briefKicker: $('#brief-kicker'),
+    briefGoal: $('#brief-goal'), briefWhy: $('#brief-why'), briefTable: $('#brief-table'),
+    briefControls: $('#brief-controls'),
+    pause: $('#modal-pause'), confirm: $('#modal-confirm'), confirmText: $('#confirm-text'),
+    settings: $('#modal-settings'), credits: $('#modal-credits'),
+    tracker: $('#tracker'), trackerList: $('#tracker-list'), trackerCount: $('#tracker-count'),
+    touch: $('#touch-controls'), stick: $('#stick'), knob: $('#stick-knob'), act: $('#act-btn'),
+  };
+  let confirmYes = null;
+
+  function applySettings() {
+    document.body.classList.toggle('reduce-motion', !!settings.motion);
+    if (settings.sound === false && !Sound.muted) Sound.toggle();
+    if (settings.sound === true && Sound.muted) Sound.toggle();
+    const touchOn = settings.touch === 'on' || (settings.touch === 'auto' && window.matchMedia('(pointer: coarse)').matches);
+    document.body.classList.toggle('touch-on', touchOn);
+    if (flowEls.touch) flowEls.touch.hidden = !touchOn;
+    const set = (id, label) => { const b = document.getElementById(id); if (b) b.textContent = label; };
+    set('set-sound', settings.sound ? 'ON' : 'OFF');
+    set('set-touch', settings.touch.toUpperCase());
+    set('set-motion', settings.motion ? 'ON' : 'OFF');
+    set('set-unlock', settings.unlock ? 'ON' : 'OFF');
+  }
+
+  function openPause() {
+    if (state.screen !== 'game') return;
+    if (document.querySelector('.modal:not([hidden])')) return;
+    flowEls.pause.hidden = false;
+    Sound.click();
+    state.paused = true;
+  }
+  function closePause() { flowEls.pause.hidden = true; state.paused = false; }
+
+  function askConfirm(text, onYes) {
+    flowEls.confirmText.textContent = text;
+    confirmYes = onYes;
+    flowEls.confirm.hidden = false;
+  }
+  function closeConfirm() { flowEls.confirm.hidden = true; confirmYes = null; }
+
+  function quitToGoodbye() {
+    closeConfirm(); closePause();
+    state.runId += 1;
+    showScreen('goodbye');
+    Sound.click();
+  }
+
+  function renderBrief(id) {
+    const L = LEVELS[id];
+    const B = BRIEFS[id];
+    if (!L || !B) { goSelect(); return; }
+    state.briefId = id;
+    flowEls.briefKicker.textContent = `Mission ${id} · The Moon`;
+    flowEls.briefTitle.textContent = L.title;
+    flowEls.briefGoal.textContent = B.goal;
+    flowEls.briefWhy.textContent = B.why;
+    flowEls.briefTable.innerHTML = '<thead><tr><th></th><th>What</th><th>Where</th><th>Goes to</th><th>What it does</th></tr></thead><tbody>'
+      + B.rows.map((r) => `<tr><td>${imgTag(r[0], '', r[1])}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td></tr>`).join('')
+      + '</tbody>';
+    const coarse = window.matchMedia('(pointer: coarse)').matches;
+    flowEls.briefControls.innerHTML = coarse
+      ? '<span>Joystick: walk</span><span>ACT: pick up / use</span><span>Tap a highlighted object</span><span>⏸ Pause</span>'
+      : '<span>WASD / arrows: walk</span><span>Click: move</span><span>Hold E: use</span><span>1–3 / Shift: cells</span><span>Space: EVA</span><span>Esc: pause</span>';
+  }
+  function openBriefing(id) { renderBrief(id); showScreen('brief'); }
+
+  function renderTracker() {
+    const listEl = document.getElementById('tracker-list');
+    const countEl = document.getElementById('tracker-count');
+    if (!listEl || !countEl || !state.level) return;
+    const s = state, L = s.level;
+    let items = [];
+    if (L.id === '1.1') {
+      items = [
+        { label: 'O₂ reserve', value: `${Math.round(s.res.o2 || 0)}/70`, done: (s.res.o2 || 0) >= 70 },
+        { label: 'Water reserve', value: `${Math.round(s.res.water || 0)}/60`, done: (s.res.water || 0) >= 60 },
+        { label: 'Battery charge', value: `${Math.round(getBattery())}/3`, done: getBattery() >= 3 },
+        { label: 'Crew landing', value: s.slip ? `slip ${s.slip}` : 'Sol 5', done: false },
+      ];
+    } else if (L.id === '1.2') {
+      items = [
+        { label: 'Isolate hatch', value: s.isolated ? 'done' : '—', done: s.isolated },
+        { label: 'Kapton tape', value: s.taped ? 'done' : '—', done: s.taped },
+        { label: 'Cure patch', value: `${s.patch}/2`, done: s.patched },
+        { label: 'Reopen hatch', value: s.reopened ? 'done' : '—', done: s.reopened },
+        { label: 'Water ≥ 40%', value: `${Math.round(s.res.water || 0)}%`, done: (s.res.water || 0) >= 40 },
+      ];
+    } else {
+      items = [
+        { label: 'Check the dish', value: s.stormKnown ? 'done' : '—', done: !!s.stormKnown },
+        { label: 'Shelter crew', value: s.sheltered ? 'done' : '—', done: !!s.sheltered },
+        { label: 'Dose ≤ 60', value: `${Math.round(s.dose || 0)}`, done: (s.dose || 0) <= RULES.doseLimit.value },
+        { label: 'O₂ ≥ 30%', value: `${Math.round(s.res.o2 || 0)}%`, done: (s.res.o2 || 0) >= 30 },
+      ];
+    }
+    listEl.innerHTML = items.map((i) =>
+      `<li class="${i.done ? 'done' : ''}"><span>${i.label}</span><b>${i.value}</b></li>`).join('');
+    countEl.textContent = `${items.filter((i) => i.done).length}/${items.length}`;
+  }
+
+  function wireFlow() {
+    document.getElementById('menu-settings').addEventListener('click', () => { flowEls.settings.hidden = false; Sound.click(); });
+    document.getElementById('menu-credits').addEventListener('click', () => { flowEls.credits.hidden = false; Sound.click(); });
+    document.getElementById('menu-quit').addEventListener('click', () => askConfirm('Quit the game? Your saved stars will stay on this device.', () => { closeConfirm(); showScreen('goodbye'); }));
+    document.getElementById('goodbye-back').addEventListener('click', () => { Sound.click(); showScreen('title'); });
+    document.getElementById('credits-version').textContent = `Version ${BUILD_VERSION}`;
+    const tv = document.getElementById('title-version');
+    if (tv) tv.textContent = `v${BUILD_VERSION}`;
+
+    document.getElementById('brief-start').addEventListener('click', () => { Sound.init(); Sound.click(); startLevel(state.briefId || '1.1'); });
+    document.getElementById('brief-back').addEventListener('click', () => { Sound.click(); goSelect(); });
+    document.getElementById('brief-back2').addEventListener('click', () => { Sound.click(); goSelect(); });
+    document.getElementById('tracker-info').addEventListener('click', () => renderBrief(state.levelId) || showScreen('brief'));
+    document.getElementById('tracker-toggle').addEventListener('click', () => flowEls.tracker.classList.toggle('is-collapsed'));
+
+    document.getElementById('pause-btn').addEventListener('click', openPause);
+    document.getElementById('pause-continue').addEventListener('click', () => { closePause(); Sound.click(); });
+    document.getElementById('pause-restart').addEventListener('click', () => askConfirm('Restart this mission? Progress in the current sol will be lost.', () => {
+      closeConfirm(); closePause(); startLevel(state.levelId);
+    }));
+    document.getElementById('pause-map').addEventListener('click', () => askConfirm('Leave to the level map? This mission will not be saved.', () => {
+      closeConfirm(); closePause(); goSelect();
+    }));
+    document.getElementById('pause-menu').addEventListener('click', () => askConfirm('Return to the main menu? This mission will not be saved.', () => {
+      closeConfirm(); closePause(); goTitle();
+    }));
+    document.getElementById('confirm-yes').addEventListener('click', () => { const fn = confirmYes; closeConfirm(); if (fn) fn(); });
+    document.getElementById('confirm-no').addEventListener('click', () => { closeConfirm(); Sound.click(); });
+
+    document.getElementById('set-sound').addEventListener('click', () => { settings.sound = !settings.sound; saveSettings(); applySettings(); if (settings.sound) Sound.click(); });
+    document.getElementById('set-touch').addEventListener('click', () => {
+      settings.touch = settings.touch === 'auto' ? 'on' : settings.touch === 'on' ? 'off' : 'auto';
+      saveSettings(); applySettings();
+    });
+    document.getElementById('set-motion').addEventListener('click', () => { settings.motion = !settings.motion; saveSettings(); applySettings(); });
+    document.getElementById('set-unlock').addEventListener('click', () => { settings.unlock = !settings.unlock; saveSettings(); applySettings(); if (state.screen === 'select') renderSelect(); });
+
+    // Esc / browser back / pause
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
+      e.preventDefault();
+      if (!flowEls.confirm.hidden) { closeConfirm(); return; }
+      if (!flowEls.pause.hidden) { closePause(); return; }
+      if (!flowEls.settings.hidden) { flowEls.settings.hidden = true; return; }
+      if (!flowEls.credits.hidden) { flowEls.credits.hidden = true; return; }
+      if (state.screen === 'game') { e.preventDefault(); openPause(); }
+      else if (state.screen === 'brief') goSelect();
+      else if (state.screen === 'debrief') goSelect();
+    }, true);
+    window.addEventListener('popstate', () => {
+      if (state.screen === 'game') openPause();
+      else if (state.screen === 'brief') goSelect();
+    });
+    window.addEventListener('blur', () => { if (state.screen === 'game' && flowEls.pause.hidden) openPause(); });
+
+    // touch joystick + ACT
+    let stickId = null;
+    const setStick = (dx, dy) => {
+      const len = Math.hypot(dx, dy) || 1;
+      const nx = dx / len, ny = dy / len;
+      keys.left = nx < -0.35; keys.right = nx > 0.35;
+      keys.up = ny < -0.35; keys.down = ny > 0.35;
+      flowEls.knob.style.transform = `translate(${Math.max(-26, Math.min(26, dx))}px, ${Math.max(-26, Math.min(26, dy))}px)`;
+    };
+    const resetStick = () => {
+      keys.left = keys.right = keys.up = keys.down = false;
+      flowEls.knob.style.transform = '';
+      stickId = null;
+    };
+    flowEls.stick.addEventListener('pointerdown', (e) => {
+      stickId = e.pointerId;
+      flowEls.stick.setPointerCapture(e.pointerId);
+      const r = flowEls.stick.getBoundingClientRect();
+      setStick(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2));
+      e.preventDefault();
+    });
+    flowEls.stick.addEventListener('pointermove', (e) => {
+      if (stickId !== e.pointerId) return;
+      const r = flowEls.stick.getBoundingClientRect();
+      setStick(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2));
+    });
+    flowEls.stick.addEventListener('pointerup', resetStick);
+    flowEls.stick.addEventListener('pointercancel', resetStick);
+    flowEls.act.addEventListener('pointerdown', (e) => { e.preventDefault(); startHold(); flowEls.act.classList.add('is-holding'); });
+    const actUp = () => { cancelHold(); flowEls.act.classList.remove('is-holding'); };
+    flowEls.act.addEventListener('pointerup', actUp);
+    flowEls.act.addEventListener('pointercancel', actUp);
+    flowEls.act.addEventListener('pointerleave', actUp);
+    setInterval(() => {
+      if (state.screen !== 'game' || state.phase !== 'eva') return;
+      const lbl = els.interact.hidden ? 'ACT' : els.interactLabel.textContent;
+      const txt = document.getElementById('act-label');
+      if (txt) txt.textContent = lbl.length > 12 ? lbl.slice(0, 12) : lbl;
+    }, 250);
+  }
+
+  function initLoading() {
+    const started = performance.now();
+    let tipIdx = 0;
+    flowEls.tip.textContent = TIPS[0];
+    const tipTimer = setInterval(() => { tipIdx = (tipIdx + 1) % TIPS.length; flowEls.tip.textContent = TIPS[tipIdx]; }, 2600);
+    const timer = setInterval(() => {
+      const L = window.__jamtLoad || { done: 1, total: 1 };
+      const pct = Math.max(4, Math.min(100, Math.round((L.done / L.total) * 100)));
+      flowEls.bar.style.width = `${pct}%`;
+      flowEls.count.textContent = `Loading outpost… ${L.done}/${L.total}`;
+      if (L.done >= L.total || performance.now() - started > 7000) {
+        clearInterval(timer); clearInterval(tipTimer);
+        flowEls.count.textContent = 'Ready, Commander.';
+        flowEls.bar.style.width = '100%';
+        flowEls.gate.disabled = false;
+        flowEls.gate.textContent = 'TAP / PRESS TO START';
+      }
+    }, 120);
+    flowEls.gate.addEventListener('click', () => {
+      Sound.init(); Sound.click();
+      flowEls.loading.hidden = true;
+      showScreen('title');
+    });
+  }
+
+  applySettings();
+  wireFlow();
+  initLoading();
 
   /* =================================================================== init == */
   buildTerrain();

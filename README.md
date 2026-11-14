@@ -19,6 +19,47 @@ assets/      sliced sprites + manifest (source JPGs are git-ignored)
 tools/       slice_assets.py · sim.py · qa.py
 ```
 
+
+## Iteration 2 — v2.0.0 (menu flow, briefing, touch, deploy)
+
+**Live:** <https://ahmed-ads.github.io/Nasa/> · still double-clicks from `file://`.
+
+**Shipped in this iteration**
+- **Loading screen** with real preload progress (96 sprites), rotating verified tips, and a
+  TAP/PRESS-TO-START gate that unlocks audio.
+- **Title menu**: START GAME · SETTINGS (sound, touch controls, reduced motion, judge unlock) ·
+  CREDITS (NASA sources, AI art, privacy) · QUIT. Settings and stars persist.
+- **Quit / pause**: QUIT → YES/NO → goodbye screen; in-level ⏸ / Esc / browser Back opens
+  PAUSED (CONTINUE · RESTART · LEVEL MAP · MAIN MENU) with confirmations; auto-pause on tab blur.
+  Hash-only routing (`#/title`, `#/map`, `#/brief`, `#/level`, `#/debrief`, `#/goodbye`).
+- **Mission briefing** before every sublevel: one-sentence goal, “why this matters for real
+  astronauts”, resource table (icon/what/where/goes/does), keyboard + touch controls, START/BACK.
+- **Objective tracker** in-level (collapsible, live counts) and an ⓘ button that reopens the briefing.
+- **Touch controls**: virtual joystick + large round ACT (hold to act, 2.2 s), tap-to-move kept;
+  enabled automatically on coarse pointers and switchable in Settings.
+- **GitHub Pages essentials**: relative paths, `.nojekyll`, `BUILD_VERSION` 2.0.0 on
+  `style.css`/`game.js`/`manifest.js` (shown in Credits and the title), save schema v2 migration
+  that keeps stars and survives corrupt data, `tools/check_assets.py` exact-case asset check,
+  system fonts only (no network requests).
+- **QA**: 40 Playwright checks at 1280×720 and 390×844 with touch emulation, including loading →
+  title → map → briefing → level → pause → confirm → map.
+
+**Deferred (not in this build)**
+- Phase C carry/deliver economy (ice, regolith bags, battery/solar/O2 canisters, repair parts,
+  physical slots, restocking, switchboard relocation). The v1 switchboard allocation and station
+  actions remain the active economy.
+- Phase D suit air and rover riding / walk-back ring.
+- Phase F new animation strips: the img6 walk/action frames are composited on opaque terrain
+  patches and cannot be keyed cleanly (halos/background remain), so the brief says to keep the
+  current sprites rather than ship artifacts. The img9 logo (“SURVIVAL OUTPOST”) and buttons are
+  not used; UI is CSS.
+- Phase G rebalance for the physical economy; the rules and 600-run balance table below still apply.
+
+**Deploy files (commit and push):** `index.html`, `style.css`, `game.js`, `README.md`,
+`assets/manifest.js`, `assets/sprites/**`, `tools/qa.py`, `tools/sim.py`,
+`tools/sim_results.json`, `tools/slice_assets.py`, `tools/check_assets.py`, `.nojekyll`,
+`.gitignore`. Never commit `assets/img*.jpg` (13 MB sources, already ignored).
+
 ---
 
 ## 1. Run it

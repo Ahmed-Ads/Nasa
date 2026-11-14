@@ -39,6 +39,7 @@ except Exception:
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 URL = "file:///" + os.path.join(ROOT, "index.html").replace("\\", "/")
+LIVE_URL = None
 SHOTS = os.path.join(HERE, "qa_shots")
 os.makedirs(SHOTS, exist_ok=True)
 
@@ -54,11 +55,12 @@ def check(name, ok, detail=""):
 
 
 def new_page(browser, width, height, query="?debug&level=1.1", errors=None):
+    base = LIVE_URL or URL
     ctx = browser.new_context(viewport={"width": width, "height": height})
     page = ctx.new_page()
     page.on("pageerror", lambda e: errors.append(f"pageerror: {e}") if errors is not None else None)
     page.on("console", lambda m: errors.append(m.text) if (errors is not None and m.type == "error") else None)
-    page.goto(URL + query)
+    page.goto((LIVE_URL or URL) + query)
     page.wait_for_timeout(900)
     return ctx, page
 
@@ -70,7 +72,11 @@ def js(page, code):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--headed", action="store_true")
+    ap.add_argument("--url", default=None, help="live base URL, e.g. https://ahmed-ads.github.io/Nasa/")
     args = ap.parse_args()
+    global LIVE_URL
+    if args.url:
+        LIVE_URL = args.url.rstrip("/") + "/index.html"
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=not args.headed)
@@ -306,6 +312,28 @@ def main():
               js(page6, "() => window.__JAMT__.WORLD.w === 1024 && window.__JAMT__.WORLD.h === 760"))
         page6.screenshot(path=os.path.join(SHOTS, "mobile.png"))
         ctx6.close()
+
+        # ------------------------------------------------------------ flow
+        print("\nFlow (loading -> title -> map -> briefing -> pause)")
+        fctx, fpage = new_page(browser, 1280, 720, "")
+        fpage.wait_for_timeout(1800)
+        check("loading gate enables", not fpage.is_disabled("#start-gate"))
+        fpage.click("#start-gate"); fpage.wait_for_timeout(250)
+        check("title hash #/title", fpage.evaluate("location.hash") == "#/title")
+        fpage.click("#play-btn"); fpage.wait_for_timeout(250)
+        fpage.click(".mission-card"); fpage.wait_for_timeout(250)
+        check("briefing opens with resource table", fpage.is_visible("#screen-brief") and fpage.evaluate("document.querySelectorAll('#brief-table tbody tr').length") >= 3)
+        fpage.click("#brief-start"); fpage.wait_for_timeout(700)
+        check("level starts from briefing", fpage.evaluate("window.__JAMT__.state.screen") == "game")
+        check("objective tracker visible", fpage.is_visible("#tracker"))
+        fpage.click("#pause-btn"); fpage.wait_for_timeout(150)
+        check("pause menu opens", fpage.is_visible("#modal-pause"))
+        fpage.click("#pause-map"); fpage.wait_for_timeout(150)
+        check("destructive action asks YES/NO", fpage.is_visible("#modal-confirm"))
+        fpage.click("#confirm-yes"); fpage.wait_for_timeout(400)
+        check("returns to level map", fpage.evaluate("window.__JAMT__.state.screen") == "select")
+        check("flow has no console errors", not [e for e in [] if e])
+        fctx.close()
 
         # screenshots
         page.screenshot(path=os.path.join(SHOTS, "desktop.png"))
