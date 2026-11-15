@@ -834,7 +834,8 @@ def main():
           .map((i) => ({ ok: i.complete && i.naturalWidth > 0, src: i.getAttribute('src') }))""")
         check("Landing uses img8/img9 art (logo, start, quit, cheer, ready)",
               len(title_art) >= 5 and all(a["ok"] for a in title_art), str(title_art))
-        apage.click("#menu-quit"); apage.wait_for_timeout(150)
+        apage.click("#menu-quit"); apage.wait_for_timeout(300)
+        apage.wait_for_function("() => { const i = document.getElementById('confirm-art'); return !i.hidden && i.complete && i.naturalWidth > 0; }", timeout=5000)
         confirm_art = js(apage, """() => { const i = document.getElementById('confirm-art');
           return { hidden: i.hidden, ok: i.complete && i.naturalWidth > 0, src: i.getAttribute('src') }; }""")
         apage.click("#confirm-yes"); apage.wait_for_timeout(250)

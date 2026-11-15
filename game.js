@@ -3105,7 +3105,7 @@
   }
   function closePause() { flowEls.pause.hidden = true; state.paused = false; }
 
-  const UI_SAD = 'assets/ui/sad_astronaut.png';
+  const UI_SAD = 'assets/ui/sad_astronaut.png?v=3.1.6';
   function askConfirm(text, onYes, art = null) {
     flowEls.confirmText.textContent = text;
     if (flowEls.confirmArt) {
