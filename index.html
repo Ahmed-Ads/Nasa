@@ -8,11 +8,7 @@
   <meta name="description"
     content="A pixel-art mission trainer for ages 7–12. Plan power, walk the lunar outpost, and keep the crew alive across three missions. Built for the 2026 NASA Space Apps Challenge.">
   <meta name="theme-color" content="#06070f">
-  <link rel="stylesheet" href="style.css?v=3.1.6">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Jersey+20&family=Jersey+25&family=Lexend:wght@700&display=swap"
-    rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=3.1.7">
   <link rel="icon"
     href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%2306070f'/%3E%3Ccircle cx='8' cy='8' r='5' fill='%23c2c6d4'/%3E%3Ccircle cx='6' cy='6.5' r='1.5' fill='%239a9fb2'/%3E%3Ccircle cx='10' cy='10' r='1' fill='%239a9fb2'/%3E%3C/svg%3E">
 </head>
@@ -33,7 +29,7 @@
         <p class="load-count" id="load-count">Loading outpost…</p>
         <p class="load-tip" id="load-tip"></p>
         <button class="btn btn-primary btn-lg gate" id="start-gate" type="button" disabled>PRESS TO START</button>
-        <p class="loading-version">v3.1.6 · no data leaves your device</p>
+        <p class="loading-version">v3.1.7 · no data leaves your device</p>
       </div>
     </div>
     <div class="viewport" id="viewport">
@@ -78,225 +74,277 @@
 
     <!-- ============================================================ title === -->
     <div class="overlay overlay--title" id="screen-title">
-      <div class="title-bg" aria-hidden="true"></div>
-      <div class="title-astronaut" aria-hidden="true">
-        <img src="assets/ui/astronaut.png" alt="Astronaut" class="astronaut-img">
-      </div>
-
-      <div class="title-header">
-        <h1 class="title-main">Newspdet</h1>
-        <p class="title-sub">YOUR MISSION STARTS HERE</p>
-      </div>
-
-      <div class="title-menu" role="menu">
-        <button class="figma-btn" id="play-btn" type="button">Start Mission</button>
-        <button class="figma-btn" id="continue-btn" type="button">Continue Mission</button>
-        <button class="figma-btn" id="menu-credits" type="button">Credits</button>
-        <button class="figma-btn" id="how-btn" type="button">Training</button>
-        <button class="figma-btn" id="menu-settings" type="button">Settings</button>
-        <button class="figma-btn" id="menu-quit" type="button">Exit</button>
-      </div>
-
-      <!-- Hidden compatibility elements to preserve game.js logic -->
-      <div hidden aria-hidden="true">
-        <span id="title-version">v3.1.6</span>
-      </div>
-
-      <p class="title-footer">Powered by NASA open data</p>
-    </div>
-
-    <!-- ===================================================== level select === -->
-    <div class="overlay overlay--select" id="screen-select" hidden>
-      <div class="select-header">
-        <button class="map-back-btn" id="select-back" type="button">◀ Title</button>
-        <h1 class="map-title">YOUR MISSION STARTS HERE</h1>
-        <span class="map-stars-chip" id="total-stars">★ 0 / 9</span>
-      </div>
-
-      <div class="solar-stage">
-        <div class="solar-map">
-          <!-- Moon System -->
-          <p class="map-label map-label--moon">Moon mission</p>
-          <div class="planet planet--moon" title="The Moon">
-            <img src="assets/ui/moon.png" alt="Moon" class="planet-img">
+      <div class="title-card title-card--landing">
+        <div class="landing-main">
+          <p class="kicker">NASA Space Apps 2026 · Level 1</p>
+          <h1 class="title">Junior<br><span>Astronaut</span></h1>
+          <p class="subtitle">Mission Trainer</p>
+          <p class="lede">It's 2087. You run <strong>Survival Outpost</strong> at Shackleton Rim on the Moon.
+            Plan the power, walk the base, and keep the crew alive across three missions.</p>
+          <div class="menu">
+            <div class="menu-art-row">
+              <button class="ui-art-btn ui-art-btn--start" id="play-btn" type="button" aria-label="Start game">
+                <img src="assets/ui/start_game.png?v=3.1.7" alt="">
+              </button>
+              <button class="ui-art-btn ui-art-btn--quit" id="menu-quit" type="button" aria-label="Quit mission">
+                <img src="assets/ui/quit_mission.png?v=3.1.7" alt="">
+              </button>
+            </div>
+            <div class="menu-row">
+              <button class="btn btn-sm" id="menu-settings" type="button">SETTINGS</button>
+              <button class="btn btn-sm" id="menu-credits" type="button">CREDITS</button>
+            </div>
+            <div class="menu-row">
+              <button class="btn btn-sm" id="how-btn" type="button">HOW TO PLAY</button>
+            </div>
           </div>
-
-          <img src="assets/ui/track1.svg" alt="" class="track track--1" aria-hidden="true">
-
-          <!-- Moon track nodes rendered by game.js -->
-          <div class="nodes-track nodes-moon" id="mission-cards"></div>
-
-          <!-- Mars System (Locked) -->
-          <div class="mars-header">
-            <img src="assets/ui/lock.svg" alt="Locked" class="mars-lock">
-            <p class="map-label map-label--mars">Mars mission</p>
-          </div>
-          <div class="planet planet--mars" title="Mars - Locked">
-            <img src="assets/ui/mars.png" alt="Mars" class="planet-img">
-          </div>
-
-          <img src="assets/ui/track2.svg" alt="" class="track track--2" aria-hidden="true">
-
-          <!-- Mars track nodes rendered by game.js -->
-          <div class="nodes-track nodes-mars" id="locked-cards"></div>
-        </div>
-      </div>
-
-      <!-- Hidden compatibility elements to preserve game.js logic -->
-      <div hidden aria-hidden="true">
-        <img id="sector-art" alt="">
-      </div>
-    </div>
-
-    <!-- ========================================================= briefing === -->
-    <div class="overlay overlay--brief" id="screen-brief" hidden>
-      <div class="brief-card">
-        <button class="link-btn brief-back" id="brief-back" type="button">◀ LEVEL MAP</button>
-        <p class="kicker" id="brief-kicker">Mission 1.1 · The Moon</p>
-        <h2 id="brief-title">Lunar Outpost Prep</h2>
-        <p class="brief-why" id="brief-why"></p>
-        <p class="brief-goal" id="brief-goal"></p>
-        <table class="brief-table" id="brief-table" aria-label="Daily mission plan">
-          <thead>
-            <tr>
-              <th>Day</th>
-              <th>Solar forecast</th>
-              <th>Goal</th>
-              <th>Meters to watch</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-        <div class="brief-controls" id="brief-controls">
-          <p class="kicker">Controls reminder</p>
-          <div class="brief-keys">
-            <span><b>WASD</b> or <b>Tap</b> move</span>
-            <span><b>Hold E</b> or <b>ACT</b> do a job</span>
-            <span><b>1, 2, 3</b> station power</span>
-            <span><b>B</b> battery boost</span>
+          <p class="title-version" id="title-version">v3.1.7</p>
+          <div class="level-chips" aria-hidden="true">
+            <span class="level is-current">1.1 Prep</span>
+            <span class="level">1.2 Leak</span>
+            <span class="level">1.3 Storm</span>
+            <span class="level">2 · Mars · NEXT</span>
           </div>
         </div>
-        <div class="menu-row">
-          <button class="btn btn-primary btn-lg" id="brief-start" type="button">LAUNCH MISSION ▶</button>
-          <button class="btn btn-sm" id="brief-back2" type="button">LEVEL MAP</button>
+        <div class="landing-side" aria-hidden="true">
+          <img class="landing-crest" src="assets/ui/logo_outpost.png?v=3.1.7" alt="">
+          <img class="landing-ready" src="assets/ui/ready_to_land.png?v=3.1.7" alt="">
+          <img class="landing-cheer" src="assets/ui/cheer_astronaut.png?v=3.1.7" alt="">
         </div>
       </div>
+      <p class="credit">Built for the 2026 NASA Space Apps Challenge · Data: NASA · Ages 7-12</p>
     </div>
 
-    <!-- ========================================================== debrief === -->
-    <div class="overlay overlay--debrief" id="screen-debrief" hidden>
-      <div class="debrief-card">
-        <p class="kicker" id="debrief-kicker">Mission Debrief</p>
-        <h1 class="title" id="debrief-title">Day survived</h1>
-        <p class="subtitle" id="debrief-sub">Cislunar Outpost · Day 5 complete</p>
-        <div class="stars-hero" id="debrief-stars" aria-label="0 of 3 stars"></div>
-        <div class="score-card" id="debrief-breakdown"></div>
-        <p class="debrief-rule" id="debrief-rule"></p>
-        <div class="debrief-actions">
-          <button class="btn btn-primary" id="debrief-next" type="button">NEXT MISSION ▶</button>
-          <button class="btn btn-accent" id="debrief-revive" type="button" hidden>USE REVIVE (1 LEFT)</button>
-          <button class="btn" id="debrief-retry" type="button">RETRY</button>
-          <button class="btn" id="debrief-map" type="button">LEVEL MAP</button>
+      <!-- ===================================================== level select === -->
+      <div class="overlay overlay--select" id="screen-select" hidden>
+        <div class="select-header">
+          <button class="map-back-btn" id="select-back" type="button">◀ Title</button>
+          <h1 class="map-title">YOUR MISSION STARTS HERE</h1>
+          <span class="map-stars-chip" id="total-stars">★ 0 / 9</span>
         </div>
-      </div>
-    </div>
 
-    <!-- =========================================================== goodbye == -->
-    <div class="overlay overlay--goodbye" id="screen-goodbye" hidden>
-      <div class="goodbye-card">
-        <div class="goodbye-art" aria-hidden="true">
-          <img class="goodbye-sad" src="assets/ui/sad_astronaut.png?v=3.1.6" alt="">
-          <img class="goodbye-door" src="assets/ui/exit_door.png?v=3.1.6" alt="">
-        </div>
-        <div class="goodbye-copy">
-          <img class="goodbye-banner" src="assets/ui/mission_aborted.png?v=3.1.6" alt="Mission aborted">
-          <p class="kicker">Mission control signing off</p>
-          <h1 class="title">See you<br><span>next day</span></h1>
-          <p class="lede">Your progress is saved on this device. Close the tab whenever you are ready.</p>
-          <button class="btn btn-primary btn-lg" id="goodbye-back" type="button">BACK TO START</button>
-        </div>
-      </div>
-    </div>
+        <div class="solar-stage">
+          <div class="solar-map">
+            <!-- Moon System -->
+            <p class="map-label map-label--moon">Moon mission</p>
+            <div class="planet planet--moon" title="The Moon">
+              <img src="assets/ui/moon.png" alt="Moon" class="planet-img">
+            </div>
 
-    <!-- ========================================================== console === -->
-    <section class="console" id="panel" hidden aria-label="Outpost controls">
-      <button class="console-toggle" id="console-toggle" type="button" aria-label="Show / hide controls">⌄</button>
+            <img src="assets/ui/track1.svg" alt="" class="track track--1" aria-hidden="true">
 
-      <div class="dock-left">
-        <div class="phase-row">
-          <span class="phase-chip" id="panel-phase">1. Plan power</span>
-          <span class="phase-hint" id="phase-hint">Spend power cells</span>
-          <span class="budget-inline">Solar cells left <button class="help-dot" type="button"
-              aria-label="What are solar cells?"
-              data-help="Solar cells are power you can spend today.">?</button> <b id="cells-left">0</b></span>
-        </div>
-        <div class="rows" id="rows"></div>
-      </div>
+            <!-- Moon track nodes rendered by game.js -->
+            <div class="nodes-track nodes-moon" id="mission-cards"></div>
 
-      <div class="dock-right">
-        <div class="meters" id="meters"></div>
-        <div class="dock-actions">
-          <button class="btn btn-primary btn-step" id="step-btn" type="button">GO OUTSIDE ▶</button>
-          <button class="btn btn-sm" id="log-toggle" type="button" aria-expanded="false" aria-controls="log">MISSION LOG</button>
-        </div>
-        <div class="log" id="log" hidden>
-          <div class="log-head">
-            <span class="log-title">MISSION LOG</span>
-            <span class="log-day" id="log-day">Day 1</span>
+            <!-- Mars System (Locked) -->
+            <div class="mars-header">
+              <img src="assets/ui/lock.svg" alt="Locked" class="mars-lock">
+              <p class="map-label map-label--mars">Mars mission</p>
+            </div>
+            <div class="planet planet--mars" title="Mars - Locked">
+              <img src="assets/ui/mars.png" alt="Mars" class="planet-img">
+            </div>
+
+            <img src="assets/ui/track2.svg" alt="" class="track track--2" aria-hidden="true">
+
+            <!-- Mars track nodes rendered by game.js -->
+            <div class="nodes-track nodes-mars" id="locked-cards"></div>
           </div>
-          <p class="log-lead" id="log-lead"></p>
-          <ul class="log-list" id="log-list"></ul>
+        </div>
+
+        <!-- Hidden compatibility elements to preserve game.js logic -->
+        <div hidden aria-hidden="true">
+          <img id="sector-art" alt="">
         </div>
       </div>
-    </section>
 
-    <!-- objective / target tracker -->
-    <div class="tracker" id="tracker" hidden>
-      <div class="tracker-head">
-        <span class="tracker-title">JOBS TO DO</span>
-        <span class="tracker-count" id="tracker-count">0 / 0</span>
-        <button class="tracker-toggle" id="tracker-toggle" type="button" aria-label="Toggle jobs list">▲</button>
+      <!-- ========================================================= briefing === -->
+      <div class="overlay overlay--brief" id="screen-brief" hidden>
+        <div class="brief-card">
+          <button class="link-btn brief-back" id="brief-back" type="button">◀ LEVEL MAP</button>
+          <p class="kicker" id="brief-kicker">Mission 1.1 · The Moon</p>
+          <h2 class="brief-title" id="brief-title">Lunar Outpost Prep</h2>
+          <p class="brief-goal" id="brief-goal"></p>
+          <p class="brief-real"><span class="real-tag">Real NASA</span> A game day is one work shift. A real Moon day
+            lasts about 29.5 Earth days.</p>
+          <div class="brief-why">
+            <p class="learn-label">Why this matters for real astronauts</p>
+            <p id="brief-why"></p>
+          </div>
+          <table class="brief-table" id="brief-table"></table>
+          <div class="brief-controls" id="brief-controls"></div>
+          <div class="menu-row brief-actions">
+            <button class="btn btn-primary" id="brief-start" type="button">START ▶</button>
+            <button class="btn" id="brief-back2" type="button">BACK</button>
+          </div>
+        </div>
       </div>
-      <p class="tracker-info" id="tracker-info">All jobs done for today.</p>
-      <ul class="tracker-list" id="tracker-list"></ul>
-    </div>
 
-    <!-- touch controls (phones, tablets, touch laptops) -->
-    <div class="touch-controls" id="touch-controls" hidden>
-      <div class="stick" id="stick" role="button" aria-label="Virtual joystick: drag to walk">
-        <div class="stick-knob" id="stick-knob"></div>
+      <!-- =========================================================== goodbye == -->
+      <div class="overlay overlay--goodbye" id="screen-goodbye" hidden>
+        <div class="goodbye-card">
+          <div class="goodbye-art" aria-hidden="true">
+            <img class="goodbye-sad" src="assets/ui/sad_astronaut.png?v=3.1.7" alt="">
+            <img class="goodbye-door" src="assets/ui/exit_door.png?v=3.1.7" alt="">
+          </div>
+          <div class="goodbye-copy">
+            <img class="goodbye-banner" src="assets/ui/mission_aborted.png?v=3.1.7" alt="Mission aborted">
+            <p class="kicker">Mission control signing off</p>
+            <h1 class="title">See you<br><span>next day</span></h1>
+            <p class="lede">Your progress is saved on this device. Close the tab whenever you are ready.</p>
+            <button class="btn btn-primary btn-lg" id="goodbye-back" type="button">BACK TO START</button>
+          </div>
+        </div>
       </div>
-      <div class="touch-actions">
-        <button class="act-btn" id="act-btn" type="button" aria-label="Action (hold to act)">
-          <span class="act-ring" id="act-ring"></span>
-          <span class="act-label" id="act-label">ACT</span>
+
+      <!-- ========================================================== console === -->
+      <section class="console" id="panel" hidden aria-label="Outpost controls">
+        <button class="console-toggle" id="console-toggle" type="button" aria-label="Show / hide controls">⌄</button>
+
+        <div class="dock-left">
+          <div class="phase-row">
+            <span class="phase-chip" id="panel-phase">1. Plan power</span>
+            <span class="phase-hint" id="phase-hint">Spend power cells</span>
+            <span class="budget-inline">Solar cells left <button class="help-dot" type="button"
+                aria-label="What are solar cells?" data-help="Solar cells are power you can spend today.">?</button> <b
+                id="cells-left">0</b></span>
+          </div>
+
+          <div class="battery-line" id="battery-line">
+            <span class="battery-label">🔋 Battery <b id="battery-val">0/6</b> <button class="help-dot" type="button"
+                aria-label="What are battery cells?" data-help="Battery cells store power for later.">?</button></span>
+            <button class="mini-btn" id="draw-btn" type="button">Draw +1</button>
+          </div>
+
+          <div class="systems" id="systems"></div>
+
+          <div class="patch" id="patch-box" hidden>
+            <div class="patch-head"><span>Leak repair</span><b id="patch-val">0/2</b></div>
+            <div class="patch-bar">
+              <div class="patch-fill" id="patch-fill"></div>
+            </div>
+            <ol class="patch-steps" id="patch-steps"></ol>
+          </div>
+
+          <div class="dose" id="dose-box" hidden>
+            <div class="dose-head"><span>☢ Radiation dose</span><b id="dose-val">0</b></div>
+            <div class="meter dose-meter">
+              <div class="meter-fill" id="dose-bar"></div>
+              <div class="meter-risk dose-risk"></div>
+            </div>
+            <p class="dose-note" id="dose-note">Stay below 60.</p>
+          </div>
+
+          <div class="eva-box" id="eva-box">
+            <div class="eva-head"><span>Suit air <button class="help-dot" type="button" aria-label="What is suit air?"
+                  data-help="Air in your spacesuit. It drains when you walk.">?</button></span><b id="eva-val">100%</b>
+            </div>
+            <div class="air-track">
+              <div class="air-bar" id="air-bar"></div>
+            </div>
+            <p class="eva-hint" id="eva-hint">Walk to a station and hold <kbd>E</kbd> (or hold the prompt).</p>
+            <button class="mini-btn" id="shelter-btn" type="button" hidden>Order shelter</button>
+          </div>
+
+          <div class="run-block" id="run-row">
+            <button class="btn btn-primary btn-lg" id="run-btn" type="button">Go outside ▶</button>
+            <p class="hint" id="run-hint">Leftover cells charge the battery.</p>
+          </div>
+
+          <div class="term-help">
+            <span>HELP</span>
+            <button class="help-dot" type="button" aria-label="What are solar cells?"
+              data-help="Solar cells are power you can spend today.">?</button><b>Solar cells</b>
+            <button class="help-dot" type="button" aria-label="What are battery cells?"
+              data-help="Battery cells store power for later.">?</button><b>Battery cells</b>
+            <button class="help-dot" type="button" aria-label="What is suit air?"
+              data-help="Air in your spacesuit. It drains when you walk.">?</button><b>Suit air</b>
+          </div>
+        </div>
+
+        <div class="dock-right">
+          <div class="forecast" id="forecast" data-tone="neutral">
+            <img class="forecast-icon" id="forecast-img" alt="" hidden>
+            <span class="forecast-emoji" id="forecast-icon" aria-hidden="true">🌤️</span>
+            <div class="forecast-body">
+              <p class="forecast-label" id="forecast-label">Forecast · Day 1</p>
+              <p class="forecast-text" id="forecast-text">Clear skies — no hazards expected.</p>
+            </div>
+          </div>
+          <ul class="log" id="log" aria-live="polite" aria-label="Mission log"></ul>
+        </div>
+      </section>
+
+      <aside class="tracker" id="tracker" hidden>
+        <button class="tracker-head" id="tracker-toggle" type="button">
+          <span>OBJECTIVES</span><span id="tracker-count">0/0</span><span class="tracker-chev">▾</span>
+        </button>
+        <ul class="tracker-list" id="tracker-list"></ul>
+        <button class="tracker-info" id="tracker-info" type="button">ⓘ Mission briefing</button>
+      </aside>
+
+      <div class="touch" id="touch-controls" hidden>
+        <div class="stick" id="stick">
+          <div class="stick-knob" id="stick-knob"></div>
+        </div>
+        <button class="act-btn" id="act-btn" type="button" aria-label="Interact">
+          <span id="act-icon">E</span><span id="act-label">ACT</span>
         </button>
       </div>
+
+      <!-- ========================================================== debrief === -->
+      <div class="overlay overlay--debrief" id="screen-debrief" hidden>
+        <div class="debrief-card">
+          <div class="debrief-stars" id="debrief-stars"></div>
+          <h2 class="debrief-title" id="debrief-title">Mission Complete</h2>
+          <p class="debrief-sub" id="debrief-sub"></p>
+          <div class="debrief-score" id="debrief-score"></div>
+          <div class="debrief-lists">
+            <div>
+              <p class="debrief-label good">What went well</p>
+              <ul id="debrief-good"></ul>
+            </div>
+            <div>
+              <p class="debrief-label bad">What hurt</p>
+              <ul id="debrief-bad"></ul>
+            </div>
+          </div>
+          <div class="learn-cards">
+            <article class="learn learn--real">
+              <p class="learn-label">Real NASA</p>
+              <p class="learn-text" id="learn-real"></p>
+              <p class="learn-src" id="learn-real-src"></p>
+            </article>
+            <article class="learn learn--assume">
+              <p class="learn-label">Game assumption</p>
+              <p class="learn-text" id="learn-assume"></p>
+            </article>
+          </div>
+          <p class="real-choice" id="real-choice"></p>
+          <div class="debrief-actions">
+            <button class="btn" id="retry-btn" type="button">Retry</button>
+            <button class="btn btn-accent" id="revive-btn" type="button" hidden>Revive ✚</button>
+            <button class="btn btn-primary" id="next-btn" type="button">Next Mission ▶</button>
+            <button class="btn" id="map-btn" type="button">Mission Map</button>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- =========================================================== modals === -->
+    <!-- station mini-panel -->
     <div class="modal" id="modal-station" hidden>
       <div class="modal-card station-card" role="dialog" aria-modal="true" aria-labelledby="station-title">
         <button class="modal-close" data-close type="button" aria-label="Close">✕</button>
-        <p class="kicker" id="station-kicker">Outpost Station</p>
-        <h2 id="station-title">Life Support: Oxygen</h2>
-        <p class="station-desc" id="station-desc">Uses power to make breathable O₂ from stored ice water.</p>
-        <div class="station-stats" id="station-stats"></div>
-        <div class="station-controls">
-          <span class="station-ctrl-label">Cells allocated:</span>
-          <button class="btn btn-sm" id="station-minus" type="button" aria-label="Remove one cell">−</button>
-          <span class="station-val" id="station-val">0</span>
-          <button class="btn btn-sm" id="station-plus" type="button" aria-label="Add one cell">+</button>
+        <h2 id="station-title">Oxygen generator</h2>
+        <p class="station-desc" id="station-desc"></p>
+        <div class="station-bars" id="station-bars"></div>
+        <div class="station-alloc">
+          <button class="step" id="station-minus" type="button" aria-label="One less cell">−</button>
+          <b id="station-cells">0</b>
+          <button class="step" id="station-plus" type="button" aria-label="One more cell">+</button>
         </div>
-        <button class="btn btn-primary" id="station-done" type="button">DONE</button>
-      </div>
-    </div>
-
-    <div class="modal" id="modal-log" hidden>
-      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-log-title">
-        <button class="modal-close" data-close type="button" aria-label="Close">✕</button>
-        <h2 id="modal-log-title">Full Mission Log</h2>
-        <div class="modal-scroll" id="modal-log-body"></div>
+        <p class="station-note" id="station-note"></p>
+        <button class="btn btn-primary" id="station-done" type="button">Done</button>
       </div>
     </div>
 
@@ -445,7 +493,7 @@
           fonts.</p>
         <p><strong>Privacy:</strong> no third-party scripts, no analytics, no cookies. No data leaves your device;
           progress is saved on this device only.</p>
-        <p class="credits-version" id="credits-version">Version 3.1.6</p>
+        <p class="credits-version" id="credits-version">Version 3.1.7</p>
       </div>
     </div>
 
@@ -465,10 +513,9 @@
         to step both action strips.</p>
     </div>
 
-    <script src="assets/manifest.js?v=3.1.6"></script>
-    <script src="assets/anim_manifest.js?v=3.1.6"></script>
-    <script src="game.js?v=3.1.6" defer></script>
-  </div>
+    <script src="assets/manifest.js?v=3.1.7"></script>
+    <script src="assets/anim_manifest.js?v=3.1.7"></script>
+    <script src="game.js?v=3.1.7" defer></script>
 </body>
 
 </html>

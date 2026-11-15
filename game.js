@@ -862,6 +862,12 @@
     camera.w = VW; camera.h = VH;
     measureConsole();
     snapCamera();
+
+    const mapEl = document.querySelector('.solar-map');
+    if (mapEl) {
+      const mapScale = Math.min(vw / 1440, vh / 1024, 1);
+      document.documentElement.style.setProperty('--map-scale', String(mapScale));
+    }
   }
 
   function measureConsole() {
@@ -3128,7 +3134,7 @@
 
 
   /* ============ iteration 2: loading, menus, briefing, pause, touch ====== */
-  const BUILD_VERSION = '3.1.6';
+  const BUILD_VERSION = '3.1.7';
   const TIPS = [
     'Did you know? ISS life support recovers about 98% of the crew’s water (NASA ECLSS).',
     'Did you know? Water ice hides in permanently shadowed craters at the lunar south pole (LRO/LCROSS).',

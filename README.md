@@ -24,6 +24,19 @@ tools/       slice_assets.py · sim.py · qa.py
 
 
 
+## v3.1.7 - Repair the game screen after the merge
+
+- Restored the console/HUD markup that the `edit_design` merge dropped: forecast, suit air,
+  radiation dose, battery line, systems, leak patch, run block and the debrief/learn cards are
+  back, so `game.js` finds every element it wires up on boot.
+- The loading gate finishes ("Ready, Commander.") and the game starts again instead of hanging
+  on the loading screen.
+- Landing page keeps the v3.1.6 crest/start/quit art and drops the Google Fonts request, so the
+  game stays fully offline with system fonts.
+- Level map now scales to the viewport (`--map-scale`), so the Moon/Mars labels and the far
+  nodes are no longer clipped.
+- QA: **106/106** on `file://`; the sim build is still stale (v2 warning).
+
 ## v3.1.6 - Landing and quit art from img8/img9
 
 - Landing page now uses the **Survival Outpost** crest, cheerful astronaut, READY TO LAND?
