@@ -255,7 +255,7 @@ def main():
           const a = run(false, false), b = run(true, false), c = run(true, true);
           return { plain: a.water, rationed: b.water, autoOff: c.ration, saved: b.water - a.water };
         }""")
-        check("B10 ration cuts crew water (not the leak)", abs(ration["saved"] - 2.4) < 0.35, str(ration))
+        check("B10 ration cuts crew water (not the leak)", abs(ration["saved"] - 4.4) < 0.5, str(ration))
         check("B10 ration auto-off after the leak is sealed", ration["autoOff"] is False, str(ration))
         ctx8.close()
         ctx4.close()
@@ -312,6 +312,28 @@ def main():
               js(page6, "() => window.__JAMT__.WORLD.w === 1024 && window.__JAMT__.WORLD.h === 760"))
         page6.screenshot(path=os.path.join(SHOTS, "mobile.png"))
         ctx6.close()
+
+        # ---------------------------------------------------------- economy
+        print("\nEconomy (carry / deliver)")
+        ectx, epage = new_page(browser, 1280, 720, "?debug&level=1.1")
+        econ = js(epage, """() => {
+          const T = window.__T, s = T.state, out = {};
+          T.teleport(150, 556); T.pick('ice'); T.teleport(730, 452);
+          const w0 = s.res.water; T.deliver('water-slot'); out.ice = s.res.water - w0;
+          T.teleport(644, 548); T.pick('panel'); T.deliver('solar-slot');
+          out.panel = T.slots().find(x => x.id === 'solar-slot').filled;
+          T.teleport(692, 548); T.pick('battery'); const b0 = s.res.battery; T.deliver('battery-slot');
+          out.battery = s.res.battery - b0;
+          T.give('o2'); T.deliver('water-slot'); out.wrongKept = T.carry();
+          out.dropped = (T.drop(), s.groundItems.length);
+          return out;
+        }""")
+        check("ice delivery adds +12 water", econ["ice"] == 12, str(econ))
+        check("panel fills a solar slot", econ["panel"] == 1, str(econ))
+        check("battery canister adds a stored cell", econ["battery"] == 1, str(econ))
+        check("wrong slot keeps the carried item", econ["wrongKept"] == "o2", str(econ))
+        check("dropped item persists on the map", econ["dropped"] >= 1, str(econ))
+        ectx.close()
 
         # ------------------------------------------------------------ flow
         print("\nFlow (loading -> title -> map -> briefing -> pause)")

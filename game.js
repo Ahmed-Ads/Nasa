@@ -32,11 +32,11 @@
     maxDrawPerSol:     { value: 2,  kind: 'game', source: 'balance' },
     batteryCap:        { value: 6,  kind: 'game', source: 'balance' },
     crewO2:            { value: 10,  kind: 'game', source: 'scaled from NASA life-support baselines' },
-    crewWater:         { value: 6,  kind: 'game', source: 'scaled from NASA life-support baselines' },
+    crewWater:         { value: 11,  kind: 'game', source: 'scaled from NASA life-support baselines' },
     o2PerCell:         { value: 10,  kind: 'game', source: 'balance; ISS O2 from water electrolysis (NASA ECLSS)' },
     waterPerCell:      { value: 9, kind: 'game', source: 'balance; ISS recovers ~98% water (NASA ECLSS 2023)' },
     waterRecovery:     { value: 0.98, kind: 'real', source: 'NASA ECLSS 2023 update' },
-    electrolysisWater: { value: 2,  kind: 'game', source: 'balance' },
+    electrolysisWater: { value: 1,  kind: 'game', source: 'balance' },
     shieldPerCell:     { value: 4, kind: 'game', source: 'balance; regolith shielding (NASA radiation research)' },
     surfacePerCell:    { value: 8,  kind: 'game', source: 'balance' },
     researchPerCell:   { value: 3,  kind: 'game', source: 'balance (<=10% of score)' },
@@ -51,7 +51,7 @@
     bunkerCut:         { value: 0.90, kind: 'real', source: 'SPE sheltering in place (NASA)' },
     backgroundDose:    { value: 2.5,  kind: 'game', source: 'balance; GCR barely shielded (NASA)' },
     doseLimit:         { value: 60, kind: 'game', source: 'balance' },
-    iceWater:          { value: 14, kind: 'game', source: 'Lunar ice (LRO/LCROSS); amount is a game value' },
+    iceWater:          { value: 12, kind: 'game', source: 'Lunar ice (LRO/LCROSS); amount is a game value' },
     iceO2:             { value: 8,  kind: 'game', source: 'balance' },
     iceDose:           { value: 6,  kind: 'game', source: 'balance' },
     evaMinutes:        { value: 3,  kind: 'game', source: 'inspired by EVA planning near shelter' },
@@ -75,7 +75,7 @@
       id: '1.1', index: 1, title: 'Lunar Outpost Prep', kicker: 'Tutorial · 5 sols',
       location: 'Shackleton Rim', brief: 'Get the outpost ready before the crew lands. Balance oxygen, water and battery charge.',
       art: 'select/moon_satellite',
-      rows: ['o2', 'water', 'battery'],
+      rows: ['o2', 'battery'],
       start: { o2: 38, water: 48, battery: 0 },
       goals: { o2: 70, water: 60, battery: 3 },
       goalsSol: 5, maxSlip: 2,
@@ -92,7 +92,7 @@
       id: '1.2', index: 2, title: 'Water Leak', kicker: 'Repair · 6 sols',
       location: 'Recycler deck', brief: 'A recycler pipe ruptured. Isolate it, tape it, patch it, and keep enough water for the crew.',
       art: 'select/moon_base',
-      rows: ['o2', 'water', 'repair'],
+      rows: ['o2', 'repair'],
       start: { o2: 65, water: 68 },
       maxSols: 6,
       schedule: ['calm', 'calm', 'dust', 'cold', 'calm', 'calm'],
@@ -109,7 +109,7 @@
       location: 'South pole surface', brief: 'A CME is on the way. Check the dish, shelter the crew, and watch the radiation dose.',
       art: 'select/planet_moon',
       rows: ['o2', 'shielding', 'surface'],
-      start: { o2: 75, shielding: 30 },
+      start: { o2: 75, shielding: 30, water: 60 },
       dose: true,
       maxSols: 6,
       schedule: ['calm', 'cme', 'calm', 'calm', 'calm', 'calm'],
@@ -151,6 +151,7 @@
     evaUsed: 0,
     sweepSol: 0,
     panelDeployed: false,
+    panelBonus: 0, bags: 0, carry: null, groundItems: [], sources: [], slots: [], snap: null, atSwitchboard: false,
     carryingPanel: false,
     carryingTape: false,
     isolated: false,
@@ -435,6 +436,140 @@
   ];
 
   const colliders = PROPS.map((p) => ({ x: p.cx, y: p.cy, w: p.cw, h: p.ch, id: p.id }));
+
+  // ---------------- carry / deliver economy (v3 session 1) ----------------
+  const ITEM_META = {
+    ice:     { name: 'Ice chunk',          sprite: 'terrain/ice' },
+    bag:     { name: 'Regolith bag',       sprite: 'icons/shield' },
+    battery: { name: 'Battery canister',   sprite: 'power/battery_green' },
+    panel:   { name: 'Solar panel',        sprite: 'power/solar_b' },
+    o2:      { name: 'O2 canister',        sprite: 'life/o2_tank' },
+    toolbox: { name: 'Toolbox',            sprite: 'repair/toolbox' },
+    tape:    { name: 'Kapton tape',        sprite: 'repair/tape' },
+    repair:  { name: 'Repair parts',       sprite: 'repair/gears' },
+  };
+  const SOURCES = [
+    { id: 'ice-src', item: 'ice', x: 150, y: 556, cap: 4, stock: 4, hold: 1.4, minutes: 1, label: 'Mine ice chunk' },
+    { id: 'panel-src', item: 'panel', x: 644, y: 548, cap: 3, stock: 3, minutes: 0, label: 'Take solar panel', levels: ['1.1', '1.3'] },
+    { id: 'battery-src', item: 'battery', x: 692, y: 548, cap: 4, stock: 4, minutes: 0, label: 'Take battery canister' },
+    { id: 'o2-src', item: 'o2', x: 596, y: 548, cap: 2, stock: 2, minutes: 0, label: 'Take O2 canister (game assumption)', levels: ['1.1'] },
+    { id: 'soil-src', item: 'bag', x: 330, y: 330, cap: 5, stock: 5, hold: 1.4, minutes: 1, label: 'Dig regolith bag', levels: ['1.3'] },
+    { id: 'toolbox-src', item: 'toolbox', x: 604, y: 566, cap: 1, stock: 1, minutes: 0, label: 'Take toolbox', levels: ['1.2'] },
+    { id: 'tape-src', item: 'tape', x: 664, y: 566, cap: 1, stock: 1, minutes: 0, label: 'Take Kapton tape', levels: ['1.2'] },
+    { id: 'repair-src', item: 'repair', x: 724, y: 566, cap: 2, stock: 2, minutes: 0, label: 'Take repair parts', levels: ['1.2'] },
+  ];
+  const SLOTS = [
+    { id: 'water-slot', item: 'ice', x: 730, y: 452, cap: 99, label: 'Water tank intake', levels: ['1.1', '1.2', '1.3'] },
+    { id: 'battery-slot', item: 'battery', x: 376, y: 378, cap: 4, label: 'Battery bank slot' },
+    { id: 'solar-slot', item: 'panel', x: 216, y: 386, cap: 3, label: 'Solar field slot', levels: ['1.1', '1.3'] },
+    { id: 'o2-slot', item: 'o2', x: 700, y: 356, cap: 2, label: 'O2 rack slot', levels: ['1.1'] },
+    { id: 'bunker-slot', item: 'bag', x: 262, y: 286, cap: 5, label: 'Bunker wall slot', levels: ['1.3'] },
+    { id: 'leak-slot', item: 'repair', x: 808, y: 452, cap: 3, label: 'Leak site', levels: ['1.2'] },
+  ];
+  function buildInteractions() {
+    const id = state.levelId;
+    state.sources = SOURCES.filter((s) => !s.levels || s.levels.includes(id)).map((s) => ({ ...s, stock: s.cap }));
+    state.slots = SLOTS.filter((s) => !s.levels || s.levels.includes(id)).map((s) => ({ ...s, filled: 0 }));
+    state.groundItems = [];
+    state.carry = null;
+    state.panelBonus = 0;
+    state.bags = 0;
+  }
+  function restock() {
+    for (const s of state.sources) s.stock = s.cap;
+  }
+  function nearestInteractable() {
+    const s = state;
+    let best = null, bd = Infinity;
+    const consider = (obj, r) => {
+      const d = dist(player.x, player.y, obj.x, obj.y);
+      if (d < r && d < bd) { bd = d; best = obj; }
+    };
+    for (const src of s.sources) consider(src, 40);
+    for (const slot of s.slots) consider(slot, 40);
+    for (const it of s.groundItems) consider(it, 30);
+    for (const st of STATIONS) { if (st.id === 'leak' && s.levelId !== '1.2') continue; consider(st, st.r); }
+    return best;
+  }
+  function isSlot(obj) { return obj && obj.id && obj.id.endsWith('-slot'); }
+  function slotAccepts(slot, item) {
+    if (slot.id === 'leak-slot') {
+      if (item === 'toolbox') return !state.isolated;
+      if (item === 'tape') return state.isolated && !state.taped;
+      if (item === 'repair') return state.taped && !state.patched;
+      return false;
+    }
+    return slot.item === item;
+  }
+  function pickupSource(src) {
+    if (state.carry) { addLog('Hands are full — drop it first (Q).', 'warn'); return; }
+    if (src.stock <= 0) { addLog('Nothing left here until the next sol — it restocks each sol.', 'warn'); return; }
+    if (src.minutes && state.eva < src.minutes) { addLog('Not enough EVA minutes.', 'warn'); return; }
+    if (src.minutes) spend(src.minutes);
+    src.stock -= 1;
+    state.carry = src.item;
+    addLog(`Carrying <b>${ITEM_META[src.item].name}</b>. Deliver it to the highlighted slot (Q to drop).`, 'good');
+    Sound.ok();
+  }
+  function pickupGround(it) {
+    if (state.carry) { addLog('Hands are full — drop it first (Q).', 'warn'); return; }
+    state.groundItems = state.groundItems.filter((g) => g !== it);
+    state.carry = it.type;
+    addLog(`Picked up <b>${ITEM_META[it.type].name}</b>.`, 'good');
+    Sound.ok();
+  }
+  function dropItem() {
+    if (!state.carry) return false;
+    state.groundItems.push({ type: state.carry, x: player.x + player.facing * 12, y: player.y });
+    addLog(`Dropped <b>${ITEM_META[state.carry].name}</b>.`, 'muted');
+    state.carry = null;
+    Sound.remove();
+    return true;
+  }
+  function deliverSlot(slot) {
+    const item = state.carry;
+    if (!item) return;
+    if (!slotAccepts(slot, item)) {
+      const want = slot.id === 'leak-slot'
+        ? (state.isolated ? (state.taped ? 'repair parts' : 'Kapton tape') : 'the toolbox')
+        : ITEM_META[slot.item].name.toLowerCase();
+      addLog(`That doesn't fit — ${slot.label} needs <b>${want}</b>.`, 'warn');
+      return;
+    }
+    state.carry = null;
+    slot.filled = Math.min(slot.cap, (slot.filled || 0) + 1);
+    state.snap = { x: slot.x, y: slot.y, t: performance.now() / 1000 };
+    if (slot.id === 'water-slot') {
+      state.res.water = clamp((state.res.water || 0) + RULES.iceWater.value);
+      addLog(`🧊 Ice delivered: <b>+${RULES.iceWater.value} water</b> (${slot.filled} chunks melted).`, 'good');
+    } else if (slot.id === 'battery-slot') {
+      setBattery(getBattery() + 1);
+      addLog(`🔋 Battery canister installed: <b>+1 stored cell</b> (${slot.filled}/${slot.cap}).`, 'good');
+    } else if (slot.id === 'solar-slot') {
+      state.panelBonus += 1;
+      addLog(`☀️ Solar panel installed: <b>+1 solar cell per sol</b> (${slot.filled}/${slot.cap}).`, 'good');
+    } else if (slot.id === 'o2-slot') {
+      state.res.o2 = clamp((state.res.o2 || 0) + 25);
+      addLog(`🫁 O2 canister installed: <b>+25 O₂</b> (game assumption) (${slot.filled}/${slot.cap}).`, 'good');
+    } else if (slot.id === 'bunker-slot') {
+      state.bags += 1;
+      state.res.shielding = clamp((state.res.shielding || 0) + 8);
+      addLog(`🛡 Regolith bag placed: <b>+8 shielding</b>, bunker protection ${Math.round((0.5 + 0.08 * state.bags) * 100)}% (${slot.filled}/5).`, 'good');
+    } else if (slot.id === 'leak-slot') {
+      if (state.carry === null) { /* noop */ }
+      if (!state.isolated) { state.isolated = true; addLog('🚪 Hatch isolated — the recycler is offline.', 'warn'); }
+      else if (!state.taped) { state.taped = true; addLog('🩹 Kapton tape applied — leak down to 15%.', 'good'); }
+      else if (!state.patched) {
+        state.patch = Math.min(RULES.patchNeeded.value, state.patch + 1);
+        if (state.patch >= RULES.patchNeeded.value) {
+          state.patched = true;
+          addLog('🔧 Permanent patch cured. Reopen the hatch at the leak station.', 'good');
+        } else addLog(`Patch curing: <b>${state.patch}/${RULES.patchNeeded.value}</b>.`, 'muted');
+      }
+    }
+    Sound.ok();
+  }
+
 
   /* ============================================================== rendering == */
   const canvas = els.scene;
@@ -790,7 +925,52 @@
     if (!drew) { ellipse(npc.x, npc.y - 18, 9, 18, '#dfe6ff'); }
   }
 
+  function drawSource(src) {
+    const m = ITEM_META[src.item];
+    const bob = Math.sin(performance.now() / 500 + src.x) * 1.5;
+    drawAsset(m.sprite, src.x, src.y - 4 + bob, 20, 20);
+    ctx.fillStyle = '#0b0f1c';
+    ctx.fillRect(src.x - 13, src.y - 30, 26, 10);
+    ctx.fillStyle = '#eaf1ff';
+    ctx.font = '8px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${src.stock}/${src.cap}`, src.x, src.y - 22);
+    ctx.textAlign = 'left';
+  }
+  function drawGroundItem(it) {
+    drawAsset(ITEM_META[it.type].sprite, it.x, it.y, 18, 18);
+    ctx.strokeStyle = 'rgba(255,207,58,.6)';
+    ctx.strokeRect(Math.round(it.x) - 9, Math.round(it.y) - 16, 18, 16);
+  }
+  function drawSlot(slot) {
+    const matching = state.carry && slotAccepts(slot, state.carry);
+    const pulse = 0.35 + 0.35 * Math.sin(performance.now() / 240);
+    if (matching) {
+      ctx.strokeStyle = `rgba(255,207,58,${pulse.toFixed(3)})`;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(Math.round(slot.x) - 18, Math.round(slot.y) - 38, 36, 24);
+    }
+    ctx.fillStyle = '#0b0f1c';
+    ctx.fillRect(slot.x - 15, Math.round(slot.y) - 54, 30, 10);
+    ctx.fillStyle = slot.filled >= slot.cap ? '#9dffb3' : '#eaf1ff';
+    ctx.font = '8px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(slot.cap > 90 ? `${slot.filled}` : `${slot.filled}/${slot.cap}`, slot.x, Math.round(slot.y) - 46);
+    ctx.textAlign = 'left';
+    if (state.snap && performance.now() / 1000 - state.snap.t < 0.4) {
+      const k = (performance.now() / 1000 - state.snap.t) / 0.4;
+      ctx.strokeStyle = `rgba(157,255,179,${1 - k})`;
+      ctx.beginPath();
+      ctx.arc(state.snap.x, state.snap.y - 20, 6 + k * 18, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
   function drawPlayer() {
+    if (state.carry) {
+      drawAsset(ITEM_META[state.carry].sprite, player.x, player.y - 74, 18, 18);
+      drawAsset(ITEM_META[state.carry].sprite, player.x + player.facing * 10, player.y - 16, 12, 12);
+    }
     for (const puff of dustPuffs) {
       ctx.globalAlpha = Math.max(0, puff.life * 1.4);
       px(puff.x - 1, puff.y - 1, 3, 2, '#b9c0d6');
@@ -806,10 +986,11 @@
       px(player.x - 5, player.y - 34, 10, 10, '#eef2ff');
       px(player.x - 4, player.y - 32, 8, 5, '#1c3b3d');
     }
-    if (state.carryingPanel) {
-      drawAsset('power/solar_b', player.x + player.facing * 10, player.y - 18, 20, 14);
+    if (state.carry) {
+      drawAsset(ITEM_META[state.carry].sprite, player.x + player.facing * 10, player.y - 16, 14, 14);
+      drawAsset(ITEM_META[state.carry].sprite, player.x, player.y - 74, 18, 18);
     }
-    if (state.carryingTape) {
+    if (false) {
       drawAsset('repair/tape', player.x - player.facing * 12, player.y - 14, 14, 12);
     }
   }
@@ -869,6 +1050,9 @@
     // y-sorted drawables
     const drawables = [];
     for (const p of PROPS) drawables.push({ id: p.id, y: p.y, draw: () => drawProp(p) });
+    for (const src of state.sources) drawables.push({ id: 'src-' + src.id, y: src.y, draw: () => drawSource(src) });
+    for (const slot of state.slots) drawables.push({ id: 'slot-' + slot.id, y: slot.y, draw: () => drawSlot(slot) });
+    state.groundItems.forEach((it, i) => drawables.push({ id: 'item' + i, y: it.y, draw: () => drawGroundItem(it) }));
     for (const n of npcs) drawables.push({ id: n.id, y: n.y, draw: () => drawNPC(n) });
     drawables.push({ id: 'player', y: player.y, draw: drawPlayer });
     drawables.sort((a, b) => a.y - b.y);
@@ -941,6 +1125,26 @@
     const s = state;
     const L = s.level;
     if (!L) return null;
+    if (!st) {
+      if (s.carry) return { id: 'drop', label: `Drop ${ITEM_META[s.carry].name}`, minutes: 0, run: () => dropItem() };
+      return null;
+    }
+    if (st.id && st.id.endsWith('-src')) {
+      const src = st;
+      return {
+        id: 'pickup', label: src.label, minutes: src.minutes || 0,
+        disabled: (src.minutes || 0) > s.eva || src.stock <= 0,
+        run: () => pickupSource(src),
+      };
+    }
+    if (st.id && st.id.endsWith('-slot')) {
+      if (!s.carry) return { id: 'slotinfo', label: st.label, minutes: 0, run: () => addLog(`${st.label}: needs ${st.id === 'leak-slot' ? (s.isolated ? (s.taped ? 'repair parts' : 'Kapton tape') : 'the toolbox') : ITEM_META[st.item].name.toLowerCase()}.`, 'muted') };
+      const ok = slotAccepts(st, s.carry);
+      return { id: 'deliver', label: ok ? `Deliver ${ITEM_META[s.carry].name} → ${st.label}` : `${st.label} doesn't take that`, minutes: 0, run: () => deliverSlot(st) };
+    }
+    if (st.type) {
+      return { id: 'pickup-ground', label: `Pick up ${ITEM_META[st.type].name}`, minutes: 0, run: () => pickupGround(st) };
+    }
     const noMinutes = s.eva <= 0;
 
     if (st.id === 'o2' || st.id === 'co2' || st.id === 'water') {
@@ -1095,8 +1299,7 @@
 
   function startHold() {
     if (state.screen !== 'game' || state.phase !== 'eva') return;
-    const st = nearestStation();
-    if (!st) return;
+    const st = nearestInteractable();
     const action = actionFor(st);
     if (!action || action.disabled) { Sound.warn(); return; }
     if (action.minutes > 0 && state.eva < action.minutes) { Sound.warn(); addLog('No EVA minutes left for that task.', 'warn'); return; }
@@ -1138,6 +1341,12 @@
 
   function buildSystems() {
     const L = state.level;
+    if (!document.getElementById('water-line')) {
+      const w = document.createElement('div');
+      w.id = 'water-line';
+      w.className = 'water-line';
+      els.systems.parentNode.insertBefore(w, els.systems);
+    }
     els.systems.innerHTML = '';
     for (const row of L.rows) {
       const meta = ROWS[row];
@@ -1184,6 +1393,11 @@
     els.phaseChip.dataset.phase = s.phase;
     els.phaseHint.textContent = s.phase === 'plan' ? 'Spend power cells' : s.phase === 'eva' ? 'Walk + do tasks' : 'Resolving…';
 
+    const nearSwitch = dist(player.x, player.y, 376, 378) < 56;
+    s.atSwitchboard = nearSwitch;
+    els.panel.classList.toggle('at-switchboard', nearSwitch);
+    const wl = document.getElementById('water-line');
+    if (wl) wl.innerHTML = `💧 Water <b>${Math.round(s.res.water || 0)}%</b><span>${nearSwitch ? 'switchboard: allocate cells' : 'walk to the switchboard to change cells'} · ice → water tank</span>`;
     els.cellsLeft.textContent = String(Math.max(0, leftCells()));
     els.cellsLeft.classList.toggle('is-empty', leftCells() === 0);
 
@@ -1222,7 +1436,7 @@
           cells.appendChild(cell);
         }
       }
-      const enabled = s.phase === 'plan' || s.phase === 'eva';
+      const enabled = (s.phase === 'plan' || s.phase === 'eva') && s.atSwitchboard;
       for (const btn of els.systems.querySelectorAll(`[data-key="${row}"]`)) {
         if (btn.dataset.act === 'plus') btn.disabled = !enabled || leftCells() <= 0 || (s.alloc[row] || 0) >= s.budget;
         else btn.disabled = !enabled || (s.alloc[row] || 0) <= 0;
@@ -1412,7 +1626,9 @@
     s.penalty = 0; s.nextPenalty = 0;
     s.eva = RULES.evaMinutes.value; s.evaUsed = 0;
     s.sweepSol = 0;
-    s.panelDeployed = false; s.carryingPanel = false; s.carryingTape = false;
+    s.panelDeployed = false; s.panelBonus = 0; s.bags = 0; s.carry = null; s.groundItems = [];
+    s.snap = null; s.atSwitchboard = false; s.carryingPanel = false; s.carryingTape = false;
+    s.res.water = L.start.water != null ? L.start.water : (s.res.water || 48);
     s.isolated = false; s.taped = false; s.patched = false; s.reopened = false;
     s.patch = 0; s.leakActive = L.id === '1.2'; s.leakStart = 0; s.spareDelivered = false;
     s.ration = false; s.rationSols = 0;
@@ -1431,6 +1647,7 @@
       s.stormDuration = Math.random() < 0.8 ? 2 : 1; // 1..2 sols
     }
 
+    buildInteractions();
     player.x = 512; player.y = 430; player.path = []; player.facing = 1;
     for (const n of npcs) { n.x = n.id === 'npc1' ? 470 : 620; n.y = n.id === 'npc1' ? 400 : 420; n.tx = n.x; n.ty = n.y; n.atBunker = false; }
     snapCamera();
@@ -1475,8 +1692,9 @@
       }
     }
 
-    s.budget = Math.max(2, RULES.budget.value - s.penalty + (s.panelDeployed ? 1 : 0));
+    s.budget = Math.max(2, RULES.budget.value - s.penalty + (s.panelBonus || 0));
     fitAlloc();
+    restock();
     if (!first) addLog(`<b>Sol ${s.sol}</b> · ${s.budget} cells${s.penalty ? ` (−${s.penalty} penalty)` : ''} · ${s.eva} EVA minutes.`, 'muted');
     if (L.hints && L.hints[s.sol]) addLog(`💡 ${L.hints[s.sol]}`, 'muted');
     if (L.id === '1.2' && s.sol === s.leakStart) {
@@ -1663,7 +1881,8 @@
         const power = RULES.stormPower.value * (1 - RULES.stormShieldCut.value * shield / 100);
         if (s.sheltered) {
           const early = s.shelterSol < s.stormArrival;
-          dose += power * (early ? 1 - RULES.bunkerCut.value : 0.85);
+          const protection = 0.5 + 0.08 * (s.bags || 0);
+          dose += power * (early ? 1 - protection : 0.85);
           lines.push({ t: early
             ? `🛖 Sheltered before arrival: storm dose mostly blocked (<b>+${dose.toFixed(1)}</b>).`
             : `🛖 Sheltered late — crew was still walking when the storm hit (<b>+${dose.toFixed(1)}</b>).`, tone: early ? 'good' : 'warn' });
@@ -1700,8 +1919,10 @@
       if (ROWS[row].kind === 'cells') continue;
       if (s.res[row] == null) continue;
       if (row !== 'repair') s.res[row] = clamp(s.res[row]);
+    s.res.water = clamp(s.res.water || 0);
     }
     const dangerRows = L.rows.filter((r) => ROWS[r].kind !== 'cells' && r !== 'repair' && r !== 'surface');
+    if (!dangerRows.includes('water')) dangerRows.push('water');
     const lows = dangerRows.filter((r) => (s.res[r] ?? 100) < CRITICAL);
     if (lows.length && s.hearts > 0) {
       s.hearts -= 1; s.heartsLost += 1;
@@ -1939,6 +2160,7 @@
     if (e.code === 'KeyD' || e.key === 'ArrowRight') { e.preventDefault(); keys.right = true; return; }
     if (e.code === 'KeyE') { if (!e.repeat) startHold(); return; }
     if (e.code === 'KeyB') { drawBattery(); return; }
+    if (e.code === 'KeyQ') { if (dropItem()) render(); return; }
 
     // B14: use e.code so Shift+1/2/3 works on every layout
     if (['Digit1', 'Digit2', 'Digit3'].includes(e.code) && state.level) {
@@ -2006,8 +2228,7 @@
   /* ================================================================ update == */
   function updateInteractPrompt() {
     if (state.screen !== 'game' || state.phase !== 'eva') { els.interact.hidden = true; return; }
-    const st = nearestStation();
-    if (!st) { els.interact.hidden = true; return; }
+    const st = nearestInteractable();
     const action = actionFor(st);
     if (!action) { els.interact.hidden = true; return; }
     els.interact.hidden = false;
@@ -2040,6 +2261,27 @@
   const DEBUG = q.has('debug');
   window.__JAMT_AUTO_EVA = false;
 
+  window.__T = {
+    teleport(x, y) { player.x = x; player.y = y; snapCamera(); },
+    pick(type) {
+      const src = state.sources.find((s) => s.item === type && s.stock > 0);
+      if (src) { pickupSource(src); return true; }
+      return false;
+    },
+    deliver(slotId) {
+      const slot = state.slots.find((s) => s.id === slotId);
+      if (!slot) return false;
+      deliverSlot(slot);
+      return true;
+    },
+    give(type) { state.carry = type; },
+    drop() { return dropItem(); },
+    carry() { return state.carry; },
+    slots() { return state.slots.map((s) => ({ id: s.id, filled: s.filled, cap: s.cap })); },
+    sources() { return state.sources.map((s) => ({ id: s.id, item: s.item, stock: s.stock, cap: s.cap })); },
+    nearest() { return nearestInteractable(); },
+    state,
+  };
   window.__JAMT__ = {
     get state() { return state; },
     get player() { return player; },
@@ -2106,7 +2348,7 @@
 
 
   /* ============ iteration 2: loading, menus, briefing, pause, touch ====== */
-  const BUILD_VERSION = '2.0.0';
+  const BUILD_VERSION = '3.0.0';
   const TIPS = [
     'Did you know? ISS life support recovers about 98% of the crew’s water (NASA ECLSS).',
     'Did you know? Water ice hides in permanently shadowed craters at the lunar south pole (LRO/LCROSS).',

@@ -20,6 +20,34 @@ tools/       slice_assets.py · sim.py · qa.py
 ```
 
 
+
+## v3.0.0 — Session 1: carry / deliver economy
+
+The switchboard no longer produces water. **Ice is the only new water**, and every big resource is
+now carried by hand to a physical slot.
+
+| Item | Source (restocks each sol) | Slot | Effect |
+| --- | --- | --- | --- |
+| Ice chunk | SW shaded crater (mine, 1 EVA min, cap 4) | Water tank intake | +12 water |
+| Battery canister | Cargo crates (cap 4) | Battery bank (4 slots) | +1 stored cell |
+| Solar panel | Crate (1.1/1.3, cap 3) | Solar field (3 slots) | +1 solar cell per sol, permanent |
+| O₂ canister | Crate (1.1, cap 2, game assumption) | O₂ rack (2 slots) | +25 O₂ |
+| Regolith bag | Soil near the bunker (dig, 1 min, cap 5) | Bunker wall (5 slots) | +8 shielding; bunker protection 50% + 8%/bag |
+| Toolbox / tape / repair parts | Crates (1.2) | Leak site | isolate hatch → tape → patch cure |
+
+- Hands carry **1 item**; `Q` / ACT on open ground drops it (items persist). Carried items show a
+  badge above the head and the sprite at the hands. Slots pulse a ghost outline when you carry a
+  match; wrong slots give a friendly hint and keep the item.
+- The **switchboard** (battery bank station) is the only place the `+/−` cells work; a compact
+  read-only **Water** strip is always visible. Unspent cells still charge the battery.
+- Crew use is now 11 water + 10 O₂ per sol; O₂ cells cost 1 water each. Doing nothing runs the
+  crew out of water around Sol 4 (ice deliveries are required).
+- QA: **45/45** checks (economy deliveries, wrong slot, drop persistence, flow, touch), plus the
+  v2 regression suite.
+- **Note:** the balance sim has **not** been retuned for this economy (that is Session 2). The
+  table below is the v2-rules table and the QA balance gate still reads it; treat it as stale for
+  the new economy.
+
 ## Iteration 2 — v2.0.0 (menu flow, briefing, touch, deploy)
 
 **Live:** <https://ahmed-ads.github.io/Nasa/> · still double-clicks from `file://`.
