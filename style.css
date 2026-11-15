@@ -685,3 +685,33 @@ body.touch-on .tracker { top: 52px; }
 .air-track { height: 9px; margin: 5px 0 4px; background: #0b140f; border: 1px solid #2f5f3c; }
 .air-bar { height: 100%; width: 100%; background: var(--green); transition: width .2s linear, background-color .2s; }
 .chip.is-low { color: #fff; background: #7a2033; border-color: #ff4d6d; }
+
+/* A4: animation debug page (?debug#anim) */
+.anim-debug {
+  position: fixed; inset: 0; z-index: 120; overflow: auto;
+  background: #05070f; color: #e8edff; padding: 16px 18px 22px;
+  font-family: var(--pixel);
+}
+.anim-debug[hidden] { display: none; }
+.anim-debug-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px; margin-bottom: 12px; }
+.anim-debug-head h1 { margin: 0; font-size: clamp(14px, 2vw, 22px); letter-spacing: 1.5px; color: var(--orange, #ffb454); }
+.anim-debug-head p { margin: 0; color: #95a4c9; font-size: 11px; letter-spacing: .5px; }
+.anim-debug-grid { display: grid; gap: 12px; }
+.anim-row { border: 1px solid #263252; background: #0a0e1a; }
+.anim-row h2 { margin: 0; padding: 6px 10px; font-size: 10px; letter-spacing: 1.6px; color: #8fa2cc; border-bottom: 1px solid #263252; }
+.anim-row.light h2 { background: #e6eaf2; color: #1a2233; border-bottom-color: #b9c2d4; }
+.anim-cells { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 8px; }
+.anim-stage { position: relative; border: 1px solid #263252; overflow: hidden; }
+.anim-row.dark .anim-stage { background: #12151f; }
+.anim-row.light .anim-stage { background: #d7dce8; border-color: #b9c2d4; }
+.anim-stage canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+.anim-stage span {
+  position: absolute; left: 6px; bottom: 4px; font-size: 9px; letter-spacing: .3px;
+  color: #dbe4ff; background: rgba(5,7,15,.72); padding: 1px 4px;
+}
+.anim-row.light .anim-stage span { color: #101827; background: rgba(255,255,255,.78); }
+.anim-debug-note { margin: 12px 0 0; color: #7f90b6; font-size: 10px; letter-spacing: .4px; }
+@media (max-width: 640px) {
+  .anim-cells { grid-template-columns: 1fr; }
+  .anim-debug { padding: 10px; }
+}

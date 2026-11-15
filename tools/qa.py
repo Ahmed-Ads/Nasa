@@ -387,6 +387,178 @@ def main():
         check("zero air drops the item and ends the EVA", air["carry"] is None and air["dropped"] >= 1 and air["phase"] in ("resolve", "plan"), str(air))
         actx.close()
 
+        # ---------------------------------------------------- astronaut walk
+        print("\nAstronaut walk (img10)")
+        # fallback: one missing slice must not break the game
+        fctx = browser.new_context(viewport={"width": 1280, "height": 720})
+        fpage = fctx.new_page()
+        ferrs, fwarns = [], []
+        fpage.on("pageerror", lambda e: ferrs.append(str(e)))
+        fpage.on("console", lambda m: fwarns.append(m.text) if m.type == "warning" else None)
+        fpage.route("**/walk_03.png", lambda route: route.abort())
+        fpage.goto((LIVE_URL or URL) + "?debug&level=1.1")
+        fpage.wait_for_timeout(1400)
+        fstate = js(fpage, "() => window.__JAMT__.anim")
+        check("A4 missing walk frame falls back to the old sprite",
+              fstate["fallback"] is True and fstate["ready"] is False
+              and fstate["draw"]["name"] == "fallback", str(fstate.get("draw")))
+        check("A4 fallback logs one warning and no page errors",
+              any("missing frame" in w.lower() for w in fwarns) and not ferrs,
+              f"warns={fwarns[:2]} errs={ferrs[:2]}")
+        fctx.close()
+
+        walk_errors = []
+        wctx, wpage = new_page(browser, 1280, 720, "?debug&level=1.1", walk_errors)
+        wpage.wait_for_function("() => window.__JAMT__ && window.__JAMT__.anim && window.__JAMT__.anim.ready",
+                                timeout=7000)
+        base_anim = js(wpage, "() => window.__JAMT__.anim")
+        check("A4 walk + idle slices preloaded", base_anim["ready"] is True,
+              f"fallback={base_anim.get('fallback')}")
+        check("A4 one sheet scale: idle is the current 64px sprite height",
+              base_anim["targetHeight"] == 64 and abs(base_anim["idleHeight"] - 64) <= 0.6,
+              f"target={base_anim['targetHeight']} idle={base_anim['idleHeight']:.2f} scale={base_anim['scale']:.5f}")
+
+        spot = js(wpage, """() => {
+          const J = window.__JAMT__, T = window.__T;
+          for (const k of ['left','right','up','down']) T.setKey(k, false);
+          let found = null;
+          for (let y = 520; y < 700 && !found; y += 8) {
+            let clear = true;
+            for (let x = 120; x < 250; x += 6) if (J.blockedAt(x, y)) { clear = false; break; }
+            if (clear) found = { x: 130, y };
+          }
+          found = found || { x: 512, y: 430 };
+          T.teleport(found.x, found.y);
+          J.resetAnim();
+          return found;
+        }""")
+        still_before = js(wpage, "() => window.__JAMT__.anim")
+        wpage.wait_for_timeout(2000)
+        still_after = js(wpage, "() => window.__JAMT__.anim")
+        check("A4 (a) standing still for 2 s does not advance",
+              still_after["distance"] == still_before["distance"]
+              and still_after["walkFrame"] == still_before["walkFrame"]
+              and still_after["mode"] == "idle",
+              f"{still_before['distance']}->{still_after['distance']} frame {still_before['walkFrame']}->{still_after['walkFrame']}")
+
+        stride = js(wpage, """() => {
+          const J = window.__JAMT__, T = window.__T;
+          J.resetAnim();
+          T.setKey('right', true);
+          const seen = new Set();
+          for (let i = 0; i < 36; i++) { T.step(1 / 60); seen.add(J.anim.walkFrame); }
+          T.setKey('right', false);
+          return { anim: J.anim, seen: [...seen].sort() };
+        }""")
+        check("A4 (b) 48 px of movement = one full six-frame cycle",
+              stride["anim"]["distance"] >= 48 and stride["anim"]["distance"] < 96
+              and stride["anim"]["cycles"] == 1 and len(stride["seen"]) == 6,
+              f"dist={stride['anim']['distance']:.1f} cycles={stride['anim']['cycles']} frames={stride['seen']}")
+
+        left = js(wpage, """() => {
+          const J = window.__JAMT__, T = window.__T;
+          T.setKey('left', true);
+          for (let i = 0; i < 10; i++) T.step(1 / 60);
+          T.setKey('left', false);
+          return { facing: J.player.facing, anim: J.anim };
+        }""")
+        wpage.wait_for_timeout(120)
+        left_draw = js(wpage, "() => window.__JAMT__.anim.draw")
+        check("A4 (c) moving left flips the sprite",
+              left["facing"] == -1 and left_draw["flipped"] is True,
+              f"facing={left['facing']} draw={left_draw['flipped']}")
+
+        foot = js(wpage, """() => {
+          const J = window.__JAMT__, a = J.anim, d = a.draw;
+          return { px: J.player.x, py: J.player.y, footX: d.footX, footY: d.footY,
+                   name: d.name, inside: J.insideCollider(), scale: a.scale };
+        }""")
+        check("A4 (d) feet are anchored to the collider point (no float/sink)",
+              abs(foot["footX"] - foot["px"]) < 0.01 and abs(foot["footY"] - foot["py"]) < 0.01
+              and foot["name"] in ("walk", "idle") and not foot["inside"], str(foot))
+        wpage.wait_for_timeout(150)
+        check("A4 (e) animation causes no console errors",
+              len([e for e in walk_errors if not any(s in e.lower() for s in IGNORE)]) == 0,
+              str(walk_errors[:2]))
+        check("A4 walk state is exposed for QA", "cycleDistance" in base_anim and base_anim["stride"] == 8)
+
+        # mid-stride screenshots: 1280x720 and 390x844
+        out_dir = os.path.join(ROOT, "tools", "out")
+        os.makedirs(out_dir, exist_ok=True)
+        desk_shot = os.path.join(SHOTS, "walk_1280x720.png")
+        phone_shot = os.path.join(SHOTS, "walk_390x844.png")
+
+        js(wpage, f"""() => {{
+          const J = window.__JAMT__, T = window.__T;
+          T.teleport({spot['x']}, {spot['y']}); J.resetAnim(); J.snapCamera();
+          T.setKey('right', true);
+        }}""")
+        wpage.wait_for_timeout(340)
+        wpage.screenshot(path=desk_shot)
+        js(wpage, "() => window.__T.setKey('right', false)")
+
+        phone_errors = []
+        pctx, ppage = new_page(browser, 390, 844, "?debug&level=1.1", phone_errors)
+        ppage.wait_for_function("() => window.__JAMT__ && window.__JAMT__.anim && window.__JAMT__.anim.ready",
+                                timeout=7000)
+        phone_anim = js(ppage, "() => window.__JAMT__.anim")
+        check("A4 phone keeps the same sheet scale",
+              abs(phone_anim["scale"] - base_anim["scale"]) < 1e-9,
+              f"{phone_anim['scale']:.5f} vs {base_anim['scale']:.5f}")
+        js(ppage, f"""() => {{
+          const J = window.__JAMT__, T = window.__T;
+          T.teleport({spot['x']}, {spot['y']}); J.resetAnim(); J.snapCamera();
+          T.setKey('right', true);
+          for (let i = 0; i < 18; i++) T.step(1 / 60);
+          T.setKey('right', false);
+        }}""")
+        ppage.wait_for_timeout(160)
+        phone_foot = js(ppage, """() => {
+          const J = window.__JAMT__, d = J.anim.draw;
+          return { px: J.player.x, py: J.player.y, footY: d.footY, inside: J.insideCollider() };
+        }""")
+        check("A4 phone feet stay on the collider point",
+              abs(phone_foot["footY"] - phone_foot["py"]) < 0.01 and not phone_foot["inside"], str(phone_foot))
+        check("A4 phone animation has no console errors",
+              len([e for e in phone_errors if not any(s in e.lower() for s in IGNORE)]) == 0,
+              str(phone_errors[:2]))
+        js(ppage, f"""() => {{
+          const T = window.__T;
+          T.teleport({spot['x']}, {spot['y']}); window.__JAMT__.resetAnim(); window.__JAMT__.snapCamera();
+          T.setKey('right', true);
+        }}""")
+        ppage.wait_for_timeout(340)
+        ppage.screenshot(path=phone_shot)
+        js(ppage, "() => window.__T.setKey('right', false)")
+
+        desk_img = Image.open(desk_shot).convert("RGB")
+        phone_img = Image.open(phone_shot).convert("RGB")
+        from PIL import ImageDraw as _Draw
+        pad, label_h = 12, 24
+        comp = Image.new("RGB", (pad + desk_img.width + pad + phone_img.width + pad,
+                                 label_h + max(desk_img.height, phone_img.height) + pad), (10, 13, 22))
+        cd = _Draw.Draw(comp)
+        cd.text((pad, 6), "1280x720 desktop - mid-stride", fill=(235, 240, 255))
+        cd.text((pad + desk_img.width + pad, 6), "390x844 phone - mid-stride", fill=(235, 240, 255))
+        comp.paste(desk_img, (pad, label_h))
+        comp.paste(phone_img, (pad + desk_img.width + pad, label_h))
+        comp.save(os.path.join(out_dir, "walk_check.png"))
+        check("A4 walk_check.png written (desktop + phone)",
+              os.path.isfile(os.path.join(out_dir, "walk_check.png")))
+        pctx.close()
+
+        # ---------------------------------------------------- ?debug#anim page
+        dctx, dpage = new_page(browser, 1280, 720, "?debug#anim")
+        try:
+            dpage.wait_for_function("() => window.__animDebug && window.__animDebug.panels === 6", timeout=5000)
+            dbg = js(dpage, "() => window.__animDebug")
+            check("A4 ?debug#anim shows 3 speeds on dark + light",
+                  dbg["panels"] == 6 and len(dbg["speeds"]) == 3, str(dbg))
+        except Exception as exc:
+            check("A4 ?debug#anim shows 3 speeds on dark + light", False, str(exc))
+        dctx.close()
+        wctx.close()
+
         # -------------------------------------------------------- version
         html = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
         check(f"E version {BUILD_VERSION} in index.html", f"v{BUILD_VERSION}" in html)

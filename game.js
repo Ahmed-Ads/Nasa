@@ -15,15 +15,76 @@
   /* ====================================================== asset preloading == */
   const SPR = {};
   const manifest = window.JAMT_ASSETS || {};
-  window.__jamtLoad = { total: Object.keys(manifest).length || 1, done: 0 };
-  const bumpLoad = () => { window.__jamtLoad.done += 1; };
-  for (const [key, info] of Object.entries(manifest)) {
-    const img = new Image();
-    SPR[key] = { img, ok: false, w: info.w, h: info.h };
-    img.onload = () => { SPR[key].ok = true; bumpLoad(); if (window.__jamtOnAsset) window.__jamtOnAsset(); };
-    img.onerror = () => { SPR[key].ok = false; bumpLoad(); };
-    img.src = info.src;
+  const animDefs = window.ANIMS || {};
+  const ANIMS = {};
+  const loadList = [];
+  let animWarned = false;
+
+  function animSettled(name) {
+    const a = ANIMS[name];
+    if (!a || a.settled) return;
+    if (a.done + a.failed < a.imgs.length) return;
+    a.settled = true;
+    a.loaded = a.failed === 0 && a.imgs.length > 0;
+    if (!a.loaded && !animWarned) {
+      animWarned = true;
+      console.warn(`[anim] "${name}" has a missing frame; using the original astronaut sprite.`);
+    }
   }
+
+  for (const [key, info] of Object.entries(manifest)) {
+    const rec = { img: new Image(), ok: false, src: info.src, w: info.w, h: info.h };
+    SPR[key] = rec;
+    loadList.push({ key, src: info.src, rec, anim: null });
+  }
+  for (const [name, def] of Object.entries(animDefs)) {
+    const frames = Array.isArray(def.frames) ? def.frames : [];
+    const imgs = frames.map((src, i) => {
+      const key = `anim/${name}/${i}`;
+      const rec = { img: null, ok: false, src, key };
+      if (/\.png$/i.test(src)) {
+        rec.img = new Image();
+        SPR[key] = rec;
+        loadList.push({ key, src, rec, anim: name });
+      }
+      return rec;
+    });
+    const failed = imgs.filter((r) => !r.img).length;
+    ANIMS[name] = Object.assign({}, def, { imgs, done: 0, failed, settled: false, loaded: false });
+    if (!imgs.some((r) => r.img)) animSettled(name);
+  }
+
+  window.__jamtLoad = { total: loadList.length || 1, done: 0 };
+  const bumpLoad = () => { window.__jamtLoad.done += 1; };
+  for (const item of loadList) {
+    const { rec, src, anim } = item;
+    rec.img.onload = () => {
+      rec.ok = true;
+      if (anim) { const a = ANIMS[anim]; if (a) { a.done += 1; animSettled(anim); } }
+      bumpLoad();
+      if (window.__jamtOnAsset) window.__jamtOnAsset();
+    };
+    rec.img.onerror = () => {
+      rec.ok = false;
+      if (anim) { const a = ANIMS[anim]; if (a) { a.failed += 1; animSettled(anim); } }
+      bumpLoad();
+    };
+    rec.img.src = src;
+  }
+
+  // One scale for the whole sheet, from the standing idle frame. The target is
+  // the height drawAsset() gives the current crew/walk sprite (37x64 in a 37x66 box).
+  const PLAYER_DRAW_BOX = { maxW: 37, maxH: 66 };
+  function currentPlayerDrawHeight() {
+    const info = manifest['crew/walk'];
+    if (!info || !info.w || !info.h) return 64;
+    let h = Math.round(PLAYER_DRAW_BOX.maxW / (info.w / info.h));
+    if (h > PLAYER_DRAW_BOX.maxH) h = PLAYER_DRAW_BOX.maxH;
+    return h;
+  }
+  const ANIM_TARGET_HEIGHT = currentPlayerDrawHeight();
+  const ANIM_IDLE_H = (ANIMS.idle && ANIMS.idle.h && ANIMS.idle.h[0]) || 283;
+  const ANIM_SCALE = ANIM_TARGET_HEIGHT / ANIM_IDLE_H;
 
   /* ================================================================ rules == */
   // kind:'real' = verified on a NASA source (named); kind:'game' = tuned for play.
@@ -184,6 +245,7 @@
   const player = {
     x: 512, y: 430, tx: 512, ty: 430,
     path: [], facing: 1, moving: false, walk: 0, radius: 7,
+    animDist: 0, animFrame: 0, animMode: 'idle',
   };
   const npcs = [
     { id: 'npc1', x: 470, y: 400, tx: 470, ty: 400, sprite: 'crew/welding', timer: 2, atBunker: false, facing: 1, walk: 0, moving: false },
@@ -866,7 +928,18 @@
     }
     if (player.moving) {
       const speed = state.rover.mounted ? 205 : 82;
+      const fromX = player.x, fromY = player.y;
       movePlayer(dx * speed * dt, dy * speed * dt);
+      const moved = Math.hypot(player.x - fromX, player.y - fromY);
+      if (!state.rover.mounted && moved > 0.01) {
+        player.animDist += moved;
+        const stride = (ANIMS.walk && ANIMS.walk.strideDistance) || 8;
+        const count = (ANIMS.walk && ANIMS.walk.frameCount) || 6;
+        player.animFrame = Math.floor(player.animDist / stride) % count;
+        player.animMode = 'walk';
+      } else if (!state.rover.mounted) {
+        player.animMode = 'idle';
+      }
       if (Math.abs(dx) > 0.1) player.facing = dx > 0 ? 1 : -1;
       state.air = Math.max(0, state.air - dt * (state.rover.mounted ? 0.18 : 0.55));
       const prev = Math.floor(player.walk / 0.16);
@@ -875,6 +948,8 @@
         dustPuffs.push({ x: player.x - player.facing * 3, y: player.y, life: 0.4 });
         if (dustPuffs.length > 16) dustPuffs.shift();
       }
+    } else {
+      player.animMode = 'idle';
     }
     if (state.air <= 25 && !state.airWarned) {
       state.airWarned = true;
@@ -939,6 +1014,46 @@
     ctx.restore();
     return true;
   }
+  function animLoaded(name) {
+    const a = ANIMS[name];
+    return !!(a && a.loaded);
+  }
+  function drawAnimFrameTo(g, name, idx, x, footY, flip) {
+    const a = ANIMS[name];
+    if (!a || !a.loaded) return false;
+    const i = Math.max(0, Math.min(a.imgs.length - 1, idx | 0));
+    const rec = a.imgs[i];
+    if (!rec || !rec.ok || !rec.img) return false;
+    const fx = (a.footX[i] || a.w[i] / 2) * ANIM_SCALE;
+    const fy = (a.footY[i] || a.h[i]) * ANIM_SCALE;
+    const w = a.w[i] * ANIM_SCALE;
+    const h = a.h[i] * ANIM_SCALE;
+    g.save();
+    g.imageSmoothingEnabled = false;
+    g.translate(Math.round(x), Math.round(footY));
+    if (flip) g.scale(-1, 1);
+    g.drawImage(rec.img, -fx, -fy, w, h);
+    g.restore();
+    return true;
+  }
+  function drawAnimFrame(name, idx, x, footY, flip) {
+    return drawAnimFrameTo(ctx, name, idx, x, footY, flip);
+  }
+  function drawSoftShadow(x, y, rx = 13, ry = 4.6) {
+    ctx.save();
+    ctx.translate(Math.round(x), Math.round(y));
+    ctx.scale(1, ry / rx);
+    const g = ctx.createRadialGradient(0, 0, rx * 0.12, 0, 0, rx);
+    g.addColorStop(0, 'rgba(8,10,18,.42)');
+    g.addColorStop(0.62, 'rgba(8,10,18,.20)');
+    g.addColorStop(1, 'rgba(8,10,18,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(0, 0, rx, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
   function px(x, y, w, h, color) { ctx.fillStyle = color; ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); }
   function ellipse(x, y, rx, ry, color) {
     ctx.fillStyle = color; ctx.beginPath(); ctx.ellipse(Math.round(x), Math.round(y), Math.max(0.5, rx), Math.max(0.5, ry), 0, 0, Math.PI * 2); ctx.fill();
@@ -1098,15 +1213,31 @@
     }
     ctx.globalAlpha = 1;
 
-    ellipse(player.x, player.y + 1, 11, 4, 'rgba(8,10,18,.4)');
-    const bob = player.moving ? Math.round(Math.sin(player.walk * 13)) : Math.round(Math.sin(performance.now() / 500));
-    const key = state.levelId === '1.2' ? 'crew/wrench' : 'crew/walk';
-    const drew = drawAsset(key, player.x, player.y + bob, 37, 66, { flip: player.facing < 0 });
-    if (!drew) {
-      px(player.x - 6, player.y - 26, 12, 22, '#eef2ff');
-      px(player.x - 5, player.y - 34, 10, 10, '#eef2ff');
-      px(player.x - 4, player.y - 32, 8, 5, '#1c3b3d');
+    drawSoftShadow(player.x, player.y + 2, 13, 4.6);
+    const animName = player.animMode === 'walk' ? 'walk' : 'idle';
+    const animIdx = animName === 'walk' ? player.animFrame : 0;
+    // If either player animation has a missing frame, use the old sprite for both.
+    let usedAnim = false;
+    if (animLoaded('walk') && animLoaded('idle')) {
+      usedAnim = drawAnimFrame(animName, animIdx, player.x, player.y, player.facing < 0);
     }
+    if (!usedAnim) {
+      // load failure path: keep the pre-animation astronaut, never blank
+      const key = state.levelId === '1.2' ? 'crew/wrench' : 'crew/walk';
+      const drew = drawAsset(key, player.x, player.y, 37, 66, { flip: player.facing < 0 });
+      if (!drew) {
+        px(player.x - 6, player.y - 26, 12, 22, '#eef2ff');
+        px(player.x - 5, player.y - 34, 10, 10, '#eef2ff');
+        px(player.x - 4, player.y - 32, 8, 5, '#1c3b3d');
+      }
+    }
+    window.__jamtAnimDraw = {
+      name: usedAnim ? animName : 'fallback', frame: usedAnim ? animIdx : -1,
+      x: player.x, y: player.y, footX: player.x, footY: player.y,
+      flipped: player.facing < 0, scale: ANIM_SCALE,
+      screenX: player.x - Math.round(camera.x),
+      screenY: player.y - Math.round(camera.y),
+    };
     if (state.carry) {
       drawAsset(ITEM_META[state.carry].sprite, player.x + player.facing * 10, player.y - 16, 14, 14);
       drawAsset(ITEM_META[state.carry].sprite, player.x, player.y - 74, 18, 18);
@@ -1744,6 +1875,7 @@
 
     buildInteractions();
     player.x = 512; player.y = 430; player.path = []; player.facing = 1;
+    player.animDist = 0; player.animFrame = 0; player.animMode = 'idle';
     for (const n of npcs) { n.x = n.id === 'npc1' ? 470 : 620; n.y = n.id === 'npc1' ? 400 : 420; n.tx = n.x; n.ty = n.y; n.atBunker = false; }
     snapCamera();
 
@@ -2387,6 +2519,28 @@
   window.__JAMT__ = {
     get state() { return state; },
     get player() { return player; },
+    get anim() {
+      const w = ANIMS.walk, idle = ANIMS.idle;
+      const stride = (w && w.strideDistance) || 8;
+      const count = (w && w.frameCount) || 6;
+      const cycle = stride * count;
+      return {
+        ready: !!(w && w.loaded && idle && idle.loaded),
+        fallback: !!((w && w.settled && !w.loaded) || (idle && idle.settled && !idle.loaded)),
+        scale: ANIM_SCALE,
+        targetHeight: ANIM_TARGET_HEIGHT,
+        idleHeight: (idle && idle.h && idle.h[0] ? idle.h[0] : 0) * ANIM_SCALE,
+        stride, frameCount: count, cycleDistance: cycle,
+        mode: player.animMode,
+        frame: player.animMode === 'walk' ? player.animFrame : 0,
+        walkFrame: player.animFrame,
+        distance: player.animDist,
+        cycles: Math.floor(player.animDist / cycle),
+        facing: player.facing,
+        draw: window.__jamtAnimDraw || null,
+      };
+    },
+    resetAnim() { player.animDist = 0; player.animFrame = 0; player.animMode = 'idle'; },
     get camera() { return camera; },
     get npcs() { return npcs; },
     get consolePx() { return consolePx; },
@@ -2450,7 +2604,7 @@
 
 
   /* ============ iteration 2: loading, menus, briefing, pause, touch ====== */
-  const BUILD_VERSION = '3.1.0';
+  const BUILD_VERSION = '3.1.2';
   const TIPS = [
     'Did you know? ISS life support recovers about 98% of the crew’s water (NASA ECLSS).',
     'Did you know? Water ice hides in permanently shadowed craters at the lunar south pole (LRO/LCROSS).',
@@ -2690,6 +2844,81 @@
     }, 250);
   }
 
+  function initAnimDebugPage() {
+    if (!DEBUG || location.hash !== '#anim') return;
+    const root = document.getElementById('anim-debug');
+    if (!root) return;
+    const loading = document.getElementById('screen-loading');
+    if (loading) loading.hidden = true;
+    document.querySelectorAll('.overlay').forEach((el) => { el.hidden = true; });
+    document.querySelectorAll('.modal').forEach((el) => { el.hidden = true; });
+    root.hidden = false;
+    const grid = document.getElementById('anim-debug-grid');
+    const meta = document.getElementById('anim-debug-meta');
+    if (meta) {
+      meta.textContent = `scale ${ANIM_SCALE.toFixed(5)} · idle ${ANIM_TARGET_HEIGHT}px · `
+        + `stride 8px · cycle 48px · foot-anchored`;
+    }
+    const speeds = [{ v: 40, label: 'SLOW' }, { v: 82, label: 'WALK' }, { v: 164, label: 'FAST' }];
+    const panels = [];
+    for (const theme of ['dark', 'light']) {
+      const row = document.createElement('section');
+      row.className = `anim-row ${theme}`;
+      const head = document.createElement('h2');
+      head.textContent = `${theme.toUpperCase()} BACKGROUND`;
+      row.append(head);
+      const cells = document.createElement('div');
+      cells.className = 'anim-cells';
+      for (const sp of speeds) {
+        const stage = document.createElement('div');
+        stage.className = 'anim-stage';
+        const canvas = document.createElement('canvas');
+        canvas.width = 220; canvas.height = 180;
+        const cap = document.createElement('span');
+        stage.append(canvas, cap);
+        cells.append(stage);
+        panels.push({ canvas, g: canvas.getContext('2d'), speed: sp.v, label: sp.label, dist: 0, theme, cap });
+      }
+      row.append(cells);
+      grid.append(row);
+    }
+    let last = 0;
+    const loop = (now) => {
+      if (root.hidden) { last = 0; requestAnimationFrame(loop); return; }
+      const t = now / 1000;
+      const dt = last ? Math.min(0.05, t - last) : 0.016;
+      last = t;
+      for (const p of panels) {
+        p.dist = (p.dist + p.speed * dt) % 48;
+        const frame = Math.floor(p.dist / 8) % 6;
+        p.g.clearRect(0, 0, 220, 180);
+        p.g.fillStyle = p.theme === 'dark' ? 'rgba(255,255,255,.16)' : 'rgba(10,14,25,.16)';
+        p.g.fillRect(24, 158, 172, 1);
+        p.g.save();
+        p.g.translate(110, 160);
+        p.g.scale(1, 0.26);
+        const grad = p.g.createRadialGradient(0, 0, 2, 0, 0, 30);
+        grad.addColorStop(0, 'rgba(0,0,0,.4)');
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        p.g.fillStyle = grad;
+        p.g.beginPath(); p.g.arc(0, 0, 30, 0, Math.PI * 2); p.g.fill();
+        p.g.restore();
+        if (!drawAnimFrameTo(p.g, 'walk', frame, 110, 158, false)) {
+          p.g.fillStyle = p.theme === 'dark' ? '#e8edff' : '#141a28';
+          p.g.font = '12px monospace';
+          p.g.fillText('loading frames...', 62, 88);
+        }
+        p.cap.textContent = `${p.label} ${p.speed}px/s · frame ${frame + 1}/6`;
+      }
+      requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
+    window.__animDebug = {
+      speeds: speeds.map((s) => s.v), panels: panels.length,
+      scale: ANIM_SCALE, targetHeight: ANIM_TARGET_HEIGHT,
+    };
+  }
+
   function initLoading() {
     const started = performance.now();
     let tipIdx = 0;
@@ -2724,6 +2953,7 @@
   applySettings();
   wireFlow();
   initLoading();
+  initAnimDebugPage();
 
   /* =================================================================== init == */
   buildTerrain();

@@ -24,6 +24,23 @@ tools/       slice_assets.py · sim.py · qa.py
 
 
 
+## v3.1.2 - Session 3 part A: distance-driven walk
+
+- `assets/anim_manifest.js` (`window.ANIMS`): **20 animations / 69 sliced PNG frames**. `walk`
+  (6 frames) and `idle` are active; the other img10 action strips, img12 console/ice strips and
+  the 7 img11 rover headings are loaded as data only.
+- **One scale for the whole sheet**, computed from the standing `idle` frame so the astronaut is
+  the same height as the previous 64 px crew sprite (scale **0.22615**). Foot points come from
+  each frame's sliced metadata; no per-frame scaling.
+- Walking advances by **distance**, not time: **8 px per frame, 48 px per 6-frame cycle**.
+  Standing still shows `idle` without advancing; moving left mirrors the frame. A soft radial
+  ground shadow is drawn in-game because the sliced frames have none.
+- Preloads only the sliced PNGs (never the source JPGs); every frame is included in the loading
+  progress count. A missing frame falls back to the previous astronaut sprite with one warning.
+- `?debug#anim` shows the walk cycle at 40/82/164 px/s on dark and light backgrounds.
+- QA: **72/72** on `file://` (desktop + phone); `tools/out/walk_check.png` is the mid-stride
+  desktop/phone proof. Rover-mounted art is unchanged. Sim remains stale (v2 warning).
+
 ## v3.1.0 — Session 2B part 2: rover
 
 - `state.rover = { mounted, cargo, usedThisSol, dead }`. ACT at the parked rover mounts;
