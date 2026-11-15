@@ -964,8 +964,35 @@ def main():
         apage.click("#start-gate"); apage.wait_for_timeout(250)
         title_art = js(apage, """() => [...document.querySelectorAll('#screen-title img')]
           .map((i) => ({ ok: i.complete && i.naturalWidth > 0, src: i.getAttribute('src') }))""")
-        check("Landing uses img8/img9 art (logo, start, quit, cheer, ready)",
-              len(title_art) >= 5 and all(a["ok"] for a in title_art), str(title_art))
+        check("Landing shows the illustrated astronaut art",
+              len(title_art) >= 1 and all(a["ok"] for a in title_art), str(title_art))
+        landing = js(apage, """() => {
+          const ids = ['play-btn', 'continue-btn', 'how-btn', 'menu-settings', 'menu-quit'];
+          const buttons = ids.map((id) => {
+            const b = document.getElementById(id);
+            if (!b) return { id, missing: true };
+            const r = b.getBoundingClientRect();
+            const s = getComputedStyle(b);
+            return { id, w: Math.round(r.width), h: Math.round(r.height),
+                     visible: r.width > 60 && r.height > 30 && s.display !== 'none' && s.visibility !== 'hidden' };
+          });
+          const title = document.querySelector('#screen-title .title-main');
+          const astro = document.querySelector('#screen-title .title-astronaut');
+          const ar = astro ? astro.getBoundingClientRect() : null;
+          return {
+            buttons,
+            jersey: document.fonts.check("40px 'Jersey 20'"),
+            astronaut: ar ? { w: Math.round(ar.width), bottom: Math.round(innerHeight - ar.bottom) } : null,
+            footer: (document.querySelector('#screen-title .title-footer') || {}).textContent || '',
+          };
+        }""")
+        check("Landing menu has the five design buttons at clickable size",
+              all(b.get("visible") for b in landing["buttons"]), str(landing["buttons"]))
+        check("Landing title uses the bundled pixel font",
+              landing["jersey"] is True, str(landing["jersey"]))
+        check("Landing keeps the big astronaut and the credit footer",
+              landing["astronaut"] is not None and landing["astronaut"]["w"] >= 180
+              and "NASA" in landing["footer"], str(landing))
         apage.click("#menu-quit"); apage.wait_for_timeout(300)
         apage.wait_for_function("() => { const i = document.getElementById('confirm-art'); return !i.hidden && i.complete && i.naturalWidth > 0; }", timeout=5000)
         confirm_art = js(apage, """() => { const i = document.getElementById('confirm-art');

@@ -24,6 +24,30 @@ tools/       slice_assets.py · sim.py · qa.py
 
 
 
+## v3.1.8 - Start / Continue landing screen from the design
+
+- The landing screen now follows the `edit_design` mockup: the full-bleed space background,
+  the pixel-font title and "YOUR MISSION STARTS HERE" sub-line centred at the top, the large
+  illustrated astronaut anchored bottom-left, the five gold buttons in a column on the right
+  (Start Mission, Continue Mission, Training, Settings, Exit) and a small
+  "Powered by NASA open data · Credits" footer.
+- **Continue Mission** is a real resume: disabled with no save, shows the saved star count
+  (`Continue Mission · ★ 4`) and opens the briefing of the furthest unlocked mission. Start
+  Mission still opens the level map, Training opens the how-to modal.
+- Jersey 20 / Jersey 25 / Lexend are now **bundled in `assets/fonts/`** (SIL OFL, licence
+  files next to them), so the pixel type of the design renders with no Google Fonts request
+  and no network at all.
+- Nothing on this screen is load-bearing for `game.js` beyond the button ids (`#play-btn`,
+  `#continue-btn`, `#how-btn`, `#menu-credits`, `#menu-settings`, `#menu-quit`,
+  `#title-version`), so changing the layout cannot repeat the v3.1.6 breakage. `Credits` sits
+  in the footer to keep the five-button column of the mockup.
+- Phone layout stacks the title, the buttons and the footer with no horizontal overflow at
+  390 x 844.
+- QA: **115/115** on `file://`. The old "5 landing art images" assertion was replaced by
+  design-specific ones (astronaut art loads, five buttons at clickable size, pixel font
+  loaded, footer present), since this screen intentionally drops the crest/sign art.
+  Sim remains stale (v2 warning).
+
 ## v3.1.7 - ROVER-FIX + the edit_design UI, merged for real
 
 - The rover now follows the rider exactly while mounted. Dismount parks it at that exact

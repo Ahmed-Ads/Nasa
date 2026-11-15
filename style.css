@@ -1,7 +1,33 @@
 /* ==========================================================================
    Junior Astronaut Mission Trainer — Level 1
-   Pixel mission control UI · system fonts only (works offline)
+   Pixel mission control UI · fonts bundled locally (works offline)
    ========================================================================== */
+
+/* Bundled so the pixel type matches the design without a Google Fonts request.
+   Jersey 20 / Jersey 25 / Lexend are SIL Open Font License; see assets/fonts/OFL-*.txt */
+@font-face {
+  font-family: 'Jersey 20';
+  src: url('assets/fonts/jersey20-latin.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Jersey 25';
+  src: url('assets/fonts/jersey25-latin.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Lexend';
+  src: url('assets/fonts/lexend-700-latin.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
 
 :root {
   --space-0: #06070f;
@@ -3524,4 +3550,164 @@ body.touch-on .tracker {
   .landing-crest { height: 58px; }
   .landing-ready { height: 70px; }
   .landing-cheer { height: 52px; }
+}
+
+/* ================================================== landing: design mockup ===
+   The edit_design start screen: illustrated astronaut bottom-left, pixel title
+   top-centre, gold menu column on the right, small credit footer.
+   game.js only needs the ids, so the layout stays free as long as #play-btn,
+   #continue-btn, #how-btn, #menu-settings, #menu-credits, #menu-quit and
+   #title-version exist. */
+.overlay--title {
+  justify-content: flex-start;
+  background: #060714 url('assets/ui/desktop1_bg.png') no-repeat center center / cover;
+}
+
+.overlay--title .title-astronaut {
+  left: 0;
+  bottom: 0;
+  width: clamp(240px, 34vw, 520px);
+  max-height: 68vh;
+  z-index: 1;
+}
+
+.overlay--title .astronaut-img {
+  max-height: 68vh;
+  filter: drop-shadow(0 18px 34px rgba(0, 0, 0, .55));
+}
+
+.overlay--title .title-header {
+  top: clamp(22px, 12vh, 132px);
+  width: min(92vw, 900px);
+  gap: clamp(6px, 1.4vh, 18px);
+}
+
+.overlay--title .title-main {
+  font-size: clamp(40px, 6.4vw, 96px);
+  letter-spacing: .01em;
+  text-shadow: 0 6px 22px rgba(0, 0, 0, .85);
+}
+
+.overlay--title .title-sub {
+  font-size: clamp(20px, 3.7vw, 58px);
+  letter-spacing: .04em;
+  text-shadow: 0 4px 16px rgba(0, 0, 0, .85);
+}
+
+.overlay--title .title-menu {
+  top: clamp(46%, 50vh, 520px);
+  right: clamp(18px, 4vw, 66px);
+  width: min(330px, 86vw);
+  gap: clamp(12px, 2.2vh, 26px);
+}
+
+.overlay--title .figma-btn {
+  height: clamp(50px, 6.4vh, 68px);
+  font-size: clamp(18px, 1.9vw, 28px);
+}
+
+.overlay--title .title-footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  bottom: clamp(10px, 2vh, 22px);
+  font-size: clamp(11px, 1.05vw, 15px);
+  color: rgba(255, 255, 255, .72);
+}
+
+.overlay--title .title-credits {
+  font: inherit;
+  letter-spacing: inherit;
+  color: #ffd970;
+  background: none;
+  border: 0;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+
+.overlay--title .title-credits:hover,
+.overlay--title .title-credits:focus-visible {
+  text-decoration: underline;
+}
+
+.overlay--title .title-version {
+  position: absolute;
+  right: clamp(10px, 2vw, 22px);
+  top: clamp(8px, 1.6vh, 18px);
+  z-index: 3;
+  font-size: 11px;
+  letter-spacing: .04em;
+  color: rgba(255, 255, 255, .4);
+}
+
+.figma-btn:disabled,
+.figma-btn:disabled:hover {
+  filter: grayscale(.7) brightness(.72);
+  transform: none;
+  cursor: not-allowed;
+}
+
+@media (max-width: 860px) {
+  .overlay--title {
+    background-position: center top;
+  }
+
+  .overlay--title .title-astronaut {
+    width: 42vw;
+    opacity: .45;
+  }
+
+  .overlay--title .title-header {
+    position: static;
+    width: min(94vw, 560px);
+    margin: clamp(40px, 8vh, 84px) auto 0;
+    top: auto;
+    transform: none;
+  }
+
+  .overlay--title .title-main {
+    font-size: clamp(34px, 9vw, 56px);
+  }
+
+  .overlay--title .title-sub {
+    font-size: clamp(13px, 4vw, 22px);
+    white-space: normal;
+  }
+
+  .overlay--title .title-menu {
+    position: static;
+    right: auto;
+    top: auto;
+    bottom: auto;
+    transform: none;
+    width: min(92vw, 420px);
+    margin: auto auto 0;
+    gap: 8px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  }
+
+  .overlay--title .figma-btn {
+    height: 44px;
+    font-size: clamp(15px, 4.4vw, 19px);
+  }
+
+  .overlay--title .title-footer {
+    position: static;
+    justify-content: center;
+    left: auto;
+    transform: none;
+    margin: 8px 0 10px;
+  }
+
+  .overlay--title .title-version {
+    position: static;
+    margin: 0 0 10px;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 560px) {
+  .overlay--title .title-astronaut {
+    opacity: .22;
+  }
 }

@@ -468,6 +468,7 @@
   function showScreen(name) {
     state.screen = name;
     els.title.hidden = name !== 'title';
+    if (name === 'title') refreshContinue();
     els.select.hidden = name !== 'select';
     els.debrief.hidden = name !== 'debrief';
     const brief = document.getElementById('screen-brief');
@@ -484,6 +485,20 @@
   }
   function goTitle() {
     state.runId += 1; state.phase = 'plan'; showScreen('title'); state.fx = null;
+  }
+
+  // "Continue" is only useful once the player has a save to come back to.
+  function refreshContinue() {
+    const btn = document.getElementById('continue-btn');
+    if (!btn) return;
+    const stars = totalStars();
+    const hasSave = stars > 0;
+    btn.disabled = !hasSave;
+    btn.setAttribute('aria-disabled', hasSave ? 'false' : 'true');
+    btn.textContent = hasSave ? `Continue Mission · ★ ${stars}` : 'Continue Mission';
+    btn.title = hasSave
+      ? 'Resume at your furthest unlocked mission'
+      : 'No saved mission yet — press Start Mission first';
   }
   function updateHash() {
     const map = { title: '#/title', select: '#/map', brief: '#/brief', game: '#/level', debrief: '#/debrief', goodbye: '#/goodbye' };
@@ -2981,7 +2996,14 @@
   els.stationDone.addEventListener('click', closeStationPanel);
 
   $('#play-btn')?.addEventListener('click', () => { Sound.init(); Sound.click(); goSelect(); });
-  $('#continue-btn')?.addEventListener('click', () => { Sound.init(); Sound.click(); goSelect(); });
+  $('#continue-btn')?.addEventListener('click', () => {
+    Sound.init(); Sound.click();
+    // Resume at the furthest level the player has already unlocked (needs a save).
+    const unlocked = LEVEL_ORDER.filter(isUnlocked);
+    const resume = unlocked[unlocked.length - 1];
+    if (totalStars() > 0 && resume) { renderBrief(resume); showScreen('brief'); return; }
+    goSelect();
+  });
   $('#select-back').addEventListener('click', () => { Sound.click(); goTitle(); });
   els.retry.addEventListener('click', () => { Sound.click(); startLevel(state.levelId); });
   els.revive.addEventListener('click', () => { if (!els.revive.disabled) reviveMission(); });
@@ -3197,7 +3219,7 @@
 
 
   /* ============ iteration 2: loading, menus, briefing, pause, touch ====== */
-  const BUILD_VERSION = '3.1.7';
+  const BUILD_VERSION = '3.1.8';
   const TIPS = [
     'Did you know? ISS life support recovers about 98% of the crew’s water (NASA ECLSS).',
     'Did you know? Water ice hides in permanently shadowed craters at the lunar south pole (LRO/LCROSS).',
