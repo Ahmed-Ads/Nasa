@@ -52,6 +52,14 @@ for name in LOADING_SPRITES:
     if f'"loading/{name}"' not in text:
         print(f"manifest missing loading/{name}")
         sys.exit(1)
+ICON_FILES = ("favicon.svg", "favicon.ico", "favicon-16.png", "favicon-32.png", "favicon-48.png",
+              "favicon-180.png", "favicon-192.png", "favicon-512.png")
+for name in ICON_FILES:
+    refs.add(f"assets/icons/{name}")
+for size in (16, 32, 48, 180, 192, 512):
+    if f'"icons/favicon_{size}"' not in text:
+        print(f"manifest missing icons/favicon_{size}")
+        sys.exit(1)
 
 missing = []
 for ref in sorted(refs):
