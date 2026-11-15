@@ -29,7 +29,7 @@
         <p class="load-count" id="load-count">Loading outpost…</p>
         <p class="load-tip" id="load-tip"></p>
         <button class="btn btn-primary btn-lg gate" id="start-gate" type="button" disabled>PRESS TO START</button>
-        <p class="loading-version">v3.1.8 · no data leaves your device</p>
+        <p class="loading-version" id="load-version">v3.1.8 · no data leaves your device</p>
       </div>
     </div>
     <div class="viewport" id="viewport">
@@ -255,17 +255,16 @@
               <p class="forecast-text" id="forecast-text">Clear skies — no hazards expected.</p>
             </div>
           </div>
+          <aside class="tracker" id="tracker" hidden>
+            <button class="tracker-head" id="tracker-toggle" type="button">
+              <span>OBJECTIVES</span><span id="tracker-count">0/0</span><span class="tracker-chev">▾</span>
+            </button>
+            <ul class="tracker-list" id="tracker-list"></ul>
+            <button class="tracker-info" id="tracker-info" type="button">ⓘ Mission briefing</button>
+          </aside>
           <ul class="log" id="log" aria-live="polite" aria-label="Mission log"></ul>
         </div>
       </section>
-
-      <aside class="tracker" id="tracker" hidden>
-        <button class="tracker-head" id="tracker-toggle" type="button">
-          <span>OBJECTIVES</span><span id="tracker-count">0/0</span><span class="tracker-chev">▾</span>
-        </button>
-        <ul class="tracker-list" id="tracker-list"></ul>
-        <button class="tracker-info" id="tracker-info" type="button">ⓘ Mission briefing</button>
-      </aside>
 
       <div class="touch" id="touch-controls" hidden>
         <div class="stick" id="stick">
@@ -473,8 +472,8 @@
         <p><strong>Junior Astronaut Mission Trainer</strong> — NASA Space Apps Challenge 2026, Level 1.</p>
         <p>Science sources: NASA ECLSS / ISS, NASA Space Weather &amp; DONKI, NASA Moon (LRO, Diviner, LCROSS), NASA
           space-radiation research, NASA lunar-dust research.</p>
-        <p>Art is AI-generated catalog art, sliced locally with <code>tools/slice_assets.py</code>. Fonts are system
-          fonts.</p>
+        <p>Art is AI-generated catalog art, sliced locally with <code>tools/slice_assets.py</code>. Fonts are bundled
+          locally in <code>assets/fonts</code> (Jersey 20, Jersey 25, Lexend — SIL Open Font License).</p>
         <p><strong>Privacy:</strong> no third-party scripts, no analytics, no cookies. No data leaves your device;
           progress is saved on this device only.</p>
         <p class="credits-version" id="credits-version">Version 3.1.8</p>

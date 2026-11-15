@@ -1270,6 +1270,72 @@ def main():
               len(shot_paths) == 8 and os.path.isfile(os.path.join(ROOT, "tools", "out", "coach_check.png")),
               f"{len(shot_paths)} shots")
 
+        # ------------------------------------------------- layout / objectives
+        print("\nLayout: objectives vs panel / HUD / coach / player / ACT")
+        layout_sizes = [(1920, 860, False), (1280, 720, False), (768, 1024, True),
+                        (390, 844, True), (360, 640, True), (844, 390, True)]
+        for w, h, touch in layout_sizes:
+            lctx = browser.new_context(viewport={"width": w, "height": h},
+                                       has_touch=touch, is_mobile=touch)
+            issues = []
+            for lid in ("1.1", "1.2", "1.3"):
+                lp = lctx.new_page()
+                lp.goto((LIVE_URL or URL) + f"?debug&level={lid}")
+                lp.wait_for_timeout(900)
+                m = js(lp, """() => {
+                  const R = (e) => { if (!e) return null; const r = e.getBoundingClientRect();
+                    return { l: r.left, t: r.top, r: r.right, b: r.bottom }; };
+                  const q = (s) => document.querySelector(s);
+                  const scene = q('#scene'), cv = scene.getBoundingClientRect();
+                  const J = window.__JAMT__, d = window.__jamtAnimDraw;
+                  const sx = cv.width / scene.width, sy = cv.height / scene.height;
+                  const px = cv.x + (d ? d.screenX : J.player.x - J.camera.x) * sx;
+                  const py = cv.y + (d ? d.screenY : J.player.y - J.camera.y) * sy;
+                  const player = { l: px - 22 * sx, t: py - 66 * sy, r: px + 22 * sx, b: py + 2 * sy };
+                  const act = q('#act-btn'), ar = act.getBoundingClientRect();
+                  const tr = q('#tracker'), list = q('#tracker-list');
+                  return {
+                    tracker: R(tr), coach: q('#coach').hidden ? null : R(q('#coach')),
+                    hud: R(q('#hud')), panel: R(q('.dock-left')), player,
+                    act: ar.width ? R(act) : null,
+                    trackerCollapsed: getComputedStyle(list).display === 'none',
+                    trackerText: tr.innerText,
+                  };
+                }""")
+                def inter(a, b):
+                    return bool(a and b and not (a["r"] <= b["l"] or a["l"] >= b["r"]
+                                                 or a["b"] <= b["t"] or a["t"] >= b["b"]))
+                pairs = [("panel", m["panel"]), ("hud", m["hud"]), ("coach", m["coach"]),
+                         ("player", m["player"]), ("act", m["act"])]
+                for name, other in pairs:
+                    if inter(m["tracker"], other):
+                        issues.append(f"{lid}: tracker/{name}")
+                if inter(m["coach"], m["hud"]): issues.append(f"{lid}: coach/hud")
+                if inter(m["coach"], m["player"]): issues.append(f"{lid}: coach/player")
+                if w != 1920 and w != 1280 and not m["trackerCollapsed"]:
+                    issues.append(f"{lid}: tracker not collapsed")
+                if (w, h) == (1280, 720) and lid == "1.3":
+                    lp.screenshot(path=os.path.join(ROOT, "tools", "out", "layout_desktop.png"))
+                if (w, h) == (390, 844) and lid == "1.3":
+                    lp.screenshot(path=os.path.join(ROOT, "tools", "out", "layout_phone.png"))
+                lp.close()
+            lctx.close()
+            check(f"Layout {w}x{h}: objectives clear of panel, HUD, coach, player, ACT",
+                  not issues, str(issues))
+
+        # version text in loading + credits
+        vctx, vpage = new_page(browser, 1280, 720, "")
+        vpage.wait_for_timeout(700)
+        versions = js(vpage, """() => ({
+          loading: document.getElementById('load-version')?.textContent || '',
+          credits: document.getElementById('credits-version')?.textContent || '',
+          title: document.getElementById('title-version')?.textContent || '',
+        })""")
+        check(f"Loading and Credits show v{BUILD_VERSION}",
+              BUILD_VERSION in versions["loading"] and BUILD_VERSION in versions["credits"]
+              and BUILD_VERSION in versions["title"], str(versions))
+        vctx.close()
+
         # -------------------------------------------------------- version
         html = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
         check(f"E version {BUILD_VERSION} in index.html", f"v{BUILD_VERSION}" in html)

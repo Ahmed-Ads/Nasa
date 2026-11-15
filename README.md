@@ -24,7 +24,9 @@ tools/       slice_assets.py · sim.py · qa.py
 
 
 
-## v3.1.8 - Start / Continue landing screen from the design
+## v3.1.8 - Design landing screen + objectives layout
+
+### Start / Continue landing screen
 
 - The landing screen now follows the `edit_design` mockup: the full-bleed space background,
   the pixel-font title and "YOUR MISSION STARTS HERE" sub-line centred at the top, the large
@@ -43,10 +45,22 @@ tools/       slice_assets.py · sim.py · qa.py
   in the footer to keep the five-button column of the mockup.
 - Phone layout stacks the title, the buttons and the footer with no horizontal overflow at
   390 x 844.
-- QA: **115/115** on `file://`. The old "5 landing art images" assertion was replaced by
-  design-specific ones (astronaut art loads, five buttons at clickable size, pixel font
-  loaded, footer present), since this screen intentionally drops the crest/sign art.
-  Sim remains stale (v2 warning).
+
+### Objectives layout and version hygiene
+
+- Desktop: Objectives moved into the right column under the hazard/forecast card, clear of the
+  left control panel header. Mobile/landscape: collapsed to a one-line "Objectives n/x" strip
+  that expands on tap. The strip sits below the coach, away from the HUD, player and ACT.
+- Compact layouts use a lower camera focus so the coach and objectives never cover the player.
+- Loading-screen and Credits versions are written by `game.js` from `BUILD_VERSION` at startup,
+  so static HTML can no longer go stale.
+- `.gitignore` re-saved as UTF-8 without a BOM, so `assets/img*.jpg` is ignored again.
+
+QA: **122/122** on `file://` — the v3.1.8 layout suite (1920x860, 1280x720, 768x1024,
+390x844, 360x640, 844x390 for all three levels) plus the design-landing checks. The old
+"5 landing art images" assertion was replaced by design-specific ones (astronaut art loads,
+five buttons at clickable size, pixel font loaded, footer present), since this landing
+intentionally drops the crest/sign art. Sim remains stale (v2 warning).
 
 ## v3.1.7 - ROVER-FIX + the edit_design UI, merged for real
 
