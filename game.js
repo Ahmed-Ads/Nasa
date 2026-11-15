@@ -283,7 +283,7 @@
     penalty: 0,
     air: 100,
     airWarned: false,
-    rover: { mounted: false, parked: true, cargo: [], usedThisSol: false, dead: false, x: 566, y: 536, turn: { x: 0, y: 1 } },
+    rover: { mounted: false, parked: true, cargo: [], usedThisSol: false, dead: false, x: 566, y: 536, turn: { x: 0, y: 1 }, roll: 0 },
     sweepSol: 0,
     panelDeployed: false,
     panelBonus: 0, bags: 0, carry: null, groundItems: [], sources: [], slots: [], snap: null, atSwitchboard: false,
@@ -1156,6 +1156,14 @@
       }
       if (Math.abs(dx) > 0.1) player.facing = dx > 0 ? 1 : -1;
       state.air = Math.max(0, state.air - dt * (state.rover.mounted ? 0.18 : 0.55));
+      if (state.rover.mounted && moved > 0.01) {
+        const oldRoll = state.rover.roll || 0;
+        state.rover.roll = oldRoll + moved;
+        if (Math.floor(state.rover.roll / 16) !== Math.floor(oldRoll / 16)) {
+          dustPuffs.push({ x: player.x - player.facing * 22, y: player.y + 2, life: 0.45 });
+          if (dustPuffs.length > 16) dustPuffs.shift();
+        }
+      }
       const prev = Math.floor(player.walk / 0.16);
       player.walk += dt;
       if (Math.floor(player.walk / 0.16) !== prev) {
@@ -1423,9 +1431,23 @@
       ctx.beginPath(); ctx.arc(baseX, baseY, Math.min(ring, 2400), 0, Math.PI * 2); ctx.stroke();
       ctx.setLineDash([]);
       ctx.globalAlpha = 1;
-      drawAsset('external/rover', player.x, player.y + 4, 84, 66);
-      drawAsset('crew/walk', player.x, player.y - 16, 30, 56, { flip: player.facing < 0 });
-      ellipse(player.x, player.y + 2, 16, 4, 'rgba(8,10,18,.35)');
+      for (const puff of dustPuffs) {
+        ctx.globalAlpha = Math.max(0, puff.life * 1.1);
+        px(puff.x - 1, puff.y - 1, 3, 2, '#b9c0d6');
+      }
+      ctx.globalAlpha = 1;
+      const rollBob = player.moving ? Math.round(Math.sin((state.rover.roll || 0) / 9)) : 0;
+      const drewRide = drawAsset('rover/ride', player.x, player.y + 4 + rollBob, 92, 88, { flip: player.facing < 0 });
+      if (!drewRide) {
+        drawAsset('external/rover', player.x, player.y + 4, 84, 66);
+        drawAsset('crew/walk', player.x, player.y - 16, 30, 56, { flip: player.facing < 0 });
+      }
+      ellipse(player.x, player.y + 2, 18, 4, 'rgba(8,10,18,.35)');
+      window.__jamtAnimDraw = {
+        name: drewRide ? 'ride' : 'fallback', frame: 0, x: player.x, y: player.y,
+        footX: player.x, footY: player.y, flipped: player.facing < 0,
+        screenX: player.x - Math.round(camera.x), screenY: player.y - Math.round(camera.y),
+      };
       return;
     }
     if (state.action) {

@@ -39,6 +39,12 @@ for name in ICE_SPRITES:
     if f'"ice/{name}"' not in text:
         print(f"manifest missing ice/{name}")
         sys.exit(1)
+ROVER_SPRITES = ("ride",)
+for name in ROVER_SPRITES:
+    refs.add(f"assets/rover/{name}.png")
+    if f'"rover/{name}"' not in text:
+        print(f"manifest missing rover/{name}")
+        sys.exit(1)
 
 missing = []
 for ref in sorted(refs):

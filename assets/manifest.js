@@ -54,6 +54,7 @@ window.JAMT_ASSETS = {
   "crew/solar": { "src": "assets/sprites/crew/solar.png", "w": 64, "h": 60 },
   "external/rover": { "src": "assets/sprites/external/rover.png", "w": 80, "h": 66 },
   "ice/deposit": { "src": "assets/ice/deposit.png", "w": 128, "h": 58 },
+  "rover/ride": { "src": "assets/rover/ride.png", "w": 128, "h": 122 },
   "ice/chunk": { "src": "assets/ice/chunk.png", "w": 40, "h": 33 },
   "external/dish_a": { "src": "assets/sprites/external/dish_a.png", "w": 47, "h": 64 },
   "external/dish_b": { "src": "assets/sprites/external/dish_b.png", "w": 46, "h": 64 },
