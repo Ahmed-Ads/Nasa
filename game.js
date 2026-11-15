@@ -125,12 +125,12 @@
   const CRITICAL = 20;
 
   const ROWS = {
-    o2:        { name: 'Oxygen', short: 'O₂', glyph: 'O₂', color: '#5ac8ff', sprite: 'icons/o2' },
+    o2:        { name: 'Oxygen', short: 'O₂', glyph: 'O₂', color: '#5ac8ff', sprite: 'icons/o2', hint: 'Power cells produce oxygen for the crew.' },
     water:     { name: 'Water', short: 'Water', glyph: 'H₂O', color: '#56c8ff', sprite: 'icons/water' },
-    repair:    { name: 'Repair', short: 'Repair', glyph: '🛠', color: '#ffb02e', sprite: 'icons/shield' },
-    shielding: { name: 'Shielding', short: 'Shield', glyph: '🛡', color: '#ffb02e', sprite: 'icons/shield' },
-    surface:   { name: 'Surface', short: 'Work', glyph: '⛏', color: '#c48bff', sprite: 'external/drill' },
-    battery:   { name: 'Battery', short: 'Battery', glyph: '🔋', color: '#7ce38b', sprite: 'icons/battery', kind: 'cells' },
+    repair:    { name: 'Repair', short: 'Repair', glyph: '🛠', color: '#ffb02e', sprite: 'icons/shield', hint: 'Use power to help seal the leak.' },
+    shielding: { name: 'Shielding', short: 'Shield', glyph: '🛡', color: '#ffb02e', sprite: 'icons/shield', hint: 'Shielding helps protect the crew from storms.' },
+    surface:   { name: 'Surface', short: 'Work', glyph: '⛏', color: '#c48bff', sprite: 'external/drill', hint: 'Use power for surface research.' },
+    battery:   { name: 'Battery', short: 'Battery', glyph: '🔋', color: '#7ce38b', sprite: 'icons/battery', kind: 'cells', hint: 'Store power for later.' },
   };
 
   const LEVELS = {
@@ -1859,6 +1859,7 @@
           <div class="meter-fill" id="bar-${row}"></div><div class="meter-risk" aria-hidden="true"></div>
           <span class="meter-target" id="target-${row}" hidden aria-hidden="true"></span>
         </div>
+        <p class="system-note">${meta.hint}</p>
         `;
       els.systems.appendChild(card);
     }
