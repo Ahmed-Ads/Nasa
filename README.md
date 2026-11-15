@@ -219,13 +219,12 @@ The interaction prompt appears whenever you stand in a station radius.
 
 ## 2. The loop
 
-1. **PLAN** — spend the solar budget across the level's rows. Leftover cells are stored in the
-   battery (cap 6). If a dust storm or long shadow cuts the budget, draw from the battery
+1. **1. Plan power** - spend the solar budget across the level's rows. Leftover cells are stored
+   in the battery (cap 6). If a dust storm or long shadow cuts the budget, draw from the battery
    (max 2 per day).
-2. **spacewalk** — you have **3 spacewalk minutes** per day. Walk to a station and hold `E` (or hold the
-   on-screen prompt). Tasks cost 1–2 minutes. There are no fail screens — you can always end
-   the spacewalk early.
-3. **End the day** — production, crew use, wear, the leak, the event, dose, then hearts and the
+2. **2. Go outside** - walk to a station and hold `E` (or the on-screen prompt). Suit air drains
+   as you walk and refills each day. There are no fail screens; you can end the day early.
+3. **3. End the day** - production, crew use, wear, the leak, the event, dose, then hearts and the
    win/fail check. The mission log explains every change.
 
 ### Stations
