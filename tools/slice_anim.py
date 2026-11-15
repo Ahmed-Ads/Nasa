@@ -308,6 +308,163 @@ def write_contact12(frames, report_lines):
     report_lines.append(f"contact sheet: tools/out/img12_contact.png ({len(frames)} frames)")
 
 
+ROVER_NAMES = ["rover_E", "rover_ESE", "rover_SE", "rover_S",
+               "rover_SW", "rover_WSW", "rover_W"]
+ROVER_HEADINGS = [0, 22.5, 45, 90, 135, 157.5, 180]
+
+
+def slice_img11(report_lines: list[str]):
+    '''Rover row only: key whole sheet, dilate, split components, take top row.'''
+    from scipy import ndimage
+
+    path = find_sheet("img11")
+    im = Image.open(path).convert("RGB")
+    rgb = np.asarray(im)
+    h, w = rgb.shape[:2]
+    rgba = key_frame(rgb)
+    alpha = rgba[:, :, 3]
+    report_lines.append(f"sheet: {os.path.basename(path)} {w}x{h}")
+
+    mask = alpha > 8
+    it = max(1, int(round(0.0025 * w)))
+    dil = ndimage.binary_dilation(mask, iterations=it)
+    lab, n = ndimage.label(dil, structure=np.ones((3, 3)))
+    report_lines.append(f"dilate: {it}px   raw components: {n}")
+
+    objs = ndimage.find_objects(lab)
+    boxes = []
+    for i, sl in enumerate(objs, 1):
+        if sl is None:
+            continue
+        y0, y1 = sl[0].start, sl[0].stop
+        x0, x1 = sl[1].start, sl[1].stop
+        area = int(mask[sl].sum())
+        if area < 40:
+            continue
+        boxes.append({"x0": x0, "x1": x1, "y0": y0, "y1": y1, "area": area,
+                      "cx": (x0 + x1) / 2, "cy": (y0 + y1) / 2})
+
+    # --- row bands by vertical gaps in component centres ------------------
+    boxes.sort(key=lambda b: b["cy"])
+    rows = []
+    gap = 0.045 * h
+    for b in boxes:
+        if rows and b["cy"] - rows[-1][-1]["cy"] <= gap:
+            rows[-1].append(b)
+        else:
+            rows.append([b])
+    rows.sort(key=lambda r: min(b["cy"] for b in r))
+    report_lines.append(f"row bands (top to bottom): {[len(r) for r in rows]}")
+    if not rows:
+        report_lines.append("STOP: no components")
+        return [], []
+
+    top = sorted(rows[0], key=lambda b: b["x0"])
+    report_lines.append(f"top row: {len(top)} components (expected 7)")
+    if len(top) != 7:
+        report_lines.append("STOP: top row is not exactly 7 frames; no frames written")
+        return [], []
+
+    # small parts (lights, spokes, antenna tips) join the frame they overlap
+    max_area = max(b["area"] for b in top)
+    big = [b for b in top if b["area"] >= 0.35 * max_area]
+    small = [b for b in top if b["area"] < 0.35 * max_area]
+    report_lines.append(f"top row large: {len(big)}   small merged: {len(small)}")
+    if len(big) != 7:
+        report_lines.append("STOP: top row is not exactly 7 large frames; no frames written")
+        return [], []
+
+    groups = [dict(b) for b in big]
+    for s in small:
+        best, best_ov = None, 0
+        for g in groups:
+            ov = max(0, min(g["x1"], s["x1"]) - max(g["x0"], s["x0"]))
+            if ov > best_ov:
+                best, best_ov = g, ov
+        if best is None:
+            best = min(groups, key=lambda g: abs((g["x0"] + g["x1"]) - (s["x0"] + s["x1"])))
+        best["x0"] = min(best["x0"], s["x0"]); best["x1"] = max(best["x1"], s["x1"])
+        best["y0"] = min(best["y0"], s["y0"]); best["y1"] = max(best["y1"], s["y1"])
+
+    outdir = os.path.join(ASSETS, "anim", "img11")
+    os.makedirs(outdir, exist_ok=True)
+    os.makedirs(PROOF, exist_ok=True)
+    frames = []
+    rejected = []
+
+    for gi, g in enumerate(groups):
+        # the dilated box is a search window; crop to the real keyed pixels
+        sx0, sx1 = max(0, g["x0"]), min(w, g["x1"])
+        sy0, sy1 = max(0, g["y0"]), min(h, g["y1"])
+        sub = alpha[sy0:sy1, sx0:sx1] > 8
+        ys, xs = np.where(sub)
+        if len(xs) == 0:
+            report_lines.append(f"{ROVER_NAMES[gi]}: EMPTY")
+            rejected.append(ROVER_NAMES[gi])
+            continue
+        x0, x1 = sx0 + int(xs.min()), sx0 + int(xs.max()) + 1
+        y0, y1 = sy0 + int(ys.min()), sy0 + int(ys.max()) + 1
+        crop = Image.fromarray(rgba[y0:y1, x0:x1], "RGBA")
+        fw, fh = crop.size
+        arr = np.asarray(crop)
+        pink = int((fringe_mask(arr[:, :, :3]) & (arr[:, :, 3] > 0)).sum())
+        lost_border = bool(x0 <= 0 or y0 <= 0 or x1 >= w or y1 >= h)
+        name = ROVER_NAMES[gi]
+        crop.save(os.path.join(outdir, name + ".png"))
+        frames.append({
+            "name": name, "file": f"assets/anim/img11/{name}.png",
+            "w": fw, "h": fh, "footX": round(fw / 2, 1), "footY": fh,
+            "heading": ROVER_HEADINGS[gi], "style": "alt",
+            "sheet": "img11", "row": 1, "col": gi + 1,
+            "baselineY": y1,
+        })
+        report_lines.append(f"{name:10s} {fw:3d}x{fh:<3d} heading={ROVER_HEADINGS[gi]:<6} "
+                            f"pink={pink:<3d} sheet-edge={'YES' if lost_border else 'no'}")
+        if pink > 6 or lost_border:
+            rejected.append(name)
+
+    with open(os.path.join(outdir, "frames.json"), "w", encoding="utf-8") as f:
+        json.dump({"sheet": "img11", "frameCount": len(frames), "style": "alt",
+                   "headingScale": "screen degrees, E=0 S=90 W=180",
+                   "frames": frames}, f, indent=1)
+
+    if frames:
+        base = [fr["baselineY"] for fr in frames]
+        report_lines.append("")
+        report_lines.append(f"wheel baseline spread (sheet y, max-min): {max(base) - min(base)} px")
+        report_lines.append(f"local footY values: {[fr['footY'] for fr in frames]}")
+    write_contact11(frames, report_lines)
+    return frames, rejected
+
+
+def write_contact11(frames, report_lines):
+    if not frames:
+        report_lines.append("no frames to contact-sheet")
+        return
+    try:
+        font = ImageFont.truetype("arial.ttf", 12)
+    except Exception:
+        font = ImageFont.load_default()
+    cw, ch = 200, 215
+    cols = 4
+    rows = (len(frames) + cols - 1) // cols
+    sheet = Image.new("RGB", (cw * cols, ch * rows), (20, 22, 32))
+    d = ImageDraw.Draw(sheet)
+    for i, fr in enumerate(frames):
+        im = Image.open(os.path.join(ROOT, fr["file"])).convert("RGBA")
+        im.thumbnail((cw - 16, ch - 64))
+        x = (i % cols) * cw; y = (i // cols) * ch
+        d.rectangle([x, y, x + cw, y + (ch - 40) // 2], fill=(18, 20, 34))
+        d.rectangle([x, y + (ch - 40) // 2, x + cw, y + ch - 40], fill=(214, 218, 228))
+        sheet.paste(im, (x + (cw - im.width) // 2, y + (ch - 40 - im.height) // 2), im)
+        d.text((x + 4, y + ch - 36), f'{fr["name"]}  {fr["heading"]}deg',
+               fill=(255, 235, 120), font=font)
+        d.text((x + 4, y + ch - 22), f'{fr["w"]}x{fr["h"]}', fill=(150, 160, 190), font=font)
+    sheet.save(os.path.join(PROOF, "img11_contact.png"))
+    report_lines.append("")
+    report_lines.append(f"contact sheet: tools/out/img11_contact.png ({len(frames)} frames)")
+
+
 def find_sheet(which: str) -> str:
     for ext in (".jpg", ".jpeg", ".png"):
         p = os.path.join(ASSETS, which + ext)
@@ -440,10 +597,11 @@ def write_contact(frames, report_lines):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("sheet", choices=["img10", "img12"])
+    ap.add_argument("sheet", choices=["img10", "img11", "img12"])
     args = ap.parse_args()
     report = []
-    frames, rejected = (slice_img10(report) if args.sheet == "img10" else slice_img12(report))
+    slicer = {"img10": slice_img10, "img11": slice_img11, "img12": slice_img12}[args.sheet]
+    frames, rejected = slicer(report)
     report.append("")
     report.append(f"frames: {len(frames)}   rejected: {len(rejected)}")
     if rejected:

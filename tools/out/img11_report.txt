@@ -1,0 +1,19 @@
+sheet: img11.jpg 2752x1536
+dilate: 7px   raw components: 25
+row bands (top to bottom): [7, 4, 10, 1]
+top row: 7 components (expected 7)
+top row large: 7   small merged: 0
+rover_E    337x340 heading=0      pink=0   sheet-edge=no
+rover_ESE  345x340 heading=22.5   pink=0   sheet-edge=no
+rover_SE   334x340 heading=45     pink=0   sheet-edge=no
+rover_S    249x340 heading=90     pink=0   sheet-edge=no
+rover_SW   335x340 heading=135    pink=0   sheet-edge=no
+rover_WSW  334x340 heading=157.5  pink=0   sheet-edge=no
+rover_W    335x340 heading=180    pink=0   sheet-edge=no
+
+wheel baseline spread (sheet y, max-min): 0 px
+local footY values: [340, 340, 340, 340, 340, 340, 340]
+
+contact sheet: tools/out/img11_contact.png (7 frames)
+
+frames: 7   rejected: 0
