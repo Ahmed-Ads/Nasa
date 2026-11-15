@@ -8,11 +8,7 @@
   <meta name="description"
     content="A pixel-art mission trainer for ages 7–12. Plan power, walk the lunar outpost, and keep the crew alive across three missions. Built for the 2026 NASA Space Apps Challenge.">
   <meta name="theme-color" content="#06070f">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Jersey+20&family=Jersey+25&family=Lexend:wght@700&display=swap"
-    rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=3.3.3">
+  <link rel="stylesheet" href="style.css?v=3.1.9">
   <link rel="icon"
     href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%2306070f'/%3E%3Ccircle cx='8' cy='8' r='5' fill='%23c2c6d4'/%3E%3Ccircle cx='6' cy='6.5' r='1.5' fill='%239a9fb2'/%3E%3Ccircle cx='10' cy='10' r='1' fill='%239a9fb2'/%3E%3C/svg%3E">
 </head>
@@ -33,7 +29,7 @@
         <p class="load-count" id="load-count">Loading outpost…</p>
         <p class="load-tip" id="load-tip"></p>
         <button class="btn btn-primary btn-lg gate" id="start-gate" type="button" disabled>PRESS TO START</button>
-        <p class="loading-version">v3.1.5 · no data leaves your device</p>
+        <p class="loading-version" id="load-version">v3.1.9 · no data leaves your device</p>
       </div>
     </div>
     <div class="viewport" id="viewport">
@@ -97,8 +93,7 @@
       <!-- Action Buttons Stack -->
       <div class="figma-menu-stack">
         <button class="figma-btn" id="play-btn" type="button">Start Mission</button>
-        <button class="figma-btn" id="btn-continue-mission" type="button"
-          onclick="document.getElementById('play-btn').click()">Continue Mission</button>
+        <button class="figma-btn" id="continue-btn" type="button">Continue Mission</button>
         <button class="figma-btn" id="menu-credits" type="button">Credits</button>
         <button class="figma-btn" id="how-btn" type="button">Training</button>
         <button class="figma-btn" id="menu-settings" type="button">Settings</button>
@@ -109,7 +104,7 @@
       <div class="figma-footer">
         <p class="figma-credit">Powered by NASA open data</p>
         <div class="figma-meta-links">
-          <span class="figma-meta-ver" id="title-version">v3.1.7</span>
+          <span class="figma-meta-ver" id="title-version">v3.1.9</span>
         </div>
       </div>
     </div>
@@ -146,54 +141,8 @@
           <img src="assets/ui/track1.svg" alt="">
         </div>
 
-        <!-- Moon Level Nodes -->
-        <button class="d2-node d2-node-lv1 is-active" type="button" onmouseenter="syncNodeStatus(this, '1.1')"
-          onclick="document.querySelector('.mission-card[data-level=\'1.1\']')?.click()">
-          <span>LV.1</span>
-          <div class="d2-tooltip">
-            <span class="d2-tooltip-kicker">Mission 1.1 · Moon</span>
-            <span class="d2-tooltip-name">Lunar Outpost Prep</span>
-            <span class="d2-tooltip-badge badge-ready">READY</span>
-          </div>
-        </button>
-
-        <button class="d2-node d2-node-lv2" type="button" onmouseenter="syncNodeStatus(this, '1.2')"
-          onclick="document.querySelector('.mission-card[data-level=\'1.2\']')?.click()">
-          <span>LV.2</span>
-          <div class="d2-tooltip">
-            <span class="d2-tooltip-kicker">Mission 1.2 · Moon</span>
-            <span class="d2-tooltip-name">Water Leak</span>
-            <span class="d2-tooltip-badge badge-locked">LOCKED</span>
-          </div>
-        </button>
-
-        <button class="d2-node d2-node-lv3" type="button" onmouseenter="syncNodeStatus(this, '1.3')"
-          onclick="document.querySelector('.mission-card[data-level=\'1.3\']')?.click()">
-          <span>LV.3</span>
-          <div class="d2-tooltip">
-            <span class="d2-tooltip-kicker">Mission 1.3 · Moon</span>
-            <span class="d2-tooltip-name">Solar Storm</span>
-            <span class="d2-tooltip-badge badge-locked">LOCKED</span>
-          </div>
-        </button>
-
-        <div class="d2-node d2-node-lv4">
-          <span>LV.4</span>
-          <div class="d2-tooltip">
-            <span class="d2-tooltip-kicker">Mission 1.4 · Moon</span>
-            <span class="d2-tooltip-name">Deep Trench</span>
-            <span class="d2-tooltip-badge badge-locked">LOCKED</span>
-          </div>
-        </div>
-
-        <div class="d2-node d2-node-lv5 d2-node-big">
-          <span>LV.5</span>
-          <div class="d2-tooltip">
-            <span class="d2-tooltip-kicker">Milestone · Moon</span>
-            <span class="d2-tooltip-name">Outpost Master</span>
-            <span class="d2-tooltip-badge badge-milestone">MILESTONE</span>
-          </div>
-        </div>
+        <!-- Moon Level Nodes: the real cards from game.js (progress + locking) -->
+        <div class="d2-node-track" id="mission-cards"></div>
 
         <!-- Mars System -->
         <div class="d2-mars-group">
@@ -207,56 +156,13 @@
           <img src="assets/ui/track2.svg" alt="">
         </div>
 
-        <!-- Mars Level Nodes -->
-        <div class="d2-node d2-node-lv6">
-          <span>LV.6</span>
-          <div class="d2-tooltip">
-            <span class="d2-tooltip-kicker">Mission 2.1 · Mars</span>
-            <span class="d2-tooltip-name">Red Planet Arrival</span>
-            <span class="d2-tooltip-badge badge-locked">LOCKED</span>
-          </div>
-        </div>
-        <div class="d2-node d2-node-lv7">
-          <span>LV.7</span>
-          <div class="d2-tooltip">
-            <span class="d2-tooltip-kicker">Mission 2.2 · Mars</span>
-            <span class="d2-tooltip-name">Dust Storms</span>
-            <span class="d2-tooltip-badge badge-locked">LOCKED</span>
-          </div>
-        </div>
-        <div class="d2-node d2-node-lv8">
-          <span>LV.8</span>
-          <div class="d2-tooltip">
-            <span class="d2-tooltip-kicker">Mission 2.3 · Mars</span>
-            <span class="d2-tooltip-name">Subsurface Ice</span>
-            <span class="d2-tooltip-badge badge-locked">LOCKED</span>
-          </div>
-        </div>
-        <div class="d2-node d2-node-lv9">
-          <span>LV.9</span>
-          <div class="d2-tooltip">
-            <span class="d2-tooltip-kicker">Mission 2.4 · Mars</span>
-            <span class="d2-tooltip-name">Long Nights</span>
-            <span class="d2-tooltip-badge badge-locked">LOCKED</span>
-          </div>
-        </div>
-        <div class="d2-node d2-node-lv10 d2-node-big">
-          <span>LV.10</span>
-          <div class="d2-tooltip">
-            <span class="d2-tooltip-kicker">Milestone · Mars</span>
-            <span class="d2-tooltip-name">Mars Outpost</span>
-            <span class="d2-tooltip-badge badge-milestone">MILESTONE</span>
-          </div>
-        </div>
+        <!-- Mars Level Nodes: the real (locked) cards from game.js -->
+        <div class="d2-node-track" id="locked-cards"></div>
       </div>
 
-      <!-- Hidden Missions Tray (Keeps all original IDs in DOM so game.js runs flawlessly) -->
-      <div class="desktop2-missions-tray">
-        <div class="sector" id="sector">
-          <img class="sector-art" id="sector-art" alt="" width="0" height="0" style="display:none;">
-          <div class="missions" id="mission-cards"></div>
-        </div>
-        <div class="locked-row" id="locked-cards" style="display:none;"></div>
+      <!-- sector art hook for game.js -->
+      <div class="sector" id="sector" hidden>
+        <img class="sector-art" id="sector-art" alt="">
       </div>
     </div>
 
@@ -356,11 +262,11 @@
     <div class="overlay overlay--goodbye" id="screen-goodbye" hidden>
       <div class="goodbye-card">
         <div class="goodbye-art" aria-hidden="true">
-          <img class="goodbye-sad" src="assets/ui/sad_astronaut.png?v=3.1.7" alt="">
-          <img class="goodbye-door" src="assets/ui/exit_door.png?v=3.1.7" alt="">
+          <img class="goodbye-sad" src="assets/ui/sad_astronaut.png?v=3.1.9" alt="">
+          <img class="goodbye-door" src="assets/ui/exit_door.png?v=3.1.9" alt="">
         </div>
         <div class="goodbye-copy">
-          <img class="goodbye-banner" src="assets/ui/mission_aborted.png?v=3.1.7" alt="Mission aborted">
+          <img class="goodbye-banner" src="assets/ui/mission_aborted.png?v=3.1.9" alt="Mission aborted">
           <p class="kicker">Mission control signing off</p>
           <h1 class="title">See you<br><span>next day</span></h1>
           <p class="lede">Your progress is saved on this device. Close the tab whenever you are ready.</p>
@@ -443,17 +349,16 @@
             <p class="forecast-text" id="forecast-text">Clear skies — no hazards expected.</p>
           </div>
         </div>
+        <aside class="tracker" id="tracker" hidden>
+          <button class="tracker-head" id="tracker-toggle" type="button" aria-expanded="true" aria-controls="tracker-list">
+            <span>OBJECTIVES</span><span id="tracker-count">0/0</span><span class="tracker-key" aria-hidden="true">O</span><span class="tracker-chev">▾</span>
+          </button>
+          <ul class="tracker-list" id="tracker-list"></ul>
+          <button class="tracker-info" id="tracker-info" type="button">ⓘ Mission briefing</button>
+        </aside>
         <ul class="log" id="log" aria-live="polite" aria-label="Mission log"></ul>
       </div>
     </section>
-
-    <aside class="tracker" id="tracker" hidden>
-      <button class="tracker-head" id="tracker-toggle" type="button">
-        <span>OBJECTIVES</span><span id="tracker-count">0/0</span><span class="tracker-chev">▾</span>
-      </button>
-      <ul class="tracker-list" id="tracker-list"></ul>
-      <button class="tracker-info" id="tracker-info" type="button">ⓘ Mission briefing</button>
-    </aside>
 
     <div class="touch" id="touch-controls" hidden>
       <div class="stick" id="stick">
@@ -663,7 +568,7 @@
         fonts.</p>
       <p><strong>Privacy:</strong> no third-party scripts, no analytics, no cookies. No data leaves your device;
         progress is saved on this device only.</p>
-      <p class="credits-version" id="credits-version">Version 3.1.5</p>
+      <p class="credits-version" id="credits-version">Version 3.1.9</p>
     </div>
   </div>
 
@@ -683,37 +588,9 @@
       to step both action strips.</p>
   </div>
 
-  <script src="assets/manifest.js?v=3.1.7"></script>
-  <script src="assets/anim_manifest.js?v=3.1.7"></script>
-  <script src="game.js?v=3.1.7" defer></script>
-  <script>
-    function syncNodeStatus(nodeEl, levelId) {
-      try {
-        const card = document.querySelector(`.mission-card[data-level="${levelId}"]`);
-        if (!card) return;
-        const badge = card.querySelector('.mission-badge');
-        const badgeEl = nodeEl.querySelector('.d2-tooltip-badge');
-        if (badge && badgeEl) {
-          if (badge.classList.contains('done')) {
-            badgeEl.textContent = 'COMPLETED ★';
-            badgeEl.className = 'd2-tooltip-badge badge-done';
-            nodeEl.classList.add('is-done');
-            nodeEl.classList.remove('is-locked');
-          } else if (card.classList.contains('is-locked') || card.disabled) {
-            badgeEl.textContent = 'LOCKED';
-            badgeEl.className = 'd2-tooltip-badge badge-locked';
-            nodeEl.classList.add('is-locked');
-            nodeEl.classList.remove('is-active', 'is-done');
-          } else {
-            badgeEl.textContent = 'READY';
-            badgeEl.className = 'd2-tooltip-badge badge-ready';
-            nodeEl.classList.add('is-active');
-            nodeEl.classList.remove('is-locked');
-          }
-        }
-      } catch (e) { }
-    }
-  </script>
+  <script src="assets/manifest.js?v=3.1.9"></script>
+  <script src="assets/anim_manifest.js?v=3.1.9"></script>
+  <script src="game.js?v=3.1.9" defer></script>
 </body>
 
 </html>
