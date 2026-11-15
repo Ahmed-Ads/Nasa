@@ -338,6 +338,35 @@ def main():
         check("dropped item persists on the map", econ["dropped"] >= 1, str(econ))
         ectx.close()
 
+        # ------------------------------------------------------------ rover
+        print("\nRover")
+        rctx, rpage = new_page(browser, 1280, 720, "?debug&level=1.1")
+        rv = js(rpage, """() => {
+          const J = window.__JAMT__, T = window.__T, s = J.state, out = {};
+          s.battery = 3; s.res.battery = 3; s.rover.dead = false;
+          T.teleport(566, 566); T.mountRover(); out.mounted = s.rover.mounted;
+          const x0 = J.player.x; T.setKey('right', true);
+          for (let i = 0; i < 20; i++) T.step(0.05);
+          T.setKey('right', false); out.dx = J.player.x - x0;
+          T.teleport(70, 700); T.pick('ice'); out.cargo1 = s.rover.cargo.length;
+          T.teleport(730, 452); T.deliver('water-slot'); out.cargo2 = s.rover.cargo.length;
+          out.ring = T.walkBackRadius();
+          T.dismountRover(); out.dismounted = !s.rover.mounted;
+          // battery: used last sol -> 1 cell charged; unused -> unchanged
+          s.rover.usedThisSol = true; s.battery = 3; s.res.battery = 3; T.startSol(true); out.usedBatt = s.res.battery;
+          s.rover.usedThisSol = false; s.battery = 3; s.res.battery = 3; T.startSol(true); out.idleBatt = s.res.battery;
+          // dome block only while mounted
+          const free = !J.blockedAt(445, 300); T.mountRover(); const blocked = J.blockedAt(445, 300);
+          return Object.assign(out, { free, blocked });
+        }""")
+        check("rover mounts/dismounts", rv["mounted"] and rv["dismounted"], str(rv))
+        check("rover speed is ~x2.5", rv["dx"] > 150, str(rv))
+        check("rover cargo loads and unloads", rv["cargo1"] == 1 and rv["cargo2"] == 0, str(rv))
+        check("walk-back ring radius is positive", rv["ring"] > 0, str(rv))
+        check("battery charged only when used", rv["usedBatt"] == 2 and rv["idleBatt"] == 3, str(rv))
+        check("rover cannot enter the dome when mounted", rv["free"] and rv["blocked"], str(rv))
+        rctx.close()
+
         # ------------------------------------------------------- suit air
         print("\nSuit air")
         actx, apage = new_page(browser, 1280, 720, "?debug&level=1.1")

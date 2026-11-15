@@ -148,6 +148,7 @@
     penalty: 0,
     air: 100,
     airWarned: false,
+    rover: { mounted: false, cargo: [], usedThisSol: false, dead: false, x: 566, y: 536, turn: { x: 0, y: 1 } },
     sweepSol: 0,
     panelDeployed: false,
     panelBonus: 0, bags: 0, carry: null, groundItems: [], sources: [], slots: [], snap: null, atSwitchboard: false,
@@ -448,7 +449,7 @@
     repair:  { name: 'Repair parts',       sprite: 'repair/gears' },
   };
   const SOURCES = [
-    { id: 'ice-src', item: 'ice', x: 150, y: 556, cap: 4, stock: 4, hold: 1.4, minutes: 1, label: 'Mine ice chunk' },
+    { id: 'ice-src', item: 'ice', x: 70, y: 700, cap: 4, stock: 4, hold: 1.4, minutes: 1, label: 'Mine ice chunk' },
     { id: 'panel-src', item: 'panel', x: 644, y: 548, cap: 3, stock: 3, minutes: 0, label: 'Take solar panel', levels: ['1.1', '1.3'] },
     { id: 'battery-src', item: 'battery', x: 692, y: 548, cap: 4, stock: 4, minutes: 0, label: 'Take battery canister' },
     { id: 'o2-src', item: 'o2', x: 596, y: 548, cap: 2, stock: 2, minutes: 0, label: 'Take O2 canister (game assumption)', levels: ['1.1'] },
@@ -516,6 +517,15 @@
     return slot.item === item;
   }
   function pickupSource(src) {
+    if (state.rover.mounted) {
+      if (state.rover.cargo.length >= 4) { addLog('Rover cargo is full (4/4).', 'warn'); return; }
+      if (src.stock <= 0) { addLog('Nothing left here until the next sol.', 'warn'); return; }
+      if (src.hold) { if (state.air < 8) { addLog('Not enough suit air to mine/dig.', 'warn'); return; } state.air = Math.max(0, state.air - 8); }
+      src.stock -= 1;
+      state.rover.cargo.push(src.item);
+      addLog(`Loaded ${ITEM_META[src.item].name} onto the rover (${state.rover.cargo.length}/4).`, 'good');
+      Sound.ok(); return;
+    }
     if (state.carry) { addLog('Hands are full — drop it first (Q).', 'warn'); return; }
     if (src.stock <= 0) { addLog('Nothing left here until the next sol — it restocks each sol.', 'warn'); return; }
     if (src.hold) {
@@ -543,7 +553,12 @@
     return true;
   }
   function deliverSlot(slot) {
-    const item = state.carry;
+    let item = state.carry;
+    let cargoIdx = -1;
+    if (!item && state.rover.mounted) {
+      cargoIdx = state.rover.cargo.findIndex((t) => slotAccepts(slot, t));
+      if (cargoIdx >= 0) item = state.rover.cargo[cargoIdx];
+    }
     if (!item) return;
     if (!slotAccepts(slot, item)) {
       const want = slot.id === 'leak-slot'
@@ -552,7 +567,7 @@
       addLog(`That doesn't fit — ${slot.label} needs <b>${want}</b>.`, 'warn');
       return;
     }
-    state.carry = null;
+    if (cargoIdx >= 0) state.rover.cargo.splice(cargoIdx, 1); else state.carry = null;
     slot.filled = Math.min(slot.cap, (slot.filled || 0) + 1);
     state.snap = { x: slot.x, y: slot.y, t: performance.now() / 1000 };
     if (slot.id === 'water-slot') {
@@ -703,6 +718,12 @@
   let extraColliders = [];
   function blockedAt(x, y) {
     const r = player.radius;
+    if (state.rover && state.rover.mounted) {
+      for (const id of ['dome', 'bunker']) {
+        const c = colliders.find((cc) => cc.id === id);
+        if (c && x + 14 > c.x - 10 && x - 14 < c.x + c.w + 10 && y + 14 > c.y - 10 && y - 14 < c.y + c.h + 10) return true;
+      }
+    }
     for (const c of colliders.concat(extraColliders)) {
       if (x + r > c.x && x - r < c.x + c.w && y + r > c.y && y - r < c.y + c.h) return true;
     }
@@ -785,10 +806,31 @@
   const keys = { up: false, down: false, left: false, right: false };
   let dustPuffs = [];
 
+  function mountRover() {
+    const r = state.rover;
+    if (r.mounted) return;
+    if (r.dead || getBattery() <= 0) { r.dead = true; addLog('🔋 Rover battery is empty — charge a cell at the switchboard.', 'warn'); Sound.warn(); return; }
+    r.mounted = true; r.usedThisSol = true;
+    addLog('🚙 Rover powered: speed x2.5, cargo 4, lower air drain. ACT again on open ground to park.', 'good');
+    Sound.ok(); render();
+  }
+  function dismountRover() {
+    const r = state.rover;
+    if (!r.mounted) return;
+    r.mounted = false;
+    r.x = player.x; r.y = player.y + 14;
+    const prop = PROPS.find((p) => p.id === 'rover');
+    if (prop) { prop.x = r.x; prop.y = r.y; const col = colliders.find((c) => c.id === 'rover'); if (col) { col.x = r.x - 36; col.y = r.y - 26; } }
+    const st = STATIONS.find((s2) => s2.id === 'rover'); if (st) { st.x = r.x; st.y = r.y + 30; }
+    addLog('🚙 Rover parked. Cargo stays on it.', 'muted'); Sound.click(); render();
+  }
+  function walkBackRadius() { return (state.air / 0.55) * 82; }
+
   function collapseFromAir() {
     const s = state;
     if (s.air > 0) return;
     if (s.carry) { dropItem(); addLog('You dropped what you were carrying.', 'muted'); }
+    if (s.rover.mounted) { s.rover.mounted = false; addLog('The rover stops — cargo stays on it.', 'warn'); }
     const storm = s.levelId === '1.3' && s.sol >= s.stormArrival && s.sol < s.stormArrival + s.stormDuration;
     if (storm) { s.hearts -= 1; s.heartsLost = (s.heartsLost || 0) + 1; addLog('⚠️ Out of air in a storm — <b>−1 heart</b>.', 'bad'); }
     if (s.phase === 'eva') {
@@ -814,11 +856,19 @@
     }
 
     player.moving = !!(dx || dy);
+    if (player.moving && state.rover.mounted) {
+      const k = Math.min(1, dt * 3);
+      const t = state.rover.turn;
+      t.x += (dx - t.x) * k; t.y += (dy - t.y) * k;
+      const tl = Math.hypot(t.x, t.y) || 1;
+      dx = t.x / tl; dy = t.y / tl;
+      if (getBattery() <= 0) { dismountRover(); addLog('Rover battery empty — walking from here.', 'warn'); }
+    }
     if (player.moving) {
-      const speed = 82;
+      const speed = state.rover.mounted ? 205 : 82;
       movePlayer(dx * speed * dt, dy * speed * dt);
       if (Math.abs(dx) > 0.1) player.facing = dx > 0 ? 1 : -1;
-      state.air = Math.max(0, state.air - dt * 0.55);
+      state.air = Math.max(0, state.air - dt * (state.rover.mounted ? 0.18 : 0.55));
       const prev = Math.floor(player.walk / 0.16);
       player.walk += dt;
       if (Math.floor(player.walk / 0.16) !== prev) {
@@ -917,6 +967,7 @@
   }
 
   function drawProp(p) {
+    if (p.id === 'rover' && state.rover && state.rover.mounted) return;
     if (p.sprite) {
       drawShadow(p.x, p.y + 2, p.w * 0.42, p.w * 0.16);
       if (!drawAsset(p.sprite, p.x, p.y, p.w, p.h)) {
@@ -1022,6 +1073,21 @@
   }
 
   function drawPlayer() {
+    if (state.rover && state.rover.mounted) {
+      const ring = walkBackRadius();
+      const baseX = 512, baseY = 420;
+      const outside = dist(player.x, player.y, baseX, baseY) > ring;
+      ctx.globalAlpha = 0.5;
+      ctx.strokeStyle = outside ? 'rgba(255,77,109,.85)' : 'rgba(127,189,255,.55)';
+      ctx.setLineDash([8, 8]);
+      ctx.beginPath(); ctx.arc(baseX, baseY, Math.min(ring, 2400), 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+      drawAsset('external/rover', player.x, player.y + 4, 84, 66);
+      drawAsset('crew/walk', player.x, player.y - 16, 30, 56, { flip: player.facing < 0 });
+      ellipse(player.x, player.y + 2, 16, 4, 'rgba(8,10,18,.35)');
+      return;
+    }
     if (state.carry) {
       drawAsset(ITEM_META[state.carry].sprite, player.x, player.y - 74, 18, 18);
       drawAsset(ITEM_META[state.carry].sprite, player.x + player.facing * 10, player.y - 16, 12, 12);
@@ -1182,6 +1248,7 @@
     const L = s.level;
     if (!L) return null;
     if (!st) {
+      if (s.rover.mounted) return { id: 'dismount', label: 'Park rover', minutes: 0, run: () => dismountRover() };
       if (s.carry) return { id: 'drop', label: `Drop ${ITEM_META[s.carry].name}`, minutes: 0, run: () => dropItem() };
       return null;
     }
@@ -1194,6 +1261,10 @@
       };
     }
     if (st.id && st.id.endsWith('-slot')) {
+      if (!s.carry && s.rover.mounted) {
+        const ci = s.rover.cargo.findIndex((t) => slotAccepts(st, t));
+        if (ci >= 0) return { id: 'unload', label: `Unload ${ITEM_META[s.rover.cargo[ci]].name} → ${st.label}`, minutes: 0, run: () => deliverSlot(st) };
+      }
       if (!s.carry) return { id: 'slotinfo', label: st.label, minutes: 0, run: () => addLog(`${st.label}: needs ${st.id === 'leak-slot' ? (s.isolated ? (s.taped ? 'repair parts' : 'Kapton tape') : 'the toolbox') : ITEM_META[st.item].name.toLowerCase()}.`, 'muted') };
       const ok = slotAccepts(st, s.carry);
       return { id: 'deliver', label: ok ? `Deliver ${ITEM_META[s.carry].name} → ${st.label}` : `${st.label} doesn't take that`, minutes: 0, run: () => deliverSlot(st) };
@@ -1211,7 +1282,7 @@
       return { id: 'battery', label: `Battery: ${Math.round(s.battery)}/6 cells`, minutes: 0, run: () => addLog(`🔋 Battery bank holds <b>${Math.round(s.battery)}/6</b> cells.`, 'muted') };
     }
     if (st.id === 'rover') {
-      return { id: 'rover', label: 'Inspect rover', minutes: 0, run: () => addLog('🚙 Rover is parked and charged. Ice hauls start at the ice patch.', 'muted') };
+      return { id: 'mount', label: 'Ride rover', minutes: 0, run: () => mountRover() };
     }
 
     if (st.id === 'solar') {
@@ -1718,6 +1789,13 @@
     s.budget = Math.max(2, RULES.budget.value - s.penalty + (s.panelBonus || 0));
     fitAlloc();
     restock();
+    if (s.rover.usedThisSol) {
+      const rb = getBattery();
+      if (rb > 0) setBattery(rb - 1);
+      s.rover.dead = getBattery() <= 0;
+    } else s.rover.dead = getBattery() <= 0;
+    s.rover.usedThisSol = false;
+    if (s.rover.dead) addLog('🔋 Rover battery empty — walk or charge a cell this sol.', 'warn');
     if (!first) addLog(`<b>Sol ${s.sol}</b> · ${s.budget} cells${s.penalty ? ` (−${s.penalty} penalty)` : ''} · ${s.air} EVA minutes.`, 'muted');
     if (L.hints && L.hints[s.sol]) addLog(`💡 ${L.hints[s.sol]}`, 'muted');
     if (L.id === '1.2' && s.sol === s.leakStart) {
@@ -2302,7 +2380,7 @@
     slots() { return state.slots.map((s) => ({ id: s.id, filled: s.filled, cap: s.cap })); },
     sources() { return state.sources.map((s) => ({ id: s.id, item: s.item, stock: s.stock, cap: s.cap })); },
     nearest() { return nearestInteractable(); },
-    state, RESOURCE_DOCS, ITEM_META, SLOTS, actionFor, blockedAt, startSol, collapseFromAir,
+    state, RESOURCE_DOCS, ITEM_META, SLOTS, actionFor, blockedAt, startSol, collapseFromAir, mountRover, dismountRover, walkBackRadius,
     setKey(k, v) { keys[k] = v; },
     step(dt) { updatePlayer(dt); },
   };
@@ -2372,7 +2450,7 @@
 
 
   /* ============ iteration 2: loading, menus, briefing, pause, touch ====== */
-  const BUILD_VERSION = '3.0.2';
+  const BUILD_VERSION = '3.1.0';
   const TIPS = [
     'Did you know? ISS life support recovers about 98% of the crew’s water (NASA ECLSS).',
     'Did you know? Water ice hides in permanently shadowed craters at the lunar south pole (LRO/LCROSS).',

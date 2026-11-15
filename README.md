@@ -23,6 +23,27 @@ tools/       slice_assets.py · sim.py · qa.py
 
 
 
+
+## v3.1.0 — Session 2B part 2: rover
+
+- `state.rover = { mounted, cargo, usedThisSol, dead }`. ACT at the parked rover mounts;
+  ACT on open ground dismounts (or the touch ACT button).
+- Mounted: **speed ×2.5**, suit-air drain **0.18/s** (walking 0.55/s), a wider turning curve,
+  and a **4-item cargo bed** on top of the 1-item hands. ACT at a matching slot unloads **one**
+  item per press; picking up while mounted loads into the bed.
+- **Battery**: 1 stored cell is charged at sol start **only if the rover was used** last sol. If
+  the stored cells are 0, the rover is dead for that sol and cannot be mounted. If it hits 0 while
+  riding, it stops and the cargo stays on it.
+- **Cannot enter the dome or bunker while mounted** (park next to them and walk).
+- **Walk-back ring**: a dashed circle centred on the hatch with radius
+  `(air / 0.55) × 82`; it turns red when the rover is outside it. This is **inspired by Apollo
+  lunar-rover traverse planning** — a game assumption, not a NASA rule.
+- Ice now sits at the far SW corner (≈2 screens from the base); the regolith patch stays by the
+  bunker, so the rover is for ice and walking is for bags.
+- Docs: Mission Science and the briefing explain the rover and the walk-back ring.
+- QA: **59/59** on `file://` (mount/dismount, speed, cargo load/unload, battery-only-if-used,
+  dome block, ring). Sim still stale (v2) and reported as a warning, not a pass.
+
 ## v3.0.2 — Session 2B part 1: suit air
 
 - **EVA minutes are gone.** `state.eva`, `RULES.evaMinutes`, the EVA chip/pips and every `spend()`
