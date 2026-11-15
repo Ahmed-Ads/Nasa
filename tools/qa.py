@@ -964,8 +964,35 @@ def main():
         apage.click("#start-gate"); apage.wait_for_timeout(250)
         title_art = js(apage, """() => [...document.querySelectorAll('#screen-title img')]
           .map((i) => ({ ok: i.complete && i.naturalWidth > 0, src: i.getAttribute('src') }))""")
-        check("Landing uses img8/img9 art (logo, start, quit, cheer, ready)",
-              len(title_art) >= 5 and all(a["ok"] for a in title_art), str(title_art))
+        check("Landing shows the illustrated astronaut art",
+              len(title_art) >= 1 and all(a["ok"] for a in title_art), str(title_art))
+        landing = js(apage, """() => {
+          const ids = ['play-btn', 'continue-btn', 'how-btn', 'menu-settings', 'menu-quit'];
+          const buttons = ids.map((id) => {
+            const b = document.getElementById(id);
+            if (!b) return { id, missing: true };
+            const r = b.getBoundingClientRect();
+            const s = getComputedStyle(b);
+            return { id, w: Math.round(r.width), h: Math.round(r.height),
+                     visible: r.width > 60 && r.height > 30 && s.display !== 'none' && s.visibility !== 'hidden' };
+          });
+          const title = document.querySelector('#screen-title .title-main');
+          const astro = document.querySelector('#screen-title .title-astronaut');
+          const ar = astro ? astro.getBoundingClientRect() : null;
+          return {
+            buttons,
+            jersey: document.fonts.check("40px 'Jersey 20'"),
+            astronaut: ar ? { w: Math.round(ar.width), bottom: Math.round(innerHeight - ar.bottom) } : null,
+            footer: (document.querySelector('#screen-title .title-footer') || {}).textContent || '',
+          };
+        }""")
+        check("Landing menu has the five design buttons at clickable size",
+              all(b.get("visible") for b in landing["buttons"]), str(landing["buttons"]))
+        check("Landing title uses the bundled pixel font",
+              landing["jersey"] is True, str(landing["jersey"]))
+        check("Landing keeps the big astronaut and the credit footer",
+              landing["astronaut"] is not None and landing["astronaut"]["w"] >= 180
+              and "NASA" in landing["footer"], str(landing))
         apage.click("#menu-quit"); apage.wait_for_timeout(300)
         apage.wait_for_function("() => { const i = document.getElementById('confirm-art'); return !i.hidden && i.complete && i.naturalWidth > 0; }", timeout=5000)
         confirm_art = js(apage, """() => { const i = document.getElementById('confirm-art');
@@ -1242,6 +1269,72 @@ def main():
         check("FIX2 coach_check.png written (desktop + phone, 4 states)",
               len(shot_paths) == 8 and os.path.isfile(os.path.join(ROOT, "tools", "out", "coach_check.png")),
               f"{len(shot_paths)} shots")
+
+        # ------------------------------------------------- layout / objectives
+        print("\nLayout: objectives vs panel / HUD / coach / player / ACT")
+        layout_sizes = [(1920, 860, False), (1280, 720, False), (768, 1024, True),
+                        (390, 844, True), (360, 640, True), (844, 390, True)]
+        for w, h, touch in layout_sizes:
+            lctx = browser.new_context(viewport={"width": w, "height": h},
+                                       has_touch=touch, is_mobile=touch)
+            issues = []
+            for lid in ("1.1", "1.2", "1.3"):
+                lp = lctx.new_page()
+                lp.goto((LIVE_URL or URL) + f"?debug&level={lid}")
+                lp.wait_for_timeout(900)
+                m = js(lp, """() => {
+                  const R = (e) => { if (!e) return null; const r = e.getBoundingClientRect();
+                    return { l: r.left, t: r.top, r: r.right, b: r.bottom }; };
+                  const q = (s) => document.querySelector(s);
+                  const scene = q('#scene'), cv = scene.getBoundingClientRect();
+                  const J = window.__JAMT__, d = window.__jamtAnimDraw;
+                  const sx = cv.width / scene.width, sy = cv.height / scene.height;
+                  const px = cv.x + (d ? d.screenX : J.player.x - J.camera.x) * sx;
+                  const py = cv.y + (d ? d.screenY : J.player.y - J.camera.y) * sy;
+                  const player = { l: px - 22 * sx, t: py - 66 * sy, r: px + 22 * sx, b: py + 2 * sy };
+                  const act = q('#act-btn'), ar = act.getBoundingClientRect();
+                  const tr = q('#tracker'), list = q('#tracker-list');
+                  return {
+                    tracker: R(tr), coach: q('#coach').hidden ? null : R(q('#coach')),
+                    hud: R(q('#hud')), panel: R(q('.dock-left')), player,
+                    act: ar.width ? R(act) : null,
+                    trackerCollapsed: getComputedStyle(list).display === 'none',
+                    trackerText: tr.innerText,
+                  };
+                }""")
+                def inter(a, b):
+                    return bool(a and b and not (a["r"] <= b["l"] or a["l"] >= b["r"]
+                                                 or a["b"] <= b["t"] or a["t"] >= b["b"]))
+                pairs = [("panel", m["panel"]), ("hud", m["hud"]), ("coach", m["coach"]),
+                         ("player", m["player"]), ("act", m["act"])]
+                for name, other in pairs:
+                    if inter(m["tracker"], other):
+                        issues.append(f"{lid}: tracker/{name}")
+                if inter(m["coach"], m["hud"]): issues.append(f"{lid}: coach/hud")
+                if inter(m["coach"], m["player"]): issues.append(f"{lid}: coach/player")
+                if w != 1920 and w != 1280 and not m["trackerCollapsed"]:
+                    issues.append(f"{lid}: tracker not collapsed")
+                if (w, h) == (1280, 720) and lid == "1.3":
+                    lp.screenshot(path=os.path.join(ROOT, "tools", "out", "layout_desktop.png"))
+                if (w, h) == (390, 844) and lid == "1.3":
+                    lp.screenshot(path=os.path.join(ROOT, "tools", "out", "layout_phone.png"))
+                lp.close()
+            lctx.close()
+            check(f"Layout {w}x{h}: objectives clear of panel, HUD, coach, player, ACT",
+                  not issues, str(issues))
+
+        # version text in loading + credits
+        vctx, vpage = new_page(browser, 1280, 720, "")
+        vpage.wait_for_timeout(700)
+        versions = js(vpage, """() => ({
+          loading: document.getElementById('load-version')?.textContent || '',
+          credits: document.getElementById('credits-version')?.textContent || '',
+          title: document.getElementById('title-version')?.textContent || '',
+        })""")
+        check(f"Loading and Credits show v{BUILD_VERSION}",
+              BUILD_VERSION in versions["loading"] and BUILD_VERSION in versions["credits"]
+              and BUILD_VERSION in versions["title"], str(versions))
+        vctx.close()
 
         # -------------------------------------------------------- version
         html = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
