@@ -21,7 +21,16 @@ if os.path.exists(anim):
     refs.add("assets/anim_manifest.js")
 html = open(index, encoding="utf-8").read()
 refs.update(re.findall(r'(?:src|href)="([^"#:]+)"', html))
-refs.update(["assets/manifest.js", "game.js", "style.css", "index.html"])
+refs.update(["assets/manifest.js", "assets/anim_manifest.js", "game.js", "style.css", "index.html"])
+
+# Buddy states are referenced from game.js as assets/ui/buddy/<state>.png and
+# registered in the manifest. Keep the exact eight names checked here too.
+BUDDY_STATES = ("idle", "listen", "think", "talk", "happy", "alert", "confused", "sleep")
+for state in BUDDY_STATES:
+    refs.add(f"assets/ui/buddy/{state}.png")
+    if f'"buddy/{state}"' not in text:
+        print(f"manifest missing buddy/{state}")
+        sys.exit(1)
 
 missing = []
 for ref in sorted(refs):

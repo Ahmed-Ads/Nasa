@@ -121,6 +121,8 @@
     holdSeconds: { value: 2.2, kind: 'game', source: 'input feel' },
   };
 
+  // Single client-side proxy setting. Empty = scripted Buddy only (offline).
+  const BUDDY_PROXY_URL = '';
   const MAX_HEARTS = 3;
   const CRITICAL = 20;
 
@@ -260,6 +262,8 @@
   ];
 
   /* ================================================================ state == */
+  let buddy = null;
+
   const state = {
     screen: 'title',
     phase: 'plan',            // plan | eva | resolve
@@ -363,7 +367,9 @@
     // Hints start on for a brand-new player and off after the first star.
     const d = {
       sound: true, touch: 'auto', motion: false, unlock: false,
-      hints: !Object.values(progress).some((n) => n > 0)
+      hints: !Object.values(progress).some((n) => n > 0),
+      buddyName: 'Buddy', buddyLang: 'en', buddyCloud: false,
+      buddyProactive: true, buddySpeak: false, buddyMuted: false
     };
     const raw = safeGet('jamt.settings', {});
     if (!raw || typeof raw !== 'object') return d;
@@ -372,6 +378,11 @@
     if (typeof raw.motion === 'boolean') d.motion = raw.motion;
     if (typeof raw.unlock === 'boolean') d.unlock = raw.unlock;
     if (typeof raw.hints === 'boolean') d.hints = raw.hints;
+    if (typeof raw.buddyName === 'string' && raw.buddyName.trim()) d.buddyName = raw.buddyName.trim().slice(0, 18);
+    if (raw.buddyLang === 'ar' || raw.buddyLang === 'en') d.buddyLang = raw.buddyLang;
+    for (const k of ['buddyCloud', 'buddyProactive', 'buddySpeak', 'buddyMuted']) {
+      if (typeof raw[k] === 'boolean') d[k] = raw[k];
+    }
     return d;
   })();
   function saveSettings() { safeSet('jamt.settings', settings); }
@@ -493,6 +504,7 @@
     const tracker = document.getElementById('tracker');
     if (tracker) tracker.hidden = name !== 'game';
     updateHash();
+    if (buddy) buddy.onScreen(name);
   }
   function goTitle() {
     state.runId += 1; state.phase = 'plan'; showScreen('title'); state.fx = null;
@@ -802,6 +814,7 @@
     }
     if (state.tutorialStep === 2) { state.tutorialDelivered = true; state.tutorialStep = 3; }
     Sound.ok();
+    buddy?.event('delivered', slot.id);
   }
 
 
@@ -889,6 +902,7 @@
     camera.w = VW; camera.h = VH;
     measureConsole();
     positionTracker();
+    buddy?.position();
     snapCamera();
 
     const mapEl = document.querySelector('.solar-map');
@@ -2495,6 +2509,7 @@
     s.fx = null; s.winAt = 0;
     s.stats = { lowest: {}, startRes: { ...s.res } };
     s.lastDoseCause = '';
+    buddy?.resetForLevel();
 
     if (L.id === '1.2') s.leakStart = Math.random() < 0.5 ? 1 : 2;
     if (L.id === '1.3') {
@@ -2954,6 +2969,7 @@
     els.revive.disabled = s.revived;
 
     if (won) Sound.win(); else Sound.lose();
+    buddy?.event(won ? 'win' : 'lose', reason);
   }
 
   /* ================================================================ revive == */
@@ -3046,6 +3062,7 @@
   els.interact.addEventListener('pointerleave', cancelHold);
 
   document.addEventListener('keydown', (e) => {
+    if (buddy?.ignoreGameKey(e)) return;
     const modalOpen = document.querySelector('.modal:not([hidden])');
     if (e.key === 'Escape') {
       if (modalOpen) { closeModals(); closeStationPanel(); }
@@ -3056,6 +3073,7 @@
     if (state.screen === 'select') { if (e.key === 'Enter') { const id = LEVEL_ORDER.find(isUnlocked); if (id) startLevel(id); } return; }
     if (state.screen === 'debrief') { if (e.key === 'Enter') { e.preventDefault(); if (!els.next.hidden) els.next.click(); else els.retry.click(); } return; }
     if (state.screen !== 'game') return;
+    if (e.code === 'KeyH' && !e.repeat) { e.preventDefault(); buddy?.toggle(); return; }
 
     const k = e.key.toLowerCase();
     if (e.code === 'KeyW' || e.key === 'ArrowUp') { e.preventDefault(); keys.up = true; return; }
@@ -3086,7 +3104,7 @@
   window.addEventListener('blur', () => { keys.up = keys.down = keys.left = keys.right = false; cancelHold(); });
 
   canvas.addEventListener('pointerdown', (e) => {
-    if (state.screen !== 'game') return;
+    if (state.screen !== 'game' || buddy?.isOpen) return;
     const rect = canvas.getBoundingClientRect();
     const wx = ((e.clientX - rect.left) / rect.width) * VW + camera.x;
     const wy = ((e.clientY - rect.top) / rect.height) * VH + camera.y;
@@ -3169,6 +3187,7 @@
       updateInteractPrompt();
       updateCoach();
     }
+    buddy?.tick(t);
     drawScene(t);
     drawMinimap();
     requestAnimationFrame(frame);
@@ -3323,7 +3342,7 @@
 
 
   /* ============ iteration 2: loading, menus, briefing, pause, touch ====== */
-  const BUILD_VERSION = '3.1.8';
+  const BUILD_VERSION = '3.2.0';
   const TIPS = [
     'Did you know? ISS life support recovers about 98% of the crew’s water (NASA ECLSS).',
     'Did you know? Water ice hides in permanently shadowed craters at the lunar south pole (LRO/LCROSS).',
@@ -3389,19 +3408,27 @@
     set('set-motion', settings.motion ? 'ON' : 'OFF');
     set('set-hints', settings.hints ? 'ON' : 'OFF');
     set('set-unlock', settings.unlock ? 'ON' : 'OFF');
+    set('set-buddy-proactive', settings.buddyProactive ? 'ON' : 'OFF');
+    set('set-buddy-cloud', settings.buddyCloud ? 'ON' : 'OFF');
+    set('set-buddy-speak', settings.buddySpeak ? 'ON' : 'OFF');
+    const bn = document.getElementById('set-buddy-name');
+    if (bn && document.activeElement !== bn) bn.value = settings.buddyName;
     document.body.classList.toggle('hints-off', !settings.hints);
+    if (buddy) buddy.applySettings();
   }
 
   function openPause() {
     if (state.screen !== 'game') return;
     if (document.querySelector('.modal:not([hidden])')) return;
+    buddy?.close();
     flowEls.pause.hidden = false;
     Sound.click();
     state.paused = true;
+    buddy?.onPause(true);
   }
-  function closePause() { flowEls.pause.hidden = true; state.paused = false; }
+  function closePause() { flowEls.pause.hidden = true; state.paused = false; buddy?.onPause(false); }
 
-  const UI_SAD = 'assets/ui/sad_astronaut.png?v=3.1.8';
+  const UI_SAD = 'assets/ui/sad_astronaut.png?v=3.2.0';
   function askConfirm(text, onYes, art = null) {
     flowEls.confirmText.textContent = text;
     if (flowEls.confirmArt) {
@@ -3542,7 +3569,7 @@
     const tv = document.getElementById('title-version');
     if (tv) tv.textContent = `v${BUILD_VERSION}`;
     const lv = document.getElementById('load-version');
-    if (lv) lv.textContent = `v${BUILD_VERSION} - no data leaves your device`;
+    if (lv) lv.textContent = `v${BUILD_VERSION} - offline by default - Buddy cloud is opt-in`;
 
     document.getElementById('brief-start').addEventListener('click', () => { Sound.init(); Sound.click(); startLevel(state.briefId || '1.1'); });
     document.getElementById('brief-back').addEventListener('click', () => { Sound.click(); goSelect(); });
@@ -3572,10 +3599,34 @@
     document.getElementById('set-motion').addEventListener('click', () => { settings.motion = !settings.motion; saveSettings(); applySettings(); updateCoach(); });
     document.getElementById('set-hints').addEventListener('click', () => { settings.hints = !settings.hints; saveSettings(); applySettings(); updateCoach(); });
     document.getElementById('set-unlock').addEventListener('click', () => { settings.unlock = !settings.unlock; saveSettings(); applySettings(); if (state.screen === 'select') renderSelect(); });
+    const buddyName = document.getElementById('set-buddy-name');
+    if (buddyName) {
+      buddyName.addEventListener('input', () => {
+        settings.buddyName = (buddyName.value || 'Buddy').trim().slice(0, 18) || 'Buddy';
+        saveSettings();
+        buddy?.applySettings();
+      });
+      buddyName.addEventListener('blur', () => {
+        if (!buddyName.value.trim()) buddyName.value = 'Buddy';
+        settings.buddyName = buddyName.value.trim().slice(0, 18) || 'Buddy';
+        saveSettings(); buddy?.applySettings();
+      });
+    }
+    document.getElementById('set-buddy-proactive').addEventListener('click', () => {
+      settings.buddyProactive = !settings.buddyProactive; saveSettings(); applySettings();
+    });
+    document.getElementById('set-buddy-cloud').addEventListener('click', () => {
+      settings.buddyCloud = !settings.buddyCloud; saveSettings(); applySettings(); buddy?.updatePrivacyNote();
+    });
+    document.getElementById('set-buddy-speak').addEventListener('click', () => {
+      settings.buddySpeak = !settings.buddySpeak; saveSettings(); applySettings();
+      if (!settings.buddySpeak) buddy?.setState('idle');
+    });
 
     // Esc / browser back / pause
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
+      if (buddy?.closeIfOpen()) { e.stopImmediatePropagation(); e.preventDefault(); return; }
       e.stopPropagation();
       e.preventDefault();
       if (!flowEls.confirm.hidden) { closeConfirm(); return; }
@@ -3632,6 +3683,998 @@
       if (txt) txt.textContent = lbl.length > 12 ? lbl.slice(0, 12) : lbl;
     }, 250);
   }
+
+  /* ============================================================ Buddy ====== */
+  // One table for every Buddy-facing string. Logic only looks up keys.
+  // Arabic lines are written for meaning, not as word-for-word translations.
+  const BUDDY_I18N = {
+    en: {
+      ui: {
+        title: 'Buddy', ready: 'Ready to help',
+        idle: 'Ready', listen: 'Listening', think: 'Thinking', talk: 'Talking',
+        happy: 'Nice work!', alert: 'Heads up!', confused: 'Not sure', sleep: 'Resting',
+        lang: 'AR', langTitle: 'Switch to Arabic', mute: 'Mute Buddy', unmute: 'Unmute Buddy',
+        close: 'Close Buddy', placeholder: 'Ask Buddy…', send: 'Send', soundShort: 'SND', mutedShort: 'MUT', micShort: 'MIC',
+        listening: 'Listening… tap the mic to stop.',
+        micUnsupported: 'Voice input is not available in this browser. You can type.',
+        micDenied: 'Microphone permission was denied. You can type instead.',
+        micFailed: 'I could not start the microphone. Please type your question.',
+        speakUnsupported: 'Spoken replies are not available in this browser.',
+        privacyOff: 'On-device by default. Cloud helper is off.',
+        privacyOn: 'Cloud ON: sends your question, language, level/day/phase/open objectives and last 4 turns.',
+        privacyNote: 'Privacy: offline by default. With “Let Buddy ask the cloud helper” ON, only your question, language, and a short state summary (level, day, phase, open objectives) plus the last 4 turns are sent to the configured helper. No name, account, device ID or analytics are sent. Progress and settings stay in this browser.',
+        stop: 'Stop talking', thinking: 'Thinking…', empty: 'Type a question first.',
+        noAnswer: 'I do not have a scripted answer for that yet. Try a chip below.',
+        cloudOff: 'The cloud helper is off, but I can still help with the mission.',
+        cloudFail: 'I could not reach the cloud helper. Try a chip or ask about the mission.',
+        timeout: 'The cloud helper took too long. Try again or use a chip.',
+        rate: 'The cloud helper is busy right now. Try again in a moment.',
+        offline: 'There is no network. Buddy still works offline.',
+        greeting: 'Hi! I am {name}. Ask me what to do next, why it matters, or what something means.',
+        real: 'REAL NASA', game: 'GAME ASSUMPTION',
+        sourceNote: 'This comes from the mission’s own Real NASA notes.',
+        newMission: 'New mission: {title}. Ask me when you need a hand.',
+        settingsName: 'Buddy name', settingsProactive: 'Buddy proactive hints',
+        settingsCloud: 'Let Buddy ask the cloud helper', settingsSpeak: 'Buddy speaks replies',
+        micTitle: 'Use your voice',
+      },
+      chips: ['What do I do next?', 'Why does this matter?', "I'm stuck"],
+      hints: {
+        nudge: 'Start with one small step. {goal}',
+        clear: 'Look at the coach arrow. {step}',
+        exact: 'Next exact step: {step} {carry}',
+        end: 'Set your power at the switchboard, then press End the day. The coach arrow shows the switchboard.',
+      },
+      goals: {
+        '1.1': 'Get the Moon base ready before the crew lands on Day {day}.',
+        '1.2': 'Fix the water leak and keep water at {water}% or more.',
+        '1.3': 'Keep dose at {dose} or less and O₂ at {o2}% or more.',
+      },
+      answers: {
+        air: 'GAME ASSUMPTION: suit air drains while you walk outside and refills each day. The broken ring shows the safe walk-back distance.',
+        solar: 'REAL NASA: the Moon’s south pole gets sunlight almost all day. GAME ASSUMPTION: solar cells are power you spend each day; leftover cells charge the battery.',
+        battery: 'GAME ASSUMPTION: battery cells store power for later. Draw one when a day gives you too few solar cells.',
+        ice: 'REAL NASA: water ice hides in permanently shadowed craters at the lunar south pole (LRO/LCROSS). GAME ASSUMPTION: one ice haul gives +{iceWater} water.',
+        regolith: 'REAL NASA: about 4 g/cm² of regolith gets below 30-day radiation limits. GAME ASSUMPTION: one bag adds +{shield} shielding.',
+        shelter: 'REAL NASA: crews shelter inside during a solar particle event. GAME ASSUMPTION: the bunker cuts dose by 90%.',
+        dish: 'REAL NASA: coronal mass ejections take about 1–4 days to arrive (NASA DONKI). GAME ASSUMPTION: the storm arrives on Day 3–5; read the dish to know the day.',
+        rover: 'GAME ASSUMPTION: the rover is faster than walking, carries 4 items, and needs a battery cell for the day. The blue circle shows how far you can safely walk back.',
+        ring: 'GAME ASSUMPTION: the dashed ring around the base shows your safe walk-back distance for the suit air you have left.',
+      },
+      why: {
+        '1.1': 'Power and water make oxygen. The Moon’s south pole gets sunlight almost all day, which is why solar power matters there.',
+        '1.2': 'Crews close hatches, find a leak, tape it, then seal it. That is the same order the game asks you to follow.',
+        '1.3': 'During a solar storm, crews shelter inside. Regolith is a real radiation shield.',
+      },
+      how: {
+        '1.1': 'Real crews test power and air before the crew lands. The game turns that into your Day 5 deadline.',
+        '1.2': 'Real crews isolate the module first, then tape the leak, then apply a permanent seal.',
+        '1.3': 'Real crews shelter during the storm. The game gives you an early-shelter bonus to show why timing matters.',
+      },
+      proactive: {
+        lowAir: 'Suit air is below 25%. Head back to the base or use the rover.',
+        station: 'You are near {name}. Hold E or press ACT to use it.',
+        storm: 'The storm arrives today. Shelter the crew in the bunker before you end the day.',
+        leak: 'A water leak is active. Close the hatch first, then tape and patch it.',
+        heart: 'You lost a crew heart. Watch the meters and keep them above 20%.',
+        objective: 'Objective complete. Check the objectives box for the next one.',
+        win: 'Mission complete. Nice work, Commander!',
+        offline: 'The cloud helper is unavailable, but I can still use the mission hints.',
+      },
+    },
+    ar: {
+      ui: {
+        title: 'بادي', ready: 'جاهز للمساعدة',
+        idle: 'جاهز', listen: 'أستمع', think: 'أفكر', talk: 'أتحدث',
+        happy: 'أحسنت!', alert: 'انتبه!', confused: 'لست متأكدًا', sleep: 'أستريح',
+        lang: 'EN', langTitle: 'التبديل إلى الإنجليزية', mute: 'اكتم صوت بادي', unmute: 'شغّل صوت بادي',
+        close: 'إغلاق بادي', placeholder: 'اسأل بادي…', send: 'إرسال', soundShort: 'صوت', mutedShort: 'كتم', micShort: 'ميك',
+        listening: 'أستمع… اضغط الميكروفون للتوقف.',
+        micUnsupported: 'الإدخال الصوتي غير متاح في هذا المتصفح. يمكنك الكتابة.',
+        micDenied: 'تم رفض إذن الميكروفون. يمكنك الكتابة بدلًا منه.',
+        micFailed: 'تعذر تشغيل الميكروفون. اكتب سؤالك من فضلك.',
+        speakUnsupported: 'الردود الصوتية غير متاحة في هذا المتصفح.',
+        privacyOff: 'يعمل على جهازك افتراضيًا. المساعد السحابي متوقف.',
+        privacyOn: 'السحابة مفعّلة: يُرسل سؤالك ولغتك والمستوى واليوم والمرحلة والأهداف المفتوحة وآخر 4 ردود.',
+        privacyNote: 'الخصوصية: يعمل دون اتصال افتراضيًا. عند تشغيل «دع بادي يسأل المساعد السحابي»، يُرسل فقط سؤالك ولغتك وملخص قصير للحالة (المستوى واليوم والمرحلة والأهداف المفتوحة) وآخر 4 ردود إلى المساعد المهيأ. لا يُرسل الاسم أو الحساب أو معرّف الجهاز أو أي تحليلات. يبقى التقدم والإعدادات في هذا المتصفح.',
+        stop: 'إيقاف الكلام', thinking: 'أفكر…', empty: 'اكتب سؤالًا أولًا.',
+        noAnswer: 'ليس لدي إجابة جاهزة لهذا بعد. جرّب أحد الأزرار أدناه.',
+        cloudOff: 'المساعد السحابي متوقف، لكنني أستطيع مساعدتك في المهمة.',
+        cloudFail: 'تعذر الوصول إلى المساعد السحابي. جرّب زرًا أو اسألني عن المهمة.',
+        timeout: 'استغرق المساعد السحابي وقتًا طويلًا. حاول مرة أخرى أو استخدم زرًا.',
+        rate: 'المساعد السحابي مشغول الآن. حاول بعد قليل.',
+        offline: 'لا يوجد اتصال. بادي يعمل دون اتصال.',
+        greeting: 'مرحبًا! أنا {name}. اسألني ماذا تفعل الآن، أو لماذا هذا مهم، أو ماذا يعني شيء ما.',
+        real: 'حقيقة ناسا', game: 'افتراض اللعبة',
+        sourceNote: 'هذه المعلومة من ملاحظات المهمة نفسها عن ناسا.',
+        newMission: 'مهمة جديدة: {title}. اسألني عندما تحتاج مساعدة.',
+        settingsName: 'اسم بادي', settingsProactive: 'تلميحات بادي التلقائية',
+        settingsCloud: 'دع بادي يسأل المساعد السحابي', settingsSpeak: 'ينطق بادي الردود',
+        micTitle: 'استخدم صوتك',
+      },
+      chips: ['ماذا أفعل الآن؟', 'لماذا هذا مهم؟', 'أنا عالق'],
+      hints: {
+        nudge: 'ابدأ بخطوة صغيرة. {goal}',
+        clear: 'اتبع سهم المدرب. {step}',
+        exact: 'الخطوة التالية بالضبط: {step} {carry}',
+        end: 'اضبط الطاقة عند لوحة التحكم، ثم اضغط «أنهِ اليوم». سهم المدرب يدلك على اللوحة.',
+      },
+      goals: {
+        '1.1': 'جهّز قاعدة القمر قبل وصول الطاقم في اليوم {day}.',
+        '1.2': 'أصلح تسرب الماء وأبقِ الماء عند {water}% أو أكثر.',
+        '1.3': 'أبقِ الجرعة عند {dose} أو أقل والأكسجين عند {o2}% أو أكثر.',
+      },
+      steps: {
+        '1.1': ['التقط لوحًا شمسيًا من الصندوق.', 'احفر الجليد من بقعة الجليد.', 'التقط أكسجينًا من الصناديق.'],
+        '1.2': ['التقط صندوق الأدوات من الصناديق.', 'التقط شريط كابتون.', 'التقط قطع الإصلاح.', 'اذهب إلى التسرب وأعد فتح الفتحة.'],
+        '1.3': ['اذهب إلى الطبق واقرأ الطقس.', 'احفر كيس ثرى قرب المخبأ.', 'اذهب إلى المخبأ وأدخل الطاقم.'],
+      },
+      answers: {
+        air: 'افتراض اللعبة: ينفد هواء البدلة عندما تمشي خارج القاعدة، ويعود إلى 100% كل يوم. الحلقة المتقطعة تُظهر مسافة العودة الآمنة.',
+        solar: 'حقيقة ناسا: القطب الجنوبي للقمر يحصل على ضوء الشمس معظم اليوم. افتراض اللعبة: خلايا الشمس طاقة تنفقها كل يوم، والفائض يشحن البطارية.',
+        battery: 'افتراض اللعبة: خلايا البطارية تخزن الطاقة لليوم التالي. اسحب خلية عندما تكون خلايا الشمس قليلة.',
+        ice: 'حقيقة ناسا: يوجد جليد ماء في الفوهات المظلمة دائمًا عند القطب الجنوبي (LRO/LCROSS). افتراض اللعبة: كل قطعة جليد تعطي +{iceWater} ماء.',
+        regolith: 'حقيقة ناسا: نحو 4 غ/سم² من الثرى القمري يخفض الجرعة تحت حدود 30 يومًا. افتراض اللعبة: كل كيس يضيف +{shield} حماية.',
+        shelter: 'حقيقة ناسا: يلجأ الطاقم إلى الداخل أثناء العاصفة الشمسية. افتراض اللعبة: المخبأ يخفض الجرعة بنسبة 90%.',
+        dish: 'حقيقة ناسا: تستغرق الانبعاثات الكتلية الإكليلية نحو 1–4 أيام للوصول (DONKI). افتراض اللعبة: العاصفة تصل في اليوم 3–5، واقرأ الطبق لتعرف اليوم.',
+        rover: 'افتراض اللعبة: المركبة أسرع من المشي، وتحمل 4 قطع، وتحتاج بطارية لليوم. الدائرة الزرقاء تُظهر مسافة العودة الآمنة.',
+        ring: 'افتراض اللعبة: الحلقة المتقطعة حول القاعدة تُظهر مسافة العودة الآمنة حسب هواء البدلة المتبقي.',
+        panel: 'ضع الـ solar panel في حقل الشمس. هذا افتراض اللعبة: كل لوح يضيف خلية شمسية كل يوم.',
+      },
+      why: {
+        '1.1': 'الكهرباء والماء يصنعان الأكسجين. القطب الجنوبي للقمر يحصل على ضوء الشمس معظم اليوم، لذلك الطاقة الشمسية مهمة هناك.',
+        '1.2': 'يغلق الطاقم الفتحات، ثم يجدون التسرب ويلصقونه بشريط، ثم يعالجونه. هذا هو الترتيب نفسه الذي تطلبه اللعبة.',
+        '1.3': 'أثناء العاصفة الشمسية يلجأ الطاقم إلى الداخل. الثرى القمري حاجز حقيقي ضد الإشعاع.',
+      },
+      how: {
+        '1.1': 'يختبر الطاقم الحقيقي الكهرباء والهواء قبل وصول الطاقم. اللعبة تحول ذلك إلى موعد اليوم 5.',
+        '1.2': 'يعزل الطاقم الحقيقي الوحدة أولًا، ثم يلصق التسرب، ثم يضع ختمًا دائمًا.',
+        '1.3': 'يلجأ الطاقم الحقيقي إلى الداخل أثناء العاصفة. اللعبة تعطي مكافأة للاحتماء المبكر لتوضيح أهمية التوقيت.',
+      },
+      proactive: {
+        lowAir: 'هواء البدلة أقل من 25%. عُد إلى القاعدة أو استخدم المركبة.',
+        station: 'أنت قرب {name}. اضغط ACT أو استمر في الضغط على E لاستخدامه.',
+        storm: 'العاصفة تصل اليوم. أدخل الطاقم إلى المخبأ قبل أن تنهي اليوم.',
+        leak: 'هناك تسرب ماء. أغلق الفتحة أولًا، ثم ضع الشريط والرقع.',
+        heart: 'فقدت قلبًا من قلوب الطاقم. راقب المقاييس وأبقها فوق 20%.',
+        objective: 'أنجزت هدفًا. افتح قائمة الأهداف لتعرف الهدف التالي.',
+        win: 'اكتملت المهمة. أحسنت يا قائد!',
+        offline: 'المساعد السحابي غير متاح، لكنني أستطيع استخدام تلميحات المهمة.',
+      },
+    },
+  };
+
+  function createBuddy() {
+    const STATE_NAMES = ['idle', 'listen', 'think', 'talk', 'happy', 'alert', 'confused', 'sleep'];
+    const el = {
+      fab: document.getElementById('buddy-fab'),
+      fabIcon: document.getElementById('buddy-fab-icon'),
+      fabNext: document.getElementById('buddy-fab-icon-next'),
+      fabBadge: document.getElementById('buddy-fab-badge'),
+      panel: document.getElementById('buddy-panel'),
+      headIcon: document.getElementById('buddy-head-icon'),
+      title: document.getElementById('buddy-title'),
+      stateLabel: document.getElementById('buddy-state-label'),
+      messages: document.getElementById('buddy-messages'),
+      chips: document.getElementById('buddy-chips'),
+      input: document.getElementById('buddy-input'),
+      form: document.getElementById('buddy-form'),
+      send: document.getElementById('buddy-send'),
+      mic: document.getElementById('buddy-mic'),
+      lang: document.getElementById('buddy-lang'),
+      mute: document.getElementById('buddy-mute'),
+      close: document.getElementById('buddy-close'),
+      stop: document.getElementById('buddy-stop'),
+      note: document.getElementById('buddy-note'),
+      recording: document.getElementById('buddy-recording'),
+      privacy: document.getElementById('buddy-privacy-mini'),
+    };
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+    const canSpeak = typeof window.speechSynthesis !== 'undefined'
+      && typeof window.SpeechSynthesisUtterance !== 'undefined';
+    let current = 'idle';
+    let panelOpen = false;
+    let messages = [];
+    let turns = [];
+    let lastInteraction = performance.now() / 1000;
+    let lastProactive = 0;
+    let unread = false;
+    let hintLevels = {};
+    let seenStations = new Set();
+    let lowAirTold = false;
+    let leakTold = false;
+    let stormTold = false;
+    let prevHearts = MAX_HEARTS;
+    let prevDone = -1;
+    let listening = false;
+    let thinking = false;
+    let speaking = false;
+    let recognition = null;
+    let fadeTimer = 0;
+    let transientUntil = 0;
+    let transientName = null;
+    let proxyUrl = (typeof window.BUDDY_PROXY_URL === 'string' ? window.BUDDY_PROXY_URL : '') || BUDDY_PROXY_URL;
+    let openTimer = 0;
+    let stateLock = null;
+
+    const now = () => performance.now() / 1000;
+    const table = () => BUDDY_I18N[settings.buddyLang] || BUDDY_I18N.en;
+    const ui = () => table().ui;
+    const t = (key, vars = {}) => {
+      const s = String(ui()[key] == null ? key : ui()[key]);
+      return s.replace(/\{(\w+)\}/g, (_, k) => (vars[k] == null ? '' : String(vars[k])));
+    };
+    const stateText = (name) => ui()[name] || name;
+    const iconFor = (name) => `assets/ui/buddy/${name}.png`;
+    const isTextTarget = (target) => !!(target && (
+      target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT'
+      || target.isContentEditable));
+    const inPanel = (target) => !!(el.panel && target && el.panel.contains(target));
+
+    function fillMixed(target, text) {
+      // bdi/isolates keep mixed English technical terms in the right place.
+      const parts = String(text).split(/(\b(?:O₂|O2|CO₂|CO2|mSv|NASA|DONKI|ISS|ECLSS|LRO\/LCROSS|LRO|LCROSS|SPE|ACT|E|solar panel|Kapton|regolith|rover|Buddy)\b)/gi);
+      for (const part of parts) {
+        if (!part) continue;
+        if (/^(?:O₂|O2|CO₂|CO2|mSv|NASA|DONKI|ISS|ECLSS|LRO\/LCROSS|LRO|LCROSS|SPE|ACT|E|solar panel|Kapton|regolith|rover|Buddy)$/i.test(part)) {
+          const bdi = document.createElement('bdi');
+          bdi.textContent = part;
+          target.append(bdi);
+        } else {
+          target.append(document.createTextNode(part));
+        }
+      }
+    }
+
+    function applySettings() {
+      if (!el.panel) return;
+      const ar = settings.buddyLang === 'ar';
+      el.panel.dir = ar ? 'rtl' : 'ltr';
+      el.panel.lang = ar ? 'ar' : 'en';
+      el.title.textContent = settings.buddyName || 'Buddy';
+      el.fab.setAttribute('aria-label', `${ui().title} — ${ui().ready}`);
+      el.lang.textContent = ui().lang;
+      el.lang.title = ui().langTitle;
+      el.mute.textContent = settings.buddyMuted ? ui().mutedShort : ui().soundShort;
+      el.mute.setAttribute('aria-label', settings.buddyMuted ? ui().unmute : ui().mute);
+      el.close.setAttribute('aria-label', ui().close);
+      el.mic.title = SR ? ui().micTitle : ui().micUnsupported;
+      const setLabel = (id, key) => { const n = document.getElementById(id); if (n) n.textContent = ui()[key]; };
+      setLabel('label-buddy-name', 'settingsName');
+      setLabel('label-buddy-proactive', 'settingsProactive');
+      setLabel('label-buddy-cloud', 'settingsCloud');
+      setLabel('label-buddy-speak', 'settingsSpeak');
+      el.input.placeholder = ui().placeholder;
+      el.send.textContent = ui().send;
+      el.mic.textContent = ui().micShort;
+      el.stop.textContent = ui().stop;
+      el.privacy.textContent = settings.buddyCloud ? ui().privacyOn : ui().privacyOff;
+      el.recording.lastChild.textContent = ` ${ui().listening}`;
+      if (!SR) {
+        el.mic.disabled = true;
+        el.mic.title = ui().micUnsupported;
+      } else {
+        el.mic.disabled = false;
+        el.mic.title = ui().ready;
+      }
+      if (!canSpeak) {
+        const b = document.getElementById('set-buddy-speak');
+        if (b) { b.disabled = true; b.textContent = 'N/A'; }
+      }
+      renderChips();
+      renderMessages();
+      el.stateLabel.textContent = stateText(current);
+      updatePrivacyNote();
+      el.headIcon.src = iconFor(current);
+      el.fabIcon.src = iconFor(current);
+      el.fabNext.src = iconFor(current);
+      if (!panelOpen) el.fab.setAttribute('aria-label', `${settings.buddyName || 'Buddy'} — ${stateText(current)}`);
+    }
+
+    function setState(name, force = false) {
+      if (!STATE_NAMES.includes(name)) name = 'idle';
+      if (!force && transientName && now() < transientUntil && current !== transientName) return;
+      if (name === current && el.fabIcon.src.endsWith(`${name}.png`)) {
+        el.stateLabel.textContent = stateText(name);
+        return;
+      }
+      current = name;
+      el.stateLabel.textContent = stateText(name);
+      el.headIcon.src = iconFor(name);
+      el.fab.setAttribute('aria-label', `${settings.buddyName || 'Buddy'} — ${stateText(name)}`);
+      el.fab.classList.toggle('is-alert', name === 'alert');
+      // 150 ms crossfade on the docked icon.
+      clearTimeout(fadeTimer);
+      el.fabNext.src = iconFor(name);
+      el.fabNext.style.opacity = '1';
+      el.fab.classList.add('is-fading');
+      fadeTimer = setTimeout(() => {
+        el.fabIcon.src = iconFor(name);
+        el.fabNext.style.opacity = '0';
+        el.fab.classList.remove('is-fading');
+      }, 150);
+    }
+
+    function flashState(name, ms = 2600) {
+      transientName = name;
+      transientUntil = now() + ms / 1000;
+      setState(name, true);
+      clearTimeout(openTimer);
+      openTimer = setTimeout(() => {
+        transientName = null;
+        if (!listening && !thinking) setState(uiStateFallback(), true);
+      }, ms);
+    }
+
+    function uiStateFallback() {
+      if (listening) return 'listen';
+      if (thinking) return 'think';
+      if (speaking) return 'talk';
+      if (state.screen === 'game' && state.phase === 'eva' && state.air < 25) return 'alert';
+      if (state.screen === 'game' && state.levelId === '1.2' && state.leakActive) return 'alert';
+      if (state.screen === 'game' && state.levelId === '1.3' && state.stormKnown && state.sol === state.stormArrival) return 'alert';
+      if (state.screen !== 'game' || state.paused) return 'sleep';
+      return 'idle';
+    }
+
+    function renderChips() {
+      if (!el.chips) return;
+      el.chips.innerHTML = '';
+      for (const label of table().chips) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'buddy-chip';
+        b.textContent = label;
+        b.addEventListener('click', () => ask(label));
+        el.chips.append(b);
+      }
+    }
+
+    function renderMessages() {
+      if (!el.messages) return;
+      el.messages.innerHTML = '';
+      for (const m of messages) {
+        const div = document.createElement('div');
+        div.className = `buddy-msg buddy-msg--${m.role}`;
+        if (m.label) {
+          const lab = document.createElement('span');
+          lab.className = `buddy-label buddy-label--${m.label}`;
+          lab.textContent = m.label === 'real' ? ui().real : ui().game;
+          div.append(lab);
+        }
+        fillMixed(div, m.text);
+        el.messages.append(div);
+      }
+      el.messages.scrollTop = el.messages.scrollHeight;
+    }
+
+    function addMessage(role, text, label = null, noisy = false) {
+      if (!text) return;
+      messages.push({ role, text: String(text), label });
+      if (messages.length > 80) messages.shift();
+      lastInteraction = now();
+      renderMessages();
+      if (role === 'buddy' && !panelOpen && noisy) {
+        unread = true;
+        el.fabBadge.hidden = false;
+        el.fabBadge.textContent = '!';
+      }
+    }
+
+    function greeting() {
+      if (messages.length) return;
+      addMessage('buddy', t('greeting', { name: settings.buddyName || 'Buddy' }));
+    }
+
+    function updateBadge() {
+      if (unread && !panelOpen) {
+        el.fabBadge.hidden = false;
+        el.fabBadge.textContent = '!';
+      } else {
+        el.fabBadge.hidden = true;
+      }
+    }
+
+    function open() {
+      if (state.screen !== 'game') return false;
+      if (document.querySelector('.modal:not([hidden])')) return false;
+      if (hold.active || state.action) {
+        // Never cover a hold/action in progress.
+        flashState('alert', 1400);
+        return false;
+      }
+      panelOpen = true;
+      el.panel.hidden = false;
+      document.body.classList.add('buddy-open');
+      keys.up = keys.down = keys.left = keys.right = false;
+      unread = false;
+      updateBadge();
+      greeting();
+      applySettings();
+      lastInteraction = now();
+      setState(uiStateFallback(), true);
+      if (!SR) note(ui().micUnsupported);
+      else if (!canSpeak) note(ui().speakUnsupported);
+      if (!window.matchMedia('(pointer: coarse)').matches) el.input.focus();
+      return true;
+    }
+
+    function close() {
+      panelOpen = false;
+      el.panel.hidden = true;
+      document.body.classList.remove('buddy-open');
+      stopMic();
+      stopSpeak();
+      setState(uiStateFallback(), true);
+      position();
+      return true;
+    }
+
+    function toggle() {
+      if (panelOpen) return close();
+      return open();
+    }
+
+    function closeIfOpen() {
+      if (!panelOpen) return false;
+      close();
+      return true;
+    }
+
+    function ignoreGameKey(e) {
+      if (!panelOpen) return false;
+      if (isTextTarget(e.target) || inPanel(e.target)) return true;
+      return true;
+    }
+
+    function position() {
+      if (!el.fab) return;
+      const game = state.screen === 'game';
+      el.fab.hidden = !game;
+      if (!game) return;
+      const compact = window.matchMedia('(max-width: 820px), (max-height: 520px)').matches
+        || document.body.classList.contains('touch-on');
+      el.fab.style.width = '';
+      el.fab.style.height = '';
+      el.fab.style.top = '';
+      el.fab.style.bottom = '';
+      el.fab.style.left = '';
+      el.fab.style.right = '';
+      if (!compact) {
+        const dock = document.querySelector('.dock-left');
+        const dr = dock ? dock.getBoundingClientRect() : null;
+        el.fab.style.left = `${Math.max(18, Math.round((dr ? dr.right : 0) + 12))}px`;
+        el.fab.style.bottom = '18px';
+        return;
+      }
+      const act = document.getElementById('act-btn');
+      const ar = act ? act.getBoundingClientRect() : { top: 0, width: 0 };
+      const tracker = document.getElementById('tracker');
+      const tr = tracker && !tracker.hidden ? tracker.getBoundingClientRect() : null;
+      const short = window.innerHeight <= 520;
+      const size = short ? 34 : 58;
+      let top;
+      if (short) {
+        // Landscape phone: the only clear band is between the tracker and the
+        // bottom console. Keep the button in that band.
+        top = Math.max(2, tr ? tr.bottom + 1 : 40);
+        if (top + size > ar.top - 6) top = Math.max(2, ar.top - size - 6);
+      } else {
+        top = Math.max(2, ar.top - size - 10);
+      }
+      el.fab.style.width = `${size}px`;
+      el.fab.style.height = `${size}px`;
+      el.fab.style.top = `${Math.round(top)}px`;
+      el.fab.style.right = '18px';
+    }
+
+    function summary() {
+      const L = state.level;
+      const plan = COACH_PLANS[state.levelId] || [];
+      const open = plan.filter((p) => !p.done(state)).map((p) => p.text).slice(0, 4);
+      return {
+        level: state.levelId || null,
+        day: state.sol || null,
+        phase: state.phase,
+        openObjectives: open,
+      };
+    }
+
+    function nextPlan() {
+      const plan = COACH_PLANS[state.levelId] || [];
+      const step = plan.find((p) => !p.done(state));
+      return step ? { step, index: plan.indexOf(step) } : null;
+    }
+
+    function hintAnswer() {
+      const id = state.levelId;
+      const next = nextPlan();
+      const level = Math.min(2, hintLevels[id] || 0);
+      hintLevels[id] = level + 1;
+      if (!next) return table().hints.end;
+      let stepText = next.step.text;
+      if (settings.buddyLang === 'ar') {
+        const list = table().steps[id] || [];
+        stepText = list[next.index] || stepText;
+      }
+      const carry = next.step.carry
+        ? (settings.buddyLang === 'ar' ? 'ثم اتبع السهم إلى المكان المضيء.' : next.step.carry)
+        : (settings.buddyLang === 'ar' ? 'اتبع السهم المضيء.' : 'Follow the glowing marker.');
+      const L = LEVELS[id] || {};
+      const g = L.goals || {};
+      const goalVars = {
+        day: L.goalsSol || '', water: g.water == null ? '' : g.water,
+        dose: g.dose == null ? '' : g.dose, o2: g.o2 == null ? '' : g.o2,
+      };
+      const goalText = String(table().goals[id] || '').replace(/\{(\w+)\}/g, (_, k) => (goalVars[k] == null ? '' : String(goalVars[k])));
+      const vars = { goal: goalText, step: stepText, carry };
+      return String(table().hints[['nudge', 'clear', 'exact'][level]]).replace(/\{(\w+)\}/g, (_, k) => (vars[k] == null ? '' : String(vars[k])));
+    }
+
+    function whatIs(text) {
+      const n = text.toLowerCase();
+      const checks = [
+        ['panel', /(solar panel|sun panel|لوح شمسي|الألواح|اللوح)/],
+        ['air', /(suit air|air supply|\bair\b|هواء|الهواء|بدلة)/],
+        ['solar', /(solar|sun power|شمس|الشمس|طاقة شمسية)/],
+        ['battery', /(battery|بطارية|البطارية|خلايا التخزين)/],
+        ['ice', /(ice|جليد|الجليد)/],
+        ['regolith', /(regolith|soil|ثرى|التربة|الثرى)/],
+        ['shelter', /(shelter|bunker|مخبأ|المخبأ|احتماء)/],
+        ['dish', /(dish|storm|forecast|طبق|الطبق|عاصفة|العاصفة|طقس)/],
+        ['rover', /(rover|مركبة|المركبة|عربة)/],
+        ['ring', /(ring|walk.back|حلقة|الحلقة|عودة)/],
+      ];
+      for (const [key, re] of checks) if (re.test(n)) return key;
+      return null;
+    }
+
+    function scriptedAnswer(text) {
+      const n = text.toLowerCase();
+      if (/(stuck|what.*next|what.*do|hint|help|lost|ماذا|أفعل|اعمل|عالق|تلميح|ساعد|الخطوة)/i.test(n)) {
+        return { text: hintAnswer(), label: null };
+      }
+      if (/(why|matter|important|لماذا|مهم|أهمية)/i.test(n)) {
+        return {
+          text: settings.buddyLang === 'ar'
+            ? table().why[state.levelId] || table().why['1.1']
+            : (BRIEFS[state.levelId]?.why || table().why['1.1']),
+          label: 'real',
+        };
+      }
+      if (/(how.*(real|astronaut)|real astronaut|كيف.*رواد|رواد الفضاء|كيف يفعل)/i.test(n)) {
+        return {
+          text: settings.buddyLang === 'ar'
+            ? table().how[state.levelId] || table().how['1.1']
+            : (LEVELS[state.levelId]?.debrief.choice || table().how['1.1']),
+          label: 'real',
+        };
+      }
+      const key = whatIs(n);
+      if (key) {
+        const vars = {
+          iceWater: RULES.iceWater.value,
+          shield: RULES.shieldPerCell.value,
+        };
+        let text = table().answers[key] || '';
+        text = text.replace(/\{(\w+)\}/g, (_, k) => (vars[k] == null ? '' : String(vars[k])));
+        const realKeys = ['solar', 'ice', 'regolith', 'shelter', 'dish'];
+        return { text, label: realKeys.includes(key) ? 'real' : 'game' };
+      }
+      if (/(hello|hi\b|hey|مرحبا|أهلا|السلام)/i.test(n)) {
+        return { text: t('greeting', { name: settings.buddyName || 'Buddy' }), label: null };
+      }
+      return null;
+    }
+
+    async function postCloud(question) {
+      if (!proxyUrl) throw { kind: 'off' };
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 8000);
+      try {
+        const res = await fetch(proxyUrl, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            question: question.slice(0, 300),
+            language: settings.buddyLang,
+            state: summary(),
+            history: turns.slice(-8),
+          }),
+          signal: controller.signal,
+        });
+        if (res.status === 429) throw { kind: 'rate' };
+        if (!res.ok) throw { kind: 'error', status: res.status };
+        const data = await res.json();
+        const answer = data && (data.answer || data.reply || data.text);
+        if (!answer) throw { kind: 'error' };
+        return String(answer).slice(0, 900);
+      } catch (e) {
+        if (e && e.kind) throw e;
+        if (e && e.name === 'AbortError') throw { kind: 'timeout' };
+        throw { kind: 'error' };
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    async function askCloud(text) {
+      thinking = true;
+      setState('think', true);
+      let lastKind = 'error';
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const answer = await postCloud(text);
+          thinking = false;
+          setState('talk', true);
+          const msg = { role: 'buddy', text: answer, label: null };
+          addMessage('buddy', answer);
+          turns.push({ role: 'assistant', content: answer });
+          turns = turns.slice(-8);
+          note(null);
+          if (settings.buddySpeak && !settings.buddyMuted) speak(answer);
+          else flashState('talk', 2200);
+          return msg;
+        } catch (e) {
+          lastKind = e?.kind || 'error';
+          if (lastKind === 'rate' || lastKind === 'off') break;
+        }
+      }
+      thinking = false;
+      flashState('confused', 3000);
+      const key = lastKind === 'timeout' ? 'timeout' : lastKind === 'rate' ? 'rate' : 'cloudFail';
+      addMessage('buddy', t(key));
+      note(settings.buddyCloud ? t(key) : t('cloudOff'));
+    }
+
+    function ask(raw) {
+      const text = String(raw == null ? '' : raw).trim().slice(0, 300);
+      if (!text) { note(t('empty')); return; }
+      if (!panelOpen) open();
+      lastInteraction = now();
+      addMessage('user', text);
+      turns.push({ role: 'user', content: text });
+      turns = turns.slice(-8);
+      const answer = scriptedAnswer(text);
+      if (answer) {
+        flashState('talk', 900);
+        setTimeout(() => {
+          addMessage('buddy', answer.text, answer.label);
+          turns.push({ role: 'assistant', content: answer.text });
+          turns = turns.slice(-8);
+          if (settings.buddySpeak && !settings.buddyMuted) speak(answer.text);
+          else flashState('talk', 1800);
+        }, 240);
+        return;
+      }
+      if (!settings.buddyCloud) {
+        flashState('confused', 3000);
+        addMessage('buddy', t('noAnswer'));
+        note(t('cloudOff'));
+        return;
+      }
+      if (!proxyUrl) {
+        flashState('confused', 3000);
+        addMessage('buddy', t('noAnswer'));
+        note(t('cloudOff'));
+        return;
+      }
+      if (navigator.onLine === false) {
+        flashState('confused', 3000);
+        addMessage('buddy', t('offline'));
+        note(t('offline'));
+        return;
+      }
+      askCloud(text);
+    }
+
+    function note(text) {
+      if (!el.note) return;
+      if (!text) { el.note.hidden = true; el.note.textContent = ''; return; }
+      el.note.hidden = false;
+      el.note.textContent = text;
+    }
+
+    function speak(text) {
+      if (!canSpeak || settings.buddyMuted || !text) return;
+      try {
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(String(text).replace(/<[^>]+>/g, ''));
+        u.lang = settings.buddyLang === 'ar' ? 'ar-EG' : 'en-US';
+        const voices = window.speechSynthesis.getVoices ? window.speechSynthesis.getVoices() : [];
+        const voice = voices.find((v) => v.lang && v.lang.toLowerCase().startsWith(settings.buddyLang === 'ar' ? 'ar' : 'en'));
+        if (voice) u.voice = voice;
+        u.onstart = () => { speaking = true; setState('talk', true); el.stop.hidden = false; };
+        u.onend = () => { speaking = false; el.stop.hidden = true; setState(uiStateFallback(), true); };
+        u.onerror = () => { speaking = false; el.stop.hidden = true; setState('confused', true); };
+        window.speechSynthesis.speak(u);
+      } catch {
+        note(ui().speakUnsupported);
+      }
+    }
+
+    function stopSpeak() {
+      if (!canSpeak) return;
+      try { window.speechSynthesis.cancel(); } catch { /* ignore */ }
+      speaking = false;
+      if (el.stop) el.stop.hidden = true;
+    }
+
+    function startMic() {
+      if (!SR) { note(ui().micUnsupported); return false; }
+      if (listening) { stopMic(); return true; }
+      try {
+        recognition = new SR();
+        recognition.lang = settings.buddyLang === 'ar' ? 'ar-EG' : 'en-US';
+        recognition.interimResults = false;
+        recognition.continuous = false;
+        recognition.maxAlternatives = 1;
+        recognition.onstart = () => {
+          listening = true;
+          setState('listen', true);
+          el.recording.hidden = false;
+          el.mic.classList.add('is-listening');
+          note(null);
+        };
+        recognition.onresult = (e) => {
+          const transcript = e.results?.[0]?.[0]?.transcript || '';
+          if (transcript) {
+            el.input.value = transcript;
+            el.input.focus();
+          }
+        };
+        recognition.onerror = (e) => {
+          listening = false;
+          el.recording.hidden = true;
+          el.mic.classList.remove('is-listening');
+          flashState('confused', 2800);
+          note(e.error === 'not-allowed' || e.error === 'service-not-allowed' ? ui().micDenied : ui().micFailed);
+        };
+        recognition.onend = () => {
+          listening = false;
+          el.recording.hidden = true;
+          el.mic.classList.remove('is-listening');
+          if (current === 'listen') setState(uiStateFallback(), true);
+        };
+        recognition.start();
+        return true;
+      } catch {
+        listening = false;
+        flashState('confused', 2800);
+        note(ui().micFailed);
+        return false;
+      }
+    }
+
+    function stopMic() {
+      if (recognition) {
+        try { recognition.stop(); } catch { /* ignore */ }
+      }
+      listening = false;
+      if (el.recording) el.recording.hidden = true;
+      if (el.mic) el.mic.classList.remove('is-listening');
+    }
+
+    function proactive(kind, vars = {}, force = false) {
+      if (!settings.buddyProactive && !force) return;
+      if (hold.active || state.action) return;
+      const at = now();
+      if (!force && at - lastProactive < 30) return;
+      lastProactive = at;
+      const key = kind;
+      const text = (table().proactive[key] || '').replace(/\{(\w+)\}/g, (_, k) => (vars[k] == null ? '' : String(vars[k])));
+      if (!text) return;
+      addMessage('buddy', text, null, true);
+      updateBadge();
+      if (kind === 'objective' || kind === 'win') flashState('happy', 2600);
+      else flashState('alert', 3200);
+    }
+
+    function event(kind, detail = '') {
+      if (kind === 'delivered') {
+        flashState('happy', 2200);
+        return;
+      }
+      if (kind === 'win') {
+        proactive('win', {}, true);
+        flashState('happy', 5000);
+        return;
+      }
+      if (kind === 'lose') {
+        flashState('alert', 3200);
+        return;
+      }
+      if (kind === 'heart') {
+        proactive('heart');
+        flashState('alert', 3000);
+      }
+    }
+
+    function resetForLevel() {
+      hintLevels = {};
+      seenStations = new Set();
+      lowAirTold = false;
+      leakTold = false;
+      stormTold = false;
+      prevHearts = state.hearts;
+      prevDone = -1;
+      messages = [];
+      turns = [];
+      lastInteraction = now();
+      lastProactive = 0;
+      unread = false;
+      updateBadge();
+      if (panelOpen) close();
+      setState('idle', true);
+      if (state.level) addMessage('buddy', t('newMission', { title: state.level.title }));
+      el.messages.innerHTML = '';
+    }
+
+    function tick(time) {
+      if (!el.fab) return;
+      if (state.screen !== 'game') return;
+      if (stateLock) { setState(stateLock, true); return; }
+      const s = state;
+      if (panelOpen) lastInteraction = time;
+      if (s.paused) {
+        if (!panelOpen && current !== 'sleep') setState('sleep', true);
+        return;
+      }
+      if (!panelOpen && !listening && !thinking && !speaking && time - lastInteraction > 60) {
+        setState('sleep', true);
+      }
+      const trackerCount = document.getElementById('tracker-count');
+      const done = trackerCount ? Number((trackerCount.textContent || '0/0').split('/')[0]) : 0;
+      if (prevDone < 0) prevDone = done;
+      else if (done > prevDone) {
+        prevDone = done;
+        proactive('objective');
+        flashState('happy', 2400);
+      } else prevDone = done;
+      if (s.hearts < prevHearts) {
+        prevHearts = s.hearts;
+        proactive('heart');
+        flashState('alert', 3000);
+      } else prevHearts = s.hearts;
+      if (s.phase === 'eva' && s.air < 25 && !lowAirTold) {
+        lowAirTold = true;
+        proactive('lowAir');
+      } else if (s.air >= 30) lowAirTold = false;
+      if (s.levelId === '1.2' && s.leakActive && !leakTold) {
+        leakTold = true;
+        proactive('leak');
+      }
+      if (s.levelId === '1.3' && s.stormKnown && s.sol === s.stormArrival && !stormTold) {
+        stormTold = true;
+        proactive('storm');
+      }
+      if (s.phase === 'eva' && !hold.active && !s.action) {
+        const st = nearestStation();
+        if (st && !seenStations.has(st.id)) {
+          seenStations.add(st.id);
+          proactive('station', { name: st.name || st.label || st.id });
+        }
+      }
+      if (!listening && !thinking && !speaking && !transientName) setState(uiStateFallback(), true);
+    }
+
+    function onScreen(name) {
+      if (name === 'game') {
+        el.fab.hidden = false;
+        position();
+        if (state.level) lastInteraction = now();
+      } else {
+        if (panelOpen) close();
+        el.fab.hidden = true;
+        setState('sleep', true);
+      }
+    }
+
+    function onPause(paused) {
+      if (paused) { close(); setState('sleep', true); }
+      else setState(uiStateFallback(), true);
+    }
+
+    function trigger(name) {
+      const n = String(name);
+      switch (n) {
+        case 'idle': setState('idle', true); break;
+        case 'listen': flashState('listen', 2200); break;
+        case 'think': thinking = true; setState('think', true); setTimeout(() => { thinking = false; setState(uiStateFallback(), true); }, 900); break;
+        case 'talk': flashState('talk', 1600); break;
+        case 'happy': event('delivered'); break;
+        case 'alert': flashState('alert', 3000); break;
+        case 'confused': flashState('confused', 3000); break;
+        case 'sleep': setState('sleep', true); break;
+        case 'deliver': event('delivered'); break;
+        case 'win': event('win'); break;
+        case 'objective': proactive('objective', {}, true); break;
+        case 'lowair': state.air = 20; lowAirTold = false; proactive('lowAir', {}, true); break;
+        case 'leak': if (state.levelId !== '1.2') state.levelId = '1.2'; state.leakActive = true; leakTold = false; proactive('leak', {}, true); break;
+        case 'storm': if (state.levelId !== '1.3') state.levelId = '1.3'; state.stormKnown = true; state.stormArrival = state.sol; stormTold = false; proactive('storm', {}, true); break;
+        case 'heart': event('heart'); break;
+        case 'mic': return startMic();
+        case 'stuck': ask(table().chips[2]); break;
+        default: setState(n, true);
+      }
+      return current;
+    }
+
+    function setLanguage(lang) {
+      settings.buddyLang = lang === 'ar' ? 'ar' : 'en';
+      saveSettings();
+      messages = [];
+      turns = [];
+      applySettings();
+      greeting();
+      if (panelOpen) el.input.focus();
+      updatePrivacyNote();
+    }
+
+    function updatePrivacyNote() {
+      const n = document.getElementById('privacy-note');
+      if (n) n.textContent = ui().privacyNote;
+    }
+
+    function init() {
+      if (!el.fab || !el.panel) return;
+      el.fab.addEventListener('click', toggle);
+      el.close.addEventListener('click', close);
+      el.form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const text = el.input.value;
+        el.input.value = '';
+        ask(text);
+      });
+      el.lang.addEventListener('click', () => setLanguage(settings.buddyLang === 'ar' ? 'en' : 'ar'));
+      el.mute.addEventListener('click', () => {
+        settings.buddyMuted = !settings.buddyMuted;
+        saveSettings();
+        if (settings.buddyMuted) stopSpeak();
+        applySettings();
+      });
+      el.mic.addEventListener('click', () => startMic());
+      el.stop.addEventListener('click', stopSpeak);
+      el.input.addEventListener('focus', () => { lastInteraction = now(); });
+      // Buddy owns H and Esc while the panel is open. Hotkeys never leak into
+      // the game while an input has focus.
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && panelOpen) {
+          e.preventDefault(); e.stopImmediatePropagation(); close(); return;
+        }
+        if (e.code === 'KeyH' && !e.repeat && !isTextTarget(e.target)
+          && state.screen === 'game' && !document.querySelector('.modal:not([hidden])')) {
+          e.preventDefault(); e.stopImmediatePropagation(); toggle();
+        }
+      }, true);
+      applySettings();
+      position();
+    }
+
+    return {
+      init, applySettings, open, close, toggle, position, tick, onScreen, onPause,
+      event, resetForLevel, trigger, setState: (n, force = true) => setState(n, force),
+      setLanguage, ask, updatePrivacyNote,
+      closeIfOpen, ignoreGameKey,
+      get state() { return current; },
+      get isOpen() { return panelOpen; },
+      get i18n() { return BUDDY_I18N; },
+      get messages() { return messages.slice(); },
+      get hintLevel() { return { ...hintLevels }; },
+      setProxy(url) { proxyUrl = String(url || ''); },
+      getProxy() { return proxyUrl; },
+      debugHint() { return hintAnswer(); },
+      debugSummary: summary,
+      debugSetAir(v) { state.air = Number(v) || 0; },
+      debugSetCloud(on) { settings.buddyCloud = !!on; saveSettings(); applySettings(); },
+      debugSetSpeak(on) { settings.buddySpeak = !!on; saveSettings(); applySettings(); },
+      debugLockState(name) { stateLock = STATE_NAMES.includes(name) ? name : null; setState(stateLock || 'idle', true); return current; },
+      debugUnlockState() { stateLock = null; return current; },
+      debugOpen: open,
+      debugClose: close,
+    };
+  }
+
 
   function initAnimDebugPage() {
     if (!DEBUG || location.hash !== '#anim') return;
@@ -3812,9 +4855,12 @@
     box.innerHTML = RESOURCE_DOCS.filter((d) => d.slot !== 'leak-slot').map((d) =>
       `<div class="station-row"><span>${ITEM_META[d.item].name} → ${(SLOTS.find((s) => s.id === d.slot) || {}).label || d.slot}</span><b>${d.effect}</b></div>`).join('');
   })();
+  buddy = createBuddy();
+  buddy.init();
   applySettings();
   wireHelpDots();
   wireFlow();
+  window.JuniorBuddy = buddy;
   initLoading();
   initAnimDebugPage();
 
