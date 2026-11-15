@@ -38,7 +38,7 @@ tools/       slice_assets.py · sim.py · qa.py
 - Preloads only the sliced PNGs (never the source JPGs); every frame is included in the loading
   progress count. A missing frame falls back to the previous astronaut sprite with one warning.
 - `?debug#anim` shows the walk cycle at 40/82/164 px/s on dark and light backgrounds.
-- QA: **72/72** on `file://` (desktop + phone); `tools/out/walk_check.png` is the mid-stride
+- QA: **74/74** on `file://` and the live GitHub Pages URL (desktop + phone); `tools/out/walk_check.png` is the mid-stride
   desktop/phone proof. Rover-mounted art is unchanged. Sim remains stale (v2 warning).
 
 ## v3.1.0 — Session 2B part 2: rover
