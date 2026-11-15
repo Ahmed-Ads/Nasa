@@ -1,7 +1,6 @@
-﻿# Junior Astronaut Mission Trainer — Level 1: The Moon
+﻿# Space Buddy — Level 1: The Moon
 
-A pixel-art mission trainer for ages 7–12, built for the **2026 NASA Space Apps Challenge**
-challenge *“Build a Junior Astronaut Mission Trainer.”*
+A pixel-art mission trainer for ages 7–12, built for the **2026 NASA Space Apps Challenge**.
 
 Level 1 is complete: **1.1 Outpost Prep**, **1.2 Water Leak**, **1.3 Solar Storm**. Level 2
 (Mars) and beyond appear only as locked nodes on the level map.
@@ -25,6 +24,20 @@ tools/       slice_assets.py · sim.py · qa.py
 
 
 
+
+## v3.2.6 - Rename to Space Buddy
+
+- The game is now **Space Buddy**. The loading screen, title screen, Credits, page title,
+  meta/OG tags, README and server prompt use the new name. The old title-screen placeholder
+  (“Newspdet”) is replaced by a text/CSS **Space Buddy** logo in the existing pixel style;
+  no new image asset is needed.
+- The title screen keeps the **NASA SPACE APPS 2026 - LEVEL 1** line.
+- The chat assistant keeps its configurable default name **Buddy**, so the game and the
+  helper now share the “Buddy” name.
+- No localStorage keys, repo/file names, URLs or save schema changed. Existing saves work.
+- Version: **3.2.6** everywhere.
+- QA: **139/139** after adding an old-name scan for visible text, `<title>`, meta tags and a
+  manifest link if present.
 
 ## v3.2.0 - Buddy: the in-game mission helper
 
@@ -155,7 +168,7 @@ intentionally drops the crest/sign art. Sim remains stale (v2 warning).
 
 ## v3.1.6 - Landing and quit art from img8/img9
 
-- Landing page now uses the **Survival Outpost** crest, cheerful astronaut, READY TO LAND?
+- Landing page now uses the old branded crest, cheerful astronaut, READY TO LAND?
   sign, and the Start Game / Quit Mission art buttons. Happy emotions are used for starting.
 - Quit page uses the **sad astronaut** and the img8 **EXIT** door and **MISSION ABORTED**
   banner. The quit confirmation also shows the sad astronaut. Leaving reads as a sad moment;
@@ -588,6 +601,6 @@ Decisions I had to guess:
 
 ## 10. Credits
 
-Code, level design and science copy: Junior Astronaut team. Sprite art: AI-generated catalog
+Code, level design and science copy: Space Buddy team. Sprite art: AI-generated catalog
 sheets sliced by `tools/slice_assets.py`. Built for the NASA Space Apps Challenge 2026 —
 educational model, not engineering-grade.

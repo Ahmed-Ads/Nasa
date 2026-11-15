@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Playwright regression + balance QA for Junior Astronaut Mission Trainer (Level 1).
+Playwright regression + balance QA for Space Buddy (Level 1).
 
 Checks, at 1280x720 and 390x844:
   * no console errors (audio autoplay + font warnings ignored)
@@ -1346,6 +1346,38 @@ def main():
         check("E game.js BUILD_VERSION is current", BUILD_VERSION in GAME_SRC)
         tags = re.findall(r"\?v=([0-9.]+)", html)
         check(f"E every ?v= tag is {BUILD_VERSION}", bool(tags) and all(t == BUILD_VERSION for t in tags), str(tags))
+
+        # ------------------------------------------------------ brand rename
+        print("\nBrand rename: Space Buddy")
+        def brand_scan(page_obj):
+            return js(page_obj, """() => {
+              const bad = /(junior\s+astronaut|survival\s+outpost|newspdet)/i;
+              const title = document.title || '';
+              const meta = [...document.querySelectorAll('meta')].map((m) => m.content || '').join(' ');
+              const manifests = [...document.querySelectorAll('link[rel="manifest"]')].map((l) => l.href);
+              const body = document.body ? document.body.textContent : '';
+              const bdi = [...document.querySelectorAll('#buddy-messages bdi')].map((b) => b.textContent);
+              return { title, meta, manifests, bdi, bad: bad.test(title + ' ' + meta + ' ' + body) };
+            }""")
+        nctx, np = new_page(browser, 1280, 720, "")
+        np.wait_for_timeout(500)
+        en_brand = brand_scan(np)
+        nctx.close()
+        arctx = browser.new_context(viewport={"width": 1280, "height": 720})
+        arp = arctx.new_page()
+        arp.goto((LIVE_URL or URL) + "?debug&level=1.1")
+        arp.wait_for_timeout(800)
+        js(arp, "() => { window.JuniorBuddy.open(); window.JuniorBuddy.setLanguage('ar'); }")
+        arp.wait_for_timeout(250)
+        ar_brand = brand_scan(arp)
+        arctx.close()
+        check("No old game name in visible text, title, meta or manifest (EN/AR)",
+              not en_brand["bad"] and not ar_brand["bad"]
+              and "Space Buddy" in en_brand["title"] and "Space Buddy" in en_brand["meta"]
+              and any("Space Buddy" in b for b in ar_brand["bdi"])
+              and not any("junior" in x.lower() or "survival" in x.lower() or "newspdet" in x.lower()
+                          for x in en_brand["manifests"] + ar_brand["manifests"]),
+              str({"en": en_brand, "ar": {k: v for k, v in ar_brand.items() if k != "body"}}))
 
         # ----------------------------------------------------- session 2A
         print("\nSession 2A gaps")

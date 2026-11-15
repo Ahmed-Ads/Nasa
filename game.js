@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Junior Astronaut Mission Trainer — Level 1 (The Moon)
+   Space Buddy — Level 1 (The Moon)
    1.1 Outpost Prep · 1.2 Water Leak · 1.3 Solar Storm
 
    Vanilla JS. No build step. Runs from file:// (no fetch).
@@ -3342,7 +3342,7 @@
 
 
   /* ============ iteration 2: loading, menus, briefing, pause, touch ====== */
-  const BUILD_VERSION = '3.2.0';
+  const BUILD_VERSION = '3.2.6';
   const TIPS = [
     'Did you know? ISS life support recovers about 98% of the crew’s water (NASA ECLSS).',
     'Did you know? Water ice hides in permanently shadowed craters at the lunar south pole (LRO/LCROSS).',
@@ -3428,7 +3428,7 @@
   }
   function closePause() { flowEls.pause.hidden = true; state.paused = false; buddy?.onPause(false); }
 
-  const UI_SAD = 'assets/ui/sad_astronaut.png?v=3.2.0';
+  const UI_SAD = 'assets/ui/sad_astronaut.png?v=3.2.6';
   function askConfirm(text, onYes, art = null) {
     flowEls.confirmText.textContent = text;
     if (flowEls.confirmArt) {
@@ -3690,7 +3690,7 @@
   const BUDDY_I18N = {
     en: {
       ui: {
-        title: 'Buddy', ready: 'Ready to help',
+        title: 'Buddy', brand: 'Space Buddy', pageTitle: 'Space Buddy — Level 1: The Moon', ready: 'Ready to help',
         idle: 'Ready', listen: 'Listening', think: 'Thinking', talk: 'Talking',
         happy: 'Nice work!', alert: 'Heads up!', confused: 'Not sure', sleep: 'Resting',
         lang: 'AR', langTitle: 'Switch to Arabic', mute: 'Mute Buddy', unmute: 'Unmute Buddy',
@@ -3710,7 +3710,7 @@
         timeout: 'The cloud helper took too long. Try again or use a chip.',
         rate: 'The cloud helper is busy right now. Try again in a moment.',
         offline: 'There is no network. Buddy still works offline.',
-        greeting: 'Hi! I am {name}. Ask me what to do next, why it matters, or what something means.',
+        greeting: 'Hi! I am {name}, your {brand} helper. Ask me what to do next, why it matters, or what something means.',
         real: 'REAL NASA', game: 'GAME ASSUMPTION',
         sourceNote: 'This comes from the mission’s own Real NASA notes.',
         newMission: 'New mission: {title}. Ask me when you need a hand.',
@@ -3764,7 +3764,7 @@
     },
     ar: {
       ui: {
-        title: 'بادي', ready: 'جاهز للمساعدة',
+        title: 'بادي', brand: 'Space Buddy', pageTitle: 'Space Buddy — المستوى 1', ready: 'جاهز للمساعدة',
         idle: 'جاهز', listen: 'أستمع', think: 'أفكر', talk: 'أتحدث',
         happy: 'أحسنت!', alert: 'انتبه!', confused: 'لست متأكدًا', sleep: 'أستريح',
         lang: 'EN', langTitle: 'التبديل إلى الإنجليزية', mute: 'اكتم صوت بادي', unmute: 'شغّل صوت بادي',
@@ -3784,7 +3784,7 @@
         timeout: 'استغرق المساعد السحابي وقتًا طويلًا. حاول مرة أخرى أو استخدم زرًا.',
         rate: 'المساعد السحابي مشغول الآن. حاول بعد قليل.',
         offline: 'لا يوجد اتصال. بادي يعمل دون اتصال.',
-        greeting: 'مرحبًا! أنا {name}. اسألني ماذا تفعل الآن، أو لماذا هذا مهم، أو ماذا يعني شيء ما.',
+        greeting: 'مرحبًا! أنا {name}، مساعدك في {brand}. اسألني ماذا تفعل الآن، أو لماذا هذا مهم، أو ماذا يعني شيء ما.',
         real: 'حقيقة ناسا', game: 'افتراض اللعبة',
         sourceNote: 'هذه المعلومة من ملاحظات المهمة نفسها عن ناسا.',
         newMission: 'مهمة جديدة: {title}. اسألني عندما تحتاج مساعدة.',
@@ -3913,10 +3913,10 @@
 
     function fillMixed(target, text) {
       // bdi/isolates keep mixed English technical terms in the right place.
-      const parts = String(text).split(/(\b(?:O₂|O2|CO₂|CO2|mSv|NASA|DONKI|ISS|ECLSS|LRO\/LCROSS|LRO|LCROSS|SPE|ACT|E|solar panel|Kapton|regolith|rover|Buddy)\b)/gi);
+      const parts = String(text).split(/(\b(?:Space Buddy|O₂|O2|CO₂|CO2|mSv|NASA|DONKI|ISS|ECLSS|LRO\/LCROSS|LRO|LCROSS|SPE|ACT|E|solar panel|Kapton|regolith|rover|Buddy)\b)/gi);
       for (const part of parts) {
         if (!part) continue;
-        if (/^(?:O₂|O2|CO₂|CO2|mSv|NASA|DONKI|ISS|ECLSS|LRO\/LCROSS|LRO|LCROSS|SPE|ACT|E|solar panel|Kapton|regolith|rover|Buddy)$/i.test(part)) {
+        if (/^(?:Space Buddy|O₂|O2|CO₂|CO2|mSv|NASA|DONKI|ISS|ECLSS|LRO\/LCROSS|LRO|LCROSS|SPE|ACT|E|solar panel|Kapton|regolith|rover|Buddy)$/i.test(part)) {
           const bdi = document.createElement('bdi');
           bdi.textContent = part;
           target.append(bdi);
@@ -3929,6 +3929,7 @@
     function applySettings() {
       if (!el.panel) return;
       const ar = settings.buddyLang === 'ar';
+      document.title = ui().pageTitle || document.title;
       el.panel.dir = ar ? 'rtl' : 'ltr';
       el.panel.lang = ar ? 'ar' : 'en';
       el.title.textContent = settings.buddyName || 'Buddy';
@@ -4063,7 +4064,7 @@
 
     function greeting() {
       if (messages.length) return;
-      addMessage('buddy', t('greeting', { name: settings.buddyName || 'Buddy' }));
+      addMessage('buddy', t('greeting', { name: settings.buddyName || 'Buddy', brand: ui().brand }));
     }
 
     function updateBadge() {
@@ -4262,7 +4263,7 @@
         return { text, label: realKeys.includes(key) ? 'real' : 'game' };
       }
       if (/(hello|hi\b|hey|مرحبا|أهلا|السلام)/i.test(n)) {
-        return { text: t('greeting', { name: settings.buddyName || 'Buddy' }), label: null };
+        return { text: t('greeting', { name: settings.buddyName || 'Buddy', brand: ui().brand }), label: null };
       }
       return null;
     }

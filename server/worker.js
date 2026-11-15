@@ -1,5 +1,5 @@
 /**
- * Tiny Buddy cloud helper for the static Junior Astronaut game.
+ * Tiny Buddy cloud helper for the static Space Buddy game.
  *
  * Deploy as a Cloudflare Worker. The API key lives only in the Worker
  * environment (`OPENAI_API_KEY`); it is never shipped to the browser.
@@ -22,7 +22,7 @@ const WINDOW_MS = 60_000;
 const MAX_PER_WINDOW = 12;
 const hits = new Map();
 
-const SYSTEM_PROMPT = `You are Buddy, a friendly mission helper inside "Junior Astronaut Mission Trainer", a game for ages about 8 to 14.
+const SYSTEM_PROMPT = `You are Buddy, a friendly mission helper inside "Space Buddy", a game for ages about 8 to 14.
 
 Rules:
 - Answer in the language selected by the player (English or Arabic).
