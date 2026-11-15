@@ -977,13 +977,17 @@ def main():
                      visible: r.width > 60 && r.height > 30 && s.display !== 'none' && s.visibility !== 'hidden' };
           });
           const title = document.querySelector('#screen-title .title-main');
-          const astro = document.querySelector('#screen-title .title-astronaut');
-          const ar = astro ? astro.getBoundingClientRect() : null;
+          // The hero figure is whatever big astronaut image the landing uses;
+          // check it by size instead of by class name so redesigns still pass.
+          const hero = [...document.querySelectorAll('#screen-title img')]
+            .map((i) => ({ el: i, r: i.getBoundingClientRect() }))
+            .sort((a, b) => b.r.width - a.r.width)[0];
+          const ar = hero ? hero.r : null;
           return {
             buttons,
             jersey: document.fonts.check("40px 'Jersey 20'"),
-            astronaut: ar ? { w: Math.round(ar.width), bottom: Math.round(innerHeight - ar.bottom) } : null,
-            footer: (document.querySelector('#screen-title .title-footer') || {}).textContent || '',
+            astronaut: ar ? { w: Math.round(ar.width), h: Math.round(ar.height), src: hero.el.getAttribute('src') } : null,
+            footer: (document.querySelector('#screen-title .title-footer, #screen-title .figma-footer, #screen-title footer') || {}).textContent || '',
           };
         }""")
         check("Landing menu has the five design buttons at clickable size",

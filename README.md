@@ -76,6 +76,23 @@ question logging. When OFF (the default) nothing leaves the device.
   390x844). Icon proof: `tools/out/buddy_states.png`. Every Arabic line is listed for
   proofreading in `BUDDY_ARABIC_REVIEW.md`. Sim balance remains stale (v2 warning).
 
+## v3.1.9 - Figma design screens (title, level map, moon-mission list)
+
+- Title screen now uses the Figma Desktop-1 layout with the new hero art: full-bleed space
+  background, `figma_astronaut` figure bottom-left, pixel title group and the six-button gold
+  stack (Start Mission, Continue Mission, Credits, Training, Settings, Exit) and the
+  "Powered by NASA open data" footer with the build version.
+- Level map rebuilt to Figma Desktop-2: pickable LV.1-LV.10 nodes on the Moon/Mars tracks with
+  hover tooltips and locked/ready badges, plus the "List of Moon Missions" modal (Desktop-9)
+  that opens from the Moon planet.
+- Everything `game.js` needs is wired to the new screens: the hidden mission tray still renders
+  the real cards so progress/locking logic is unchanged, and `Continue Mission` is bound to
+  `#continue-btn` again (it had been a second "Start" proxy).
+- Kept from 3.1.8: bundled Jersey 20/25 + Lexend fonts (the Google Fonts links are gone again,
+  the build stays offline), the objectives panel inside the right column with the `O` toggle,
+  the resource bars with goal markers, and the loading/credits version written from
+  `BUILD_VERSION`.
+
 ## v3.1.8 - Design landing screen + objectives layout
 
 ### Start / Continue landing screen

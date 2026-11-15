@@ -72,208 +72,302 @@
       <span class="interact-progress" id="interact-progress"></span>
     </button>
 
-    <!-- ============================================================ title === -->
-    <div class="overlay overlay--title" id="screen-title">
-      <div class="title-astronaut" aria-hidden="true">
-        <img class="astronaut-img" src="assets/ui/astronaut.png" alt="">
+    <!-- ============================================================ title (Desktop-1) === -->
+    <div class="overlay overlay--title figma-desktop1" id="screen-title">
+      <!-- Background space art -->
+      <div class="figma-bg-layer" aria-hidden="true">
+        <img class="figma-bg-img" src="assets/ui/desktop1_bg.png" alt="">
       </div>
 
-      <div class="title-header">
-        <h1 class="title-main">Junior Astronaut</h1>
-        <p class="title-sub">YOUR MISSION STARTS HERE</p>
+      <!-- Astronaut illustration -->
+      <div class="figma-astronaut-wrap" aria-hidden="true">
+        <img class="figma-astronaut-img" src="assets/ui/astronaut.png" alt="">
       </div>
 
-      <div class="title-menu" role="menu">
+      <!-- Main Title Block -->
+      <div class="figma-title-group">
+        <h1 class="figma-main-title">Newspdet</h1>
+        <p class="figma-sub-title">YOUR MISSION STARTS HERE</p>
+      </div>
+
+      <!-- Action Buttons Stack -->
+      <div class="figma-menu-stack">
         <button class="figma-btn" id="play-btn" type="button">Start Mission</button>
         <button class="figma-btn" id="continue-btn" type="button">Continue Mission</button>
+        <button class="figma-btn" id="menu-credits" type="button">Credits</button>
         <button class="figma-btn" id="how-btn" type="button">Training</button>
         <button class="figma-btn" id="menu-settings" type="button">Settings</button>
         <button class="figma-btn" id="menu-quit" type="button">Exit</button>
       </div>
 
-      <p class="title-footer">
-        Powered by NASA open data ·
-        <button class="link-btn title-credits" id="menu-credits" type="button">Credits</button>
-      </p>
-
-      <span class="title-version" id="title-version">v3.2.0</span>
+      <!-- Footer -->
+      <div class="figma-footer">
+        <p class="figma-credit">Powered by NASA open data</p>
+        <div class="figma-meta-links">
+          <span class="figma-meta-ver" id="title-version">v3.2.0</span>
+        </div>
+      </div>
     </div>
 
-      <!-- ===================================================== level select === -->
-      <div class="overlay overlay--select" id="screen-select" hidden>
-        <div class="select-header">
-          <button class="map-back-btn" id="select-back" type="button">◀ Title</button>
-          <h1 class="map-title">YOUR MISSION STARTS HERE</h1>
-          <span class="map-stars-chip" id="total-stars">★ 0 / 9</span>
+    <!-- ===================================================== level select (Desktop-2) === -->
+    <div class="overlay overlay--select figma-desktop2" id="screen-select" hidden>
+      <!-- Background space map art -->
+      <div class="figma-bg-layer" aria-hidden="true">
+        <img class="figma-bg-img" src="assets/ui/desktop2_bg.png" alt="">
+      </div>
+
+      <!-- Top Header Navigation -->
+      <div class="desktop2-header">
+        <button class="desktop2-back-btn" id="select-back" type="button">◀ Title</button>
+        <span class="desktop2-stars-chip" id="total-stars">★ 0 / 9</span>
+      </div>
+
+      <!-- Main Title -->
+      <h1 class="desktop2-title">YOUR MISSION STARTS HERE</h1>
+
+      <!-- Galaxy Progression Map (Desktop-2 Figma layout) -->
+      <div class="desktop2-map-canvas">
+        <!-- Moon System (Clickable to open Desktop-9: List of Moon Missions) -->
+        <div class="d2-moon-group d2-moon-clickable" role="button" tabindex="0"
+          title="Click to view List of Moon Missions"
+          onclick="document.getElementById('modal-moon-missions').hidden = false;"
+          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('modal-moon-missions').hidden = false;}">
+          <p class="d2-planet-label d2-moon-label">Moon mission</p>
+          <img class="d2-moon-img" src="assets/ui/moon.png" alt="Moon">
         </div>
 
-        <div class="solar-stage">
-          <div class="solar-map">
-            <!-- Moon System -->
-            <p class="map-label map-label--moon">Moon mission</p>
-            <div class="planet planet--moon" title="The Moon">
-              <img src="assets/ui/moon.png" alt="Moon" class="planet-img">
+        <!-- Track 1 SVG -->
+        <div class="d2-track d2-track-1" aria-hidden="true">
+          <img src="assets/ui/track1.svg" alt="">
+        </div>
+
+        <!-- Moon Level Nodes: the real cards from game.js (progress + locking) -->
+        <div class="d2-node-track" id="mission-cards"></div>
+
+        <!-- Mars System -->
+        <div class="d2-mars-group">
+          <img class="d2-lock-icon" src="assets/ui/lock.svg" alt="Locked">
+          <p class="d2-planet-label d2-mars-label">Mars mission</p>
+          <img class="d2-mars-img" src="assets/ui/mars.png" alt="Mars">
+        </div>
+
+        <!-- Track 2 SVG -->
+        <div class="d2-track d2-track-2" aria-hidden="true">
+          <img src="assets/ui/track2.svg" alt="">
+        </div>
+
+        <!-- Mars Level Nodes: the real (locked) cards from game.js -->
+        <div class="d2-node-track" id="locked-cards"></div>
+      </div>
+
+      <!-- sector art hook for game.js -->
+      <div class="sector" id="sector" hidden>
+        <img class="sector-art" id="sector-art" alt="">
+      </div>
+    </div>
+
+    <!-- ===================================================== Desktop-9: List of moon Missions Modal === -->
+    <div class="modal-moon-missions" id="modal-moon-missions" hidden
+      onclick="if (event.target === this) this.hidden = true;">
+      <button class="desktop2-back-btn moon-screen-back" type="button"
+        onclick="document.getElementById('modal-moon-missions').hidden = true;">◀ Map</button>
+      <p class="moon-missions-title">List of moon Missions</p>
+      <div class="moon-missions-card">
+        <button class="moon-modal-close" type="button" aria-label="Close"
+          onclick="document.getElementById('modal-moon-missions').hidden = true;">✕</button>
+
+        <div class="moon-missions-list">
+          <div class="moon-mission-item"
+            onclick="document.getElementById('modal-moon-missions').hidden = true; document.querySelector('.mission-card[data-level=\'1.1\']')?.click();">
+            <div class="moon-mission-head">
+              <p class="moon-mission-title">Lv.1 : Rock Samples</p>
+              <p class="moon-diff-easy">Easy</p>
             </div>
+            <p class="moon-mission-desc">Scientists on Earth want to study Moon rocks. Collect rock samples and bring
+              them back to base.</p>
+          </div>
 
-            <img src="assets/ui/track1.svg" alt="" class="track track--1" aria-hidden="true">
-
-            <!-- Moon track nodes rendered by game.js -->
-            <div class="nodes-track nodes-moon" id="mission-cards"></div>
-
-            <!-- Mars System (Locked) -->
-            <div class="mars-header">
-              <img src="assets/ui/lock.svg" alt="Locked" class="mars-lock">
-              <p class="map-label map-label--mars">Mars mission</p>
+          <div class="moon-mission-item"
+            onclick="document.getElementById('modal-moon-missions').hidden = true; document.querySelector('.mission-card[data-level=\'1.2\']')?.click();">
+            <div class="moon-mission-head">
+              <p class="moon-mission-title">Lv.2 : Ice Hunt</p>
+              <p class="moon-diff-medium">Medium</p>
             </div>
-            <div class="planet planet--mars" title="Mars - Locked">
-              <img src="assets/ui/mars.png" alt="Mars" class="planet-img">
+            <p class="moon-mission-desc">There is frozen water hidden on the Moon! Find it and carry some home. Water is
+              very important for astronauts.</p>
+          </div>
+
+          <div class="moon-mission-item"
+            onclick="document.getElementById('modal-moon-missions').hidden = true; document.querySelector('.mission-card[data-level=\'1.3\']')?.click();">
+            <div class="moon-mission-head">
+              <p class="moon-mission-title">Lv.3 : Dust Cleanup</p>
+              <p class="moon-diff-medium">Medium</p>
             </div>
+            <p class="moon-mission-desc">Moon dust is sticky and sharp. It covers our solar panels, so they can’t make
+              power. Clean them off.</p>
+          </div>
 
-            <img src="assets/ui/track2.svg" alt="" class="track track--2" aria-hidden="true">
+          <div class="moon-mission-item">
+            <div class="moon-mission-head">
+              <p class="moon-mission-title">Lv.4 : Moon Garden</p>
+              <p class="moon-diff-medium">Medium</p>
+            </div>
+            <p class="moon-mission-desc">Astronauts need fresh food! Set up a plant box and give it water so food can
+              grow.</p>
+          </div>
 
-            <!-- Mars track nodes rendered by game.js -->
-            <div class="nodes-track nodes-mars" id="locked-cards"></div>
+          <div class="moon-mission-item">
+            <div class="moon-mission-head">
+              <p class="moon-mission-title">Lv.5 : Solar Storm</p>
+              <p class="moon-diff-hard">Hard</p>
+            </div>
+            <p class="moon-mission-desc">A storm from the Sun is coming! It sends out radiation, which is invisible
+              energy that can hurt astronauts. Set up the radiation meter, then get back to base.</p>
           </div>
         </div>
 
-        <!-- Hidden compatibility elements to preserve game.js logic -->
-        <div hidden aria-hidden="true">
-          <img id="sector-art" alt="">
+        <div class="moon-missions-actions">
+          <button class="moon-btn-hints" type="button"
+            onclick="document.getElementById('modal-moon-missions').hidden = true; document.getElementById('modal-how').hidden = false;">Hints</button>
+          <button class="moon-btn-start" type="button"
+            onclick="document.getElementById('modal-moon-missions').hidden = true; document.querySelector('.mission-card[data-level=\'1.1\']')?.click();">Start
+            Lv.1</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================= briefing === -->
+    <div class="overlay overlay--brief" id="screen-brief" hidden>
+      <div class="brief-card">
+        <button class="link-btn brief-back" id="brief-back" type="button">◀ LEVEL MAP</button>
+        <p class="kicker" id="brief-kicker">Mission 1.1 · The Moon</p>
+        <h2 class="brief-title" id="brief-title">Lunar Outpost Prep</h2>
+        <p class="brief-goal" id="brief-goal"></p>
+        <p class="brief-real"><span class="real-tag">Real NASA</span> A game day is one work shift. A real Moon day
+          lasts about 29.5 Earth days.</p>
+        <div class="brief-why">
+          <p class="learn-label">Why this matters for real astronauts</p>
+          <p id="brief-why"></p>
+        </div>
+        <table class="brief-table" id="brief-table"></table>
+        <div class="brief-controls" id="brief-controls"></div>
+        <div class="menu-row brief-actions">
+          <button class="btn btn-primary" id="brief-start" type="button">START ▶</button>
+          <button class="btn" id="brief-back2" type="button">BACK</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- =========================================================== goodbye == -->
+    <div class="overlay overlay--goodbye" id="screen-goodbye" hidden>
+      <div class="goodbye-card">
+        <div class="goodbye-art" aria-hidden="true">
+          <img class="goodbye-sad" src="assets/ui/sad_astronaut.png?v=3.2.0" alt="">
+          <img class="goodbye-door" src="assets/ui/exit_door.png?v=3.2.0" alt="">
+        </div>
+        <div class="goodbye-copy">
+          <img class="goodbye-banner" src="assets/ui/mission_aborted.png?v=3.2.0" alt="Mission aborted">
+          <p class="kicker">Mission control signing off</p>
+          <h1 class="title">See you<br><span>next day</span></h1>
+          <p class="lede">Your progress is saved on this device. Close the tab whenever you are ready.</p>
+          <button class="btn btn-primary btn-lg" id="goodbye-back" type="button">BACK TO START</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================== console === -->
+    <section class="console" id="panel" hidden aria-label="Outpost controls">
+      <button class="console-toggle" id="console-toggle" type="button" aria-label="Show / hide controls">⌄</button>
+
+      <div class="dock-left">
+        <div class="phase-row">
+          <span class="phase-chip" id="panel-phase">1. Plan power</span>
+          <span class="phase-hint" id="phase-hint">Spend power cells</span>
+          <span class="budget-inline">Solar cells left <button class="help-dot" type="button"
+              aria-label="What are solar cells?" data-help="Solar cells are power you can spend today.">?</button> <b
+              id="cells-left">0</b></span>
+        </div>
+
+        <div class="battery-line" id="battery-line">
+          <span class="battery-label">🔋 Battery <b id="battery-val">0/6</b> <button class="help-dot" type="button"
+              aria-label="What are battery cells?" data-help="Battery cells store power for later.">?</button></span>
+          <button class="mini-btn" id="draw-btn" type="button">Draw +1</button>
+        </div>
+
+        <div class="systems" id="systems"></div>
+
+        <div class="patch" id="patch-box" hidden>
+          <div class="patch-head"><span>Leak repair</span><b id="patch-val">0/2</b></div>
+          <div class="patch-bar">
+            <div class="patch-fill" id="patch-fill"></div>
+          </div>
+          <ol class="patch-steps" id="patch-steps"></ol>
+        </div>
+
+        <div class="dose" id="dose-box" hidden>
+          <div class="dose-head"><span>☢ Radiation dose</span><b id="dose-val">0</b></div>
+          <div class="meter dose-meter">
+            <div class="meter-fill" id="dose-bar"></div>
+            <div class="meter-risk dose-risk"></div>
+          </div>
+          <p class="dose-note" id="dose-note">Stay below 60.</p>
+        </div>
+
+        <div class="eva-box" id="eva-box">
+          <div class="eva-head"><span>Suit air <button class="help-dot" type="button" aria-label="What is suit air?"
+                data-help="Air in your spacesuit. It drains when you walk.">?</button></span><b id="eva-val">100%</b>
+          </div>
+          <div class="air-track">
+            <div class="air-bar" id="air-bar"></div>
+          </div>
+          <p class="eva-hint" id="eva-hint">Walk to a station and hold <kbd>E</kbd> (or hold the prompt).</p>
+          <button class="mini-btn" id="shelter-btn" type="button" hidden>Order shelter</button>
+        </div>
+
+        <div class="run-block" id="run-row">
+          <button class="btn btn-primary btn-lg" id="run-btn" type="button">Go outside ▶</button>
+          <p class="hint" id="run-hint">Leftover cells charge the battery.</p>
+        </div>
+
+        <div class="term-help">
+          <span>HELP</span>
+          <button class="help-dot" type="button" aria-label="What are solar cells?"
+            data-help="Solar cells are power you can spend today.">?</button><b>Solar cells</b>
+          <button class="help-dot" type="button" aria-label="What are battery cells?"
+            data-help="Battery cells store power for later.">?</button><b>Battery cells</b>
+          <button class="help-dot" type="button" aria-label="What is suit air?"
+            data-help="Air in your spacesuit. It drains when you walk.">?</button><b>Suit air</b>
         </div>
       </div>
 
-      <!-- ========================================================= briefing === -->
-      <div class="overlay overlay--brief" id="screen-brief" hidden>
-        <div class="brief-card">
-          <button class="link-btn brief-back" id="brief-back" type="button">◀ LEVEL MAP</button>
-          <p class="kicker" id="brief-kicker">Mission 1.1 · The Moon</p>
-          <h2 class="brief-title" id="brief-title">Lunar Outpost Prep</h2>
-          <p class="brief-goal" id="brief-goal"></p>
-          <p class="brief-real"><span class="real-tag">Real NASA</span> A game day is one work shift. A real Moon day
-            lasts about 29.5 Earth days.</p>
-          <div class="brief-why">
-            <p class="learn-label">Why this matters for real astronauts</p>
-            <p id="brief-why"></p>
-          </div>
-          <table class="brief-table" id="brief-table"></table>
-          <div class="brief-controls" id="brief-controls"></div>
-          <div class="menu-row brief-actions">
-            <button class="btn btn-primary" id="brief-start" type="button">START ▶</button>
-            <button class="btn" id="brief-back2" type="button">BACK</button>
+      <div class="dock-right">
+        <div class="forecast" id="forecast" data-tone="neutral">
+          <img class="forecast-icon" id="forecast-img" alt="" hidden>
+          <span class="forecast-emoji" id="forecast-icon" aria-hidden="true">🌤️</span>
+          <div class="forecast-body">
+            <p class="forecast-label" id="forecast-label">Forecast · Day 1</p>
+            <p class="forecast-text" id="forecast-text">Clear skies — no hazards expected.</p>
           </div>
         </div>
+        <aside class="tracker" id="tracker" hidden>
+          <button class="tracker-head" id="tracker-toggle" type="button" aria-expanded="true" aria-controls="tracker-list">
+            <span>OBJECTIVES</span><span id="tracker-count">0/0</span><span class="tracker-key" aria-hidden="true">O</span><span class="tracker-chev">▾</span>
+          </button>
+          <ul class="tracker-list" id="tracker-list"></ul>
+          <button class="tracker-info" id="tracker-info" type="button">ⓘ Mission briefing</button>
+        </aside>
+        <ul class="log" id="log" aria-live="polite" aria-label="Mission log"></ul>
       </div>
+    </section>
 
-      <!-- =========================================================== goodbye == -->
-      <div class="overlay overlay--goodbye" id="screen-goodbye" hidden>
-        <div class="goodbye-card">
-          <div class="goodbye-art" aria-hidden="true">
-            <img class="goodbye-sad" src="assets/ui/sad_astronaut.png?v=3.2.0" alt="">
-            <img class="goodbye-door" src="assets/ui/exit_door.png?v=3.2.0" alt="">
-          </div>
-          <div class="goodbye-copy">
-            <img class="goodbye-banner" src="assets/ui/mission_aborted.png?v=3.2.0" alt="Mission aborted">
-            <p class="kicker">Mission control signing off</p>
-            <h1 class="title">See you<br><span>next day</span></h1>
-            <p class="lede">Your progress is saved on this device. Close the tab whenever you are ready.</p>
-            <button class="btn btn-primary btn-lg" id="goodbye-back" type="button">BACK TO START</button>
-          </div>
-        </div>
+    <div class="touch" id="touch-controls" hidden>
+      <div class="stick" id="stick">
+        <div class="stick-knob" id="stick-knob"></div>
       </div>
-
-      <!-- ========================================================== console === -->
-      <section class="console" id="panel" hidden aria-label="Outpost controls">
-        <button class="console-toggle" id="console-toggle" type="button" aria-label="Show / hide controls">⌄</button>
-
-        <div class="dock-left">
-          <div class="phase-row">
-            <span class="phase-chip" id="panel-phase">1. Plan power</span>
-            <span class="phase-hint" id="phase-hint">Spend power cells</span>
-            <span class="budget-inline">Solar cells left <button class="help-dot" type="button"
-                aria-label="What are solar cells?" data-help="Solar cells are power you can spend today.">?</button> <b
-                id="cells-left">0</b></span>
-          </div>
-
-          <div class="battery-line" id="battery-line">
-            <span class="battery-label">🔋 Battery <b id="battery-val">0/6</b> <button class="help-dot" type="button"
-                aria-label="What are battery cells?" data-help="Battery cells store power for later.">?</button></span>
-            <button class="mini-btn" id="draw-btn" type="button">Draw +1</button>
-          </div>
-
-          <div class="systems" id="systems"></div>
-
-          <div class="patch" id="patch-box" hidden>
-            <div class="patch-head"><span>Leak repair</span><b id="patch-val">0/2</b></div>
-            <div class="patch-bar">
-              <div class="patch-fill" id="patch-fill"></div>
-            </div>
-            <ol class="patch-steps" id="patch-steps"></ol>
-          </div>
-
-          <div class="dose" id="dose-box" hidden>
-            <div class="dose-head"><span>☢ Radiation dose</span><b id="dose-val">0</b></div>
-            <div class="meter dose-meter">
-              <div class="meter-fill" id="dose-bar"></div>
-              <div class="meter-risk dose-risk"></div>
-            </div>
-            <p class="dose-note" id="dose-note">Stay below 60.</p>
-          </div>
-
-          <div class="eva-box" id="eva-box">
-            <div class="eva-head"><span>Suit air <button class="help-dot" type="button" aria-label="What is suit air?"
-                  data-help="Air in your spacesuit. It drains when you walk.">?</button></span><b id="eva-val">100%</b>
-            </div>
-            <div class="air-track">
-              <div class="air-bar" id="air-bar"></div>
-            </div>
-            <p class="eva-hint" id="eva-hint">Walk to a station and hold <kbd>E</kbd> (or hold the prompt).</p>
-            <button class="mini-btn" id="shelter-btn" type="button" hidden>Order shelter</button>
-          </div>
-
-          <div class="run-block" id="run-row">
-            <button class="btn btn-primary btn-lg" id="run-btn" type="button">Go outside ▶</button>
-            <p class="hint" id="run-hint">Leftover cells charge the battery.</p>
-          </div>
-
-          <div class="term-help">
-            <span>HELP</span>
-            <button class="help-dot" type="button" aria-label="What are solar cells?"
-              data-help="Solar cells are power you can spend today.">?</button><b>Solar cells</b>
-            <button class="help-dot" type="button" aria-label="What are battery cells?"
-              data-help="Battery cells store power for later.">?</button><b>Battery cells</b>
-            <button class="help-dot" type="button" aria-label="What is suit air?"
-              data-help="Air in your spacesuit. It drains when you walk.">?</button><b>Suit air</b>
-          </div>
-        </div>
-
-        <div class="dock-right">
-          <div class="forecast" id="forecast" data-tone="neutral">
-            <img class="forecast-icon" id="forecast-img" alt="" hidden>
-            <span class="forecast-emoji" id="forecast-icon" aria-hidden="true">🌤️</span>
-            <div class="forecast-body">
-              <p class="forecast-label" id="forecast-label">Forecast · Day 1</p>
-              <p class="forecast-text" id="forecast-text">Clear skies — no hazards expected.</p>
-            </div>
-          </div>
-          <aside class="tracker" id="tracker" hidden>
-            <button class="tracker-head" id="tracker-toggle" type="button" aria-expanded="true" aria-controls="tracker-list">
-              <span>OBJECTIVES</span><span id="tracker-count">0/0</span><span class="tracker-key" aria-hidden="true">O</span><span class="tracker-chev">▾</span>
-            </button>
-            <ul class="tracker-list" id="tracker-list"></ul>
-            <button class="tracker-info" id="tracker-info" type="button">ⓘ Mission briefing</button>
-          </aside>
-          <ul class="log" id="log" aria-live="polite" aria-label="Mission log"></ul>
-        </div>
-      </section>
-
-      <div class="touch" id="touch-controls" hidden>
-        <div class="stick" id="stick">
-          <div class="stick-knob" id="stick-knob"></div>
-        </div>
-        <button class="act-btn" id="act-btn" type="button" aria-label="Interact">
-          <span id="act-icon">E</span><span id="act-label">ACT</span>
-        </button>
-      </div>
+      <button class="act-btn" id="act-btn" type="button" aria-label="Interact">
+        <span id="act-icon">E</span><span id="act-label">ACT</span>
+      </button>
+    </div>
 
       <!-- =========================================================== buddy == -->
       <button class="buddy-fab" id="buddy-fab" type="button" aria-label="Open Buddy" title="Buddy (H)" hidden>
@@ -311,192 +405,190 @@
         </div>
       </section>
 
-      <!-- ========================================================== debrief === -->
-      <div class="overlay overlay--debrief" id="screen-debrief" hidden>
-        <div class="debrief-card">
-          <div class="debrief-stars" id="debrief-stars"></div>
-          <h2 class="debrief-title" id="debrief-title">Mission Complete</h2>
-          <p class="debrief-sub" id="debrief-sub"></p>
-          <div class="debrief-score" id="debrief-score"></div>
-          <div class="debrief-lists">
-            <div>
-              <p class="debrief-label good">What went well</p>
-              <ul id="debrief-good"></ul>
-            </div>
-            <div>
-              <p class="debrief-label bad">What hurt</p>
-              <ul id="debrief-bad"></ul>
-            </div>
+    <!-- ========================================================== debrief === -->
+    <div class="overlay overlay--debrief" id="screen-debrief" hidden>
+      <div class="debrief-card">
+        <div class="debrief-stars" id="debrief-stars"></div>
+        <h2 class="debrief-title" id="debrief-title">Mission Complete</h2>
+        <p class="debrief-sub" id="debrief-sub"></p>
+        <div class="debrief-score" id="debrief-score"></div>
+        <div class="debrief-lists">
+          <div>
+            <p class="debrief-label good">What went well</p>
+            <ul id="debrief-good"></ul>
           </div>
-          <div class="learn-cards">
-            <article class="learn learn--real">
-              <p class="learn-label">Real NASA</p>
-              <p class="learn-text" id="learn-real"></p>
-              <p class="learn-src" id="learn-real-src"></p>
-            </article>
-            <article class="learn learn--assume">
-              <p class="learn-label">Game assumption</p>
-              <p class="learn-text" id="learn-assume"></p>
-            </article>
-          </div>
-          <p class="real-choice" id="real-choice"></p>
-          <div class="debrief-actions">
-            <button class="btn" id="retry-btn" type="button">Retry</button>
-            <button class="btn btn-accent" id="revive-btn" type="button" hidden>Revive ✚</button>
-            <button class="btn btn-primary" id="next-btn" type="button">Next Mission ▶</button>
-            <button class="btn" id="map-btn" type="button">Mission Map</button>
+          <div>
+            <p class="debrief-label bad">What hurt</p>
+            <ul id="debrief-bad"></ul>
           </div>
         </div>
-      </div>
-    </div>
-
-    <!-- station mini-panel -->
-    <div class="modal" id="modal-station" hidden>
-      <div class="modal-card station-card" role="dialog" aria-modal="true" aria-labelledby="station-title">
-        <button class="modal-close" data-close type="button" aria-label="Close">✕</button>
-        <h2 id="station-title">Oxygen generator</h2>
-        <p class="station-desc" id="station-desc"></p>
-        <div class="station-bars" id="station-bars"></div>
-        <div class="station-alloc">
-          <button class="step" id="station-minus" type="button" aria-label="One less cell">−</button>
-          <b id="station-cells">0</b>
-          <button class="step" id="station-plus" type="button" aria-label="One more cell">+</button>
+        <div class="learn-cards">
+          <article class="learn learn--real">
+            <p class="learn-label">Real NASA</p>
+            <p class="learn-text" id="learn-real"></p>
+            <p class="learn-src" id="learn-real-src"></p>
+          </article>
+          <article class="learn learn--assume">
+            <p class="learn-label">Game assumption</p>
+            <p class="learn-text" id="learn-assume"></p>
+          </article>
         </div>
-        <p class="station-note" id="station-note"></p>
-        <button class="btn btn-primary" id="station-done" type="button">Done</button>
-      </div>
-    </div>
-
-    <div class="modal" id="modal-how" hidden>
-      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="how-title">
-        <button class="modal-close" data-close type="button" aria-label="Close">✕</button>
-        <h2 id="how-title">How to Play</h2>
-        <ol class="steps">
-          <li><strong>1. Plan power.</strong> At the battery bank, click a resource bar to add a cell; Shift-click, or touch and hold, to remove one. The bars show their targets; press O for all objectives. Leftover cells charge the battery.</li>
-          <li><strong>2. Go outside.</strong> Walk with WASD or the joystick. Hold E or ACT to do a job. Suit air drains
-            outside. It refills each day.</li>
-          <li><strong>3. End the day.</strong> The base makes power. The crew uses supplies. Hazards happen.</li>
-          <li><strong>Keep everyone safe.</strong> Keep meters above 20%. Zero hearts ends the mission. Retry is free.
-            You get one Revive.</li>
-        </ol>
-        <p class="modal-note">Stations: solar field (sweep dust, deploy a panel), battery bank, O₂/CO₂/water units
-          (adjust cells on the spot),
-          comms dish (detailed storm forecast), rover + ice patch (haul ice), bunker (shelter order), recycler (leak
-          steps in 1.2).</p>
-      </div>
-    </div>
-
-    <div class="modal" id="modal-science" hidden>
-      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="science-title">
-        <button class="modal-close" data-close type="button" aria-label="Close">✕</button>
-        <h2 id="science-title">Mission Science</h2>
-        <p class="learn-label" style="color:var(--cyan)">Resources in Level 1</p>
-        <div id="science-resources" class="science-res"></div>
-        <p>Every rule starts from real space engineering. Values we could verify on NASA pages are marked
-          <strong>real</strong>; everything tuned for play is marked <strong>game assumption</strong>.
-        </p>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>In-game rule</th>
-              <th>Real NASA science</th>
-              <th>Simplification</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>O₂ from water</td>
-              <td>ISS oxygen comes from electrolysis of water (Oxygen Generation Assembly, ECLSS)</td>
-              <td>Game: 1 O₂ cell = +10 O₂ and uses 2 water</td>
-            </tr>
-            <tr>
-              <td>Water recycling</td>
-              <td>ISS ECLSS recovers about 98% of water (2023 NASA update)</td>
-              <td>Game: 1 water cell = +10 water</td>
-            </tr>
-            <tr>
-              <td>Crew use</td>
-              <td>NASA life-support baselines: crews need oxygen, water and food every day</td>
-              <td>Game: crew of 3 uses 10 O₂ and 6 water each day</td>
-            </tr>
-            <tr>
-              <td>Leak response</td>
-              <td>ISS procedure: close hatches, find the leak, Kapton tape, then epoxy. The 2018 Soyuz leak was a
-                drilled hole — not a micrometeoroid</td>
-              <td>Game: burst drains 30 water each day → isolate (40%) → tape (15%) → 2 repair cells → reopen</td>
-            </tr>
-            <tr>
-              <td>Solar particle events</td>
-              <td>Crews shelter in place; ~4 g/cm² of regolith gets below 30-day limits. CMEs take about 1–4 days to
-                arrive (NASA DONKI)</td>
-              <td>Game: the storm arrives on Day 3-5. Early shelter cuts dose by 90%.</td>
-            </tr>
-            <tr>
-              <td>Cosmic rays</td>
-              <td>Extra shielding barely reduces galactic cosmic rays</td>
-              <td>Game: shielding slows dose but never zeroes it</td>
-            </tr>
-            <tr>
-              <td>Long Shadow</td>
-              <td>South-pole crater rims get near-constant sunlight; terrain can still shadow arrays</td>
-              <td>Game: the event removes 2 solar cells for one day</td>
-            </tr>
-            <tr>
-              <td>Lunar dust</td>
-              <td>Lunar dust is abrasive and degrades solar panels and seals (NASA lunar dust research)</td>
-              <td>Game: dust event → sweep the panels outside restores output</td>
-            </tr>
-            <tr>
-              <td>Water ice</td>
-              <td>Shackleton crater holds ice in permanently shadowed regions (LRO, LCROSS)</td>
-              <td>Game: ice haul = +14 water</td>
-            </tr>
-          </tbody>
-        </table>
-        <p class="modal-note">Sources: NASA ECLSS / ISS, NASA Space Weather &amp; DONKI, NASA Moon (LRO/Diviner/LCROSS),
-          NASA radiation research. Full list in <code>README.md</code>. Educational model, not engineering-grade.</p>
-      </div>
-    </div>
-
-    <div class="modal" id="modal-pause" hidden>
-      <div class="modal-card pause-card" role="dialog" aria-modal="true" aria-labelledby="pause-title">
-        <h2 id="pause-title">PAUSED</h2>
-        <div class="pause-menu">
-          <button class="btn btn-primary" id="pause-continue" type="button">CONTINUE</button>
-          <button class="btn" id="pause-restart" type="button">RESTART</button>
-          <button class="btn" id="pause-map" type="button">LEVEL MAP</button>
-          <button class="btn" id="pause-menu" type="button">MAIN MENU</button>
-        </div>
-        <p class="modal-note">Esc / browser Back opens this menu. Progress autosaves on this device.</p>
-      </div>
-    </div>
-
-    <div class="modal" id="modal-confirm" hidden>
-      <div class="modal-card confirm-card" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
-        <h2 id="confirm-title">Are you sure?</h2>
-        <img class="confirm-art" id="confirm-art" alt="" hidden>
-        <p id="confirm-text">This will end the current mission.</p>
-        <div class="menu-row">
-          <button class="btn btn-accent" id="confirm-yes" type="button">YES</button>
-          <button class="btn" id="confirm-no" type="button">NO</button>
+        <p class="real-choice" id="real-choice"></p>
+        <div class="debrief-actions">
+          <button class="btn" id="retry-btn" type="button">Retry</button>
+          <button class="btn btn-accent" id="revive-btn" type="button" hidden>Revive ✚</button>
+          <button class="btn btn-primary" id="next-btn" type="button">Next Mission ▶</button>
+          <button class="btn" id="map-btn" type="button">Mission Map</button>
         </div>
       </div>
     </div>
+  </div>
 
-    <div class="modal" id="modal-settings" hidden>
-      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="settings-title">
-        <button class="modal-close" data-close type="button" aria-label="Close">✕</button>
-        <h2 id="settings-title">SETTINGS</h2>
-        <div class="setting-row"><span>Sound</span><button class="mini-btn" id="set-sound" type="button">ON</button>
-        </div>
-        <div class="setting-row"><span>Touch controls</span><button class="mini-btn" id="set-touch"
-            type="button">AUTO</button></div>
-        <div class="setting-row"><span>Reduced motion</span><button class="mini-btn" id="set-motion"
-            type="button">OFF</button></div>
-        <div class="setting-row"><span>Hints</span><button class="mini-btn" id="set-hints" type="button">ON</button>
-        </div>
-        <div class="setting-row"><span>Unlock all missions (judge mode)</span><button class="mini-btn" id="set-unlock"
-            type="button">OFF</button></div>
+  <!-- station mini-panel -->
+  <div class="modal" id="modal-station" hidden>
+    <div class="modal-card station-card" role="dialog" aria-modal="true" aria-labelledby="station-title">
+      <button class="modal-close" data-close type="button" aria-label="Close">✕</button>
+      <h2 id="station-title">Oxygen generator</h2>
+      <p class="station-desc" id="station-desc"></p>
+      <div class="station-bars" id="station-bars"></div>
+      <div class="station-alloc">
+        <button class="step" id="station-minus" type="button" aria-label="One less cell">−</button>
+        <b id="station-cells">0</b>
+        <button class="step" id="station-plus" type="button" aria-label="One more cell">+</button>
+      </div>
+      <p class="station-note" id="station-note"></p>
+      <button class="btn btn-primary" id="station-done" type="button">Done</button>
+    </div>
+  </div>
+
+  <div class="modal" id="modal-how" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="how-title">
+      <button class="modal-close" data-close type="button" aria-label="Close">✕</button>
+      <h2 id="how-title">How to Play</h2>
+      <ol class="steps">
+        <li><strong>1. Plan power.</strong> Spend power cells. Leftover cells charge the battery.</li>
+        <li><strong>2. Go outside.</strong> Walk with WASD or the joystick. Hold E or ACT to do a job. Suit air drains
+          outside. It refills each day.</li>
+        <li><strong>3. End the day.</strong> The base makes power. The crew uses supplies. Hazards happen.</li>
+        <li><strong>Keep everyone safe.</strong> Keep meters above 20%. Zero hearts ends the mission. Retry is free. You
+          get one Revive.</li>
+      </ol>
+      <p class="modal-note">Stations: solar field (sweep dust, deploy a panel), battery bank, O₂/CO₂/water units (adjust
+        cells on the spot),
+        comms dish (detailed storm forecast), rover + ice patch (haul ice), bunker (shelter order), recycler (leak steps
+        in 1.2).</p>
+    </div>
+  </div>
+
+  <div class="modal" id="modal-science" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="science-title">
+      <button class="modal-close" data-close type="button" aria-label="Close">✕</button>
+      <h2 id="science-title">Mission Science</h2>
+      <p class="learn-label" style="color:var(--cyan)">Resources in Level 1</p>
+      <div id="science-resources" class="science-res"></div>
+      <p>Every rule starts from real space engineering. Values we could verify on NASA pages are marked
+        <strong>real</strong>; everything tuned for play is marked <strong>game assumption</strong>.
+      </p>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>In-game rule</th>
+            <th>Real NASA science</th>
+            <th>Simplification</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>O₂ from water</td>
+            <td>ISS oxygen comes from electrolysis of water (Oxygen Generation Assembly, ECLSS)</td>
+            <td>Game: 1 O₂ cell = +10 O₂ and uses 2 water</td>
+          </tr>
+          <tr>
+            <td>Water recycling</td>
+            <td>ISS ECLSS recovers about 98% of water (2023 NASA update)</td>
+            <td>Game: 1 water cell = +10 water</td>
+          </tr>
+          <tr>
+            <td>Crew use</td>
+            <td>NASA life-support baselines: crews need oxygen, water and food every day</td>
+            <td>Game: crew of 3 uses 10 O₂ and 6 water each day</td>
+          </tr>
+          <tr>
+            <td>Leak response</td>
+            <td>ISS procedure: close hatches, find the leak, Kapton tape, then epoxy. The 2018 Soyuz leak was a drilled
+              hole — not a micrometeoroid</td>
+            <td>Game: burst drains 30 water each day → isolate (40%) → tape (15%) → 2 repair cells → reopen</td>
+          </tr>
+          <tr>
+            <td>Solar particle events</td>
+            <td>Crews shelter in place; ~4 g/cm² of regolith gets below 30-day limits. CMEs take about 1–4 days to
+              arrive (NASA DONKI)</td>
+            <td>Game: the storm arrives on Day 3-5. Early shelter cuts dose by 90%.</td>
+          </tr>
+          <tr>
+            <td>Cosmic rays</td>
+            <td>Extra shielding barely reduces galactic cosmic rays</td>
+            <td>Game: shielding slows dose but never zeroes it</td>
+          </tr>
+          <tr>
+            <td>Long Shadow</td>
+            <td>South-pole crater rims get near-constant sunlight; terrain can still shadow arrays</td>
+            <td>Game: the event removes 2 solar cells for one day</td>
+          </tr>
+          <tr>
+            <td>Lunar dust</td>
+            <td>Lunar dust is abrasive and degrades solar panels and seals (NASA lunar dust research)</td>
+            <td>Game: dust event → sweep the panels outside restores output</td>
+          </tr>
+          <tr>
+            <td>Water ice</td>
+            <td>Shackleton crater holds ice in permanently shadowed regions (LRO, LCROSS)</td>
+            <td>Game: ice haul = +14 water</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="modal-note">Sources: NASA ECLSS / ISS, NASA Space Weather &amp; DONKI, NASA Moon (LRO/Diviner/LCROSS),
+        NASA radiation research. Full list in <code>README.md</code>. Educational model, not engineering-grade.</p>
+    </div>
+  </div>
+
+  <div class="modal" id="modal-pause" hidden>
+    <div class="modal-card pause-card" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+      <h2 id="pause-title">PAUSED</h2>
+      <div class="pause-menu">
+        <button class="btn btn-primary" id="pause-continue" type="button">CONTINUE</button>
+        <button class="btn" id="pause-restart" type="button">RESTART</button>
+        <button class="btn" id="pause-map" type="button">LEVEL MAP</button>
+        <button class="btn" id="pause-menu" type="button">MAIN MENU</button>
+      </div>
+      <p class="modal-note">Esc / browser Back opens this menu. Progress autosaves on this device.</p>
+    </div>
+  </div>
+
+  <div class="modal" id="modal-confirm" hidden>
+    <div class="modal-card confirm-card" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+      <h2 id="confirm-title">Are you sure?</h2>
+      <img class="confirm-art" id="confirm-art" alt="" hidden>
+      <p id="confirm-text">This will end the current mission.</p>
+      <div class="menu-row">
+        <button class="btn btn-accent" id="confirm-yes" type="button">YES</button>
+        <button class="btn" id="confirm-no" type="button">NO</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="modal-settings" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <button class="modal-close" data-close type="button" aria-label="Close">✕</button>
+      <h2 id="settings-title">SETTINGS</h2>
+      <div class="setting-row"><span>Sound</span><button class="mini-btn" id="set-sound" type="button">ON</button></div>
+      <div class="setting-row"><span>Touch controls</span><button class="mini-btn" id="set-touch"
+          type="button">AUTO</button></div>
+      <div class="setting-row"><span>Reduced motion</span><button class="mini-btn" id="set-motion"
+          type="button">OFF</button></div>
+      <div class="setting-row"><span>Hints</span><button class="mini-btn" id="set-hints" type="button">ON</button></div>
+      <div class="setting-row"><span>Unlock all missions (judge mode)</span><button class="mini-btn" id="set-unlock"
+          type="button">OFF</button></div>
         <div class="setting-row"><span id="label-buddy-name">Buddy name</span><input class="setting-input" id="set-buddy-name" type="text"
             maxlength="18" value="Buddy" aria-label="Buddy name"></div>
         <div class="setting-row"><span id="label-buddy-proactive">Buddy proactive hints</span><button class="mini-btn" id="set-buddy-proactive"
@@ -505,49 +597,49 @@
             id="set-buddy-cloud" type="button">OFF</button></div>
         <div class="setting-row"><span id="label-buddy-speak">Buddy speaks replies</span><button class="mini-btn" id="set-buddy-speak"
             type="button">OFF</button></div>
-        <p class="modal-note" id="privacy-note"><strong>Privacy:</strong> offline by default. With “Let Buddy ask the
-          cloud helper” ON, only your question, language, and a short state summary (level, day, phase, open
-          objectives) plus the last 4 turns are sent to the configured helper. No name, account, device ID or
-          analytics are sent. Progress and settings stay in this browser.</p>
-      </div>
+      <p class="modal-note" id="privacy-note"><strong>Privacy:</strong> offline by default. With “Let Buddy ask the
+        cloud helper” ON, only your question, language, and a short state summary (level, day, phase, open
+        objectives) plus the last 4 turns are sent to the configured helper. No name, account, device ID or
+        analytics are sent. Progress and settings stay in this browser.</p>
     </div>
+  </div>
 
-    <div class="modal" id="modal-credits" hidden>
-      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="credits-title">
-        <button class="modal-close" data-close type="button" aria-label="Close">✕</button>
-        <h2 id="credits-title">CREDITS</h2>
-        <p><strong>Junior Astronaut Mission Trainer</strong> — NASA Space Apps Challenge 2026, Level 1.</p>
-        <p>Science sources: NASA ECLSS / ISS, NASA Space Weather &amp; DONKI, NASA Moon (LRO, Diviner, LCROSS), NASA
-          space-radiation research, NASA lunar-dust research.</p>
-        <p>Art is AI-generated catalog art, sliced locally with <code>tools/slice_assets.py</code>. Fonts are bundled
-          locally in <code>assets/fonts</code> (Jersey 20, Jersey 25, Lexend — SIL Open Font License).</p>
-        <p><strong>Privacy:</strong> no analytics, no cookies, no third-party scripts. Buddy is offline by default.
-          If you turn on “Let Buddy ask the cloud helper”, it sends only your question, language, a short state
-          summary (level, day, phase, open objectives) and the last 4 turns to the configured helper. No name,
-          account or device ID is sent. Progress is saved on this device only.</p>
-        <p class="credits-version" id="credits-version">Version 3.2.0</p>
-      </div>
+  <div class="modal" id="modal-credits" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="credits-title">
+      <button class="modal-close" data-close type="button" aria-label="Close">✕</button>
+      <h2 id="credits-title">CREDITS</h2>
+      <p><strong>Junior Astronaut Mission Trainer</strong> — NASA Space Apps Challenge 2026, Level 1.</p>
+      <p>Science sources: NASA ECLSS / ISS, NASA Space Weather &amp; DONKI, NASA Moon (LRO, Diviner, LCROSS), NASA
+        space-radiation research, NASA lunar-dust research.</p>
+      <p>Art is AI-generated catalog art, sliced locally with <code>tools/slice_assets.py</code>. Fonts are bundled
+        locally in <code>assets/fonts</code> (Jersey 20, Jersey 25, Lexend — SIL Open Font License).</p>
+      <p><strong>Privacy:</strong> no analytics, no cookies, no third-party scripts. Buddy is offline by default.
+        If you turn on “Let Buddy ask the cloud helper”, it sends only your question, language, a short state
+        summary (level, day, phase, open objectives) and the last 4 turns to the configured helper. No name,
+        account or device ID is sent. Progress is saved on this device only.</p>
+      <p class="credits-version" id="credits-version">Version 3.2.0</p>
     </div>
+  </div>
 
-    <div class="anim-debug" id="anim-debug" hidden>
-      <div class="anim-debug-head">
-        <h1>WALK CYCLE / DISTANCE-DRIVEN</h1>
-        <p id="anim-debug-meta"></p>
-      </div>
-      <div class="anim-debug-grid" id="anim-debug-grid"></div>
-      <div class="anim-action-controls">
-        <label for="anim-scrub">ACTION PROGRESS</label>
-        <input type="range" id="anim-scrub" min="0" max="100" value="50">
-        <span id="anim-scrub-val">50%</span>
-      </div>
-      <div class="anim-debug-grid" id="anim-action-grid"></div>
-      <p class="anim-debug-note">Ice mining (img12, helmet-matched scale) and regolith digging (img10). Scrub the slider
-        to step both action strips.</p>
+  <div class="anim-debug" id="anim-debug" hidden>
+    <div class="anim-debug-head">
+      <h1>WALK CYCLE / DISTANCE-DRIVEN</h1>
+      <p id="anim-debug-meta"></p>
     </div>
+    <div class="anim-debug-grid" id="anim-debug-grid"></div>
+    <div class="anim-action-controls">
+      <label for="anim-scrub">ACTION PROGRESS</label>
+      <input type="range" id="anim-scrub" min="0" max="100" value="50">
+      <span id="anim-scrub-val">50%</span>
+    </div>
+    <div class="anim-debug-grid" id="anim-action-grid"></div>
+    <p class="anim-debug-note">Ice mining (img12, helmet-matched scale) and regolith digging (img10). Scrub the slider
+      to step both action strips.</p>
+  </div>
 
-    <script src="assets/manifest.js?v=3.2.0"></script>
-    <script src="assets/anim_manifest.js?v=3.2.0"></script>
-    <script src="game.js?v=3.2.0" defer></script>
+  <script src="assets/manifest.js?v=3.2.0"></script>
+  <script src="assets/anim_manifest.js?v=3.2.0"></script>
+  <script src="game.js?v=3.2.0" defer></script>
 </body>
 
 </html>
