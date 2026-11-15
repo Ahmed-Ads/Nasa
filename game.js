@@ -283,12 +283,13 @@
     penalty: 0,
     air: 100,
     airWarned: false,
-    rover: { mounted: false, parked: true, cargo: [], usedThisSol: false, dead: false, x: 566, y: 536, turn: { x: 0, y: 1 } },
+    rover: { mounted: false, parked: true, cargo: [], usedThisSol: false, dead: false, x: 566, y: 536, turn: { x: 0, y: 1 }, roll: 0 },
     sweepSol: 0,
     panelDeployed: false,
     panelBonus: 0, bags: 0, carry: null, groundItems: [], sources: [], slots: [], snap: null, atSwitchboard: false,
     action: null,
     tutorialStep: 0, tutorialMoved: false, tutorialSkipped: false, tutorialDelivered: false, tutorialDone: false,
+    coachActed: false,
     carryingPanel: false,
     carryingTape: false,
     isolated: false,
@@ -369,7 +370,8 @@
       sound: true, touch: 'auto', motion: false, unlock: false,
       hints: !Object.values(progress).some((n) => n > 0),
       buddyName: 'Buddy', buddyLang: 'en', buddyCloud: false,
-      buddyProactive: true, buddySpeak: false, buddyMuted: false
+      buddyProactive: true, buddySpeak: false, buddyMuted: false,
+      panels: 'auto'
     };
     const raw = safeGet('jamt.settings', {});
     if (!raw || typeof raw !== 'object') return d;
@@ -383,6 +385,7 @@
     for (const k of ['buddyCloud', 'buddyProactive', 'buddySpeak', 'buddyMuted']) {
       if (typeof raw[k] === 'boolean') d[k] = raw[k];
     }
+    if (['auto', 'full', 'focus'].includes(raw.panels)) d.panels = raw.panels;
     return d;
   })();
   function saveSettings() { safeSet('jamt.settings', settings); }
@@ -459,6 +462,7 @@
     app: $('#app'), scene: $('#scene'), minimap: $('#minimap'),
     hud: $('#hud'), hudHearts: $('#hud-hearts'), hudSol: $('#hud-sol'), hudLevel: $('#hud-level'),
     hudDose: $('#hud-dose'), hudPhase: $('#hud-phase'), hudEva: $('#hud-eva'),
+    hudGoal: $('#hud-goal'), hudAlert: $('#hud-alert'), panelToggle: $('#panel-toggle'), panelsKey: $('#panels-key'),
     coach: $('#coach'), coachText: $('#coach-text'), coachIcon: $('#coach-icon'), coachSkip: $('#coach-skip'),
     sound: $('#sound-btn'),
     title: $('#screen-title'), select: $('#screen-select'), debrief: $('#screen-debrief'),
@@ -643,7 +647,6 @@
     { id: 'water', x: 730, y: 452, r: 44, label: 'Water recycler' },
     { id: 'leak', x: 808, y: 452, r: 38, label: 'Leak' },
     { id: 'comms', x: 664, y: 240, r: 44, label: 'Comms dish' },
-    { id: 'ice', x: 150, y: 556, r: 52, label: 'Ice patch' },
     { id: 'bunker', x: 262, y: 286, r: 52, label: 'Bunker' },
     { id: 'rover', x: 566, y: 536, r: 56, label: 'Rover' },
     { id: 'crates', x: 650, y: 564, r: 42, label: 'Crates' },
@@ -653,7 +656,7 @@
 
   // ---------------- carry / deliver economy (v3 session 1) ----------------
   const ITEM_META = {
-    ice: { name: 'Ice chunk', sprite: 'terrain/ice' },
+    ice: { name: 'Ice chunk', sprite: 'ice/chunk' },
     bag: { name: 'Regolith bag', sprite: 'icons/shield' },
     battery: { name: 'Battery canister', sprite: 'power/battery_green' },
     panel: { name: 'Solar panel', sprite: 'power/solar_b' },
@@ -663,7 +666,7 @@
     repair: { name: 'Repair parts', sprite: 'repair/gears' },
   };
   const SOURCES = [
-    { id: 'ice-src', item: 'ice', x: 70, y: 700, cap: 4, stock: 4, hold: 1.4, minutes: 1, label: 'Mine ice chunk' },
+    { id: 'ice-src', item: 'ice', x: 148, y: 552, cap: 4, stock: 4, hold: 1.4, minutes: 1, label: 'Mine ice chunk' },
     { id: 'panel-src', item: 'panel', x: 644, y: 548, cap: 3, stock: 3, minutes: 0, label: 'Take solar panel', levels: ['1.1', '1.3'] },
     { id: 'battery-src', item: 'battery', x: 692, y: 548, cap: 4, stock: 4, minutes: 0, label: 'Take battery canister' },
     { id: 'o2-src', item: 'o2', x: 596, y: 548, cap: 2, stock: 2, minutes: 0, label: 'Take O2 canister (game assumption)', levels: ['1.1'] },
@@ -864,16 +867,7 @@
       t.beginPath(); t.ellipse(x, y, r, r * 0.6, 0, Math.PI * 0.9, Math.PI * 1.9); t.stroke();
     }
 
-    // shaded ice patch (SW)
-    const ice = SPR['terrain/ice'];
-    if (ice && ice.ok) {
-      t.globalAlpha = 0.9;
-      t.drawImage(ice.img, 100, 505, 96, 96);
-      t.globalAlpha = 1;
-    } else {
-      t.fillStyle = '#bfe9ff';
-      t.beginPath(); t.ellipse(148, 552, 48, 26, 0, 0, Math.PI * 2); t.fill();
-    }
+    // The ice outcrop itself is drawn by drawSource() at the interaction point.
 
     // dusty paths between stations
     t.strokeStyle = 'rgba(210,216,235,.16)';
@@ -901,6 +895,7 @@
     ctx.imageSmoothingEnabled = false;
     camera.w = VW; camera.h = VH;
     measureConsole();
+    applyPanelsMode(false);
     positionTracker();
     buddy?.position();
     snapCamera();
@@ -1160,6 +1155,14 @@
       }
       if (Math.abs(dx) > 0.1) player.facing = dx > 0 ? 1 : -1;
       state.air = Math.max(0, state.air - dt * (state.rover.mounted ? 0.18 : 0.55));
+      if (state.rover.mounted && moved > 0.01) {
+        const oldRoll = state.rover.roll || 0;
+        state.rover.roll = oldRoll + moved;
+        if (Math.floor(state.rover.roll / 16) !== Math.floor(oldRoll / 16)) {
+          dustPuffs.push({ x: player.x - player.facing * 22, y: player.y + 2, life: 0.45 });
+          if (dustPuffs.length > 16) dustPuffs.shift();
+        }
+      }
       const prev = Math.floor(player.walk / 0.16);
       player.walk += dt;
       if (Math.floor(player.walk / 0.16) !== prev) {
@@ -1357,13 +1360,16 @@
     if (state.action && state.action.hiddenSourceId === src.id) return;
     const m = ITEM_META[src.item];
     const bob = Math.sin(performance.now() / 500 + src.x) * 1.5;
-    drawAsset(m.sprite, src.x, src.y - 4 + bob, 20, 20);
+    const iceDeposit = src.item === 'ice';
+    if (iceDeposit) drawAsset('ice/deposit', src.x, src.y - 4 + bob, 74, 44);
+    else drawAsset(m.sprite, src.x, src.y - 4 + bob, 20, 20);
+    const labelY = iceDeposit ? src.y - 48 : src.y - 30;
     ctx.fillStyle = '#0b0f1c';
-    ctx.fillRect(src.x - 13, src.y - 30, 26, 10);
+    ctx.fillRect(src.x - 13, labelY, 26, 10);
     ctx.fillStyle = '#eaf1ff';
     ctx.font = '8px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText(`${src.stock}/${src.cap}`, src.x, src.y - 22);
+    ctx.fillText(`${src.stock}/${src.cap}`, src.x, labelY + 8);
     ctx.textAlign = 'left';
   }
   function drawGroundItem(it) {
@@ -1424,9 +1430,23 @@
       ctx.beginPath(); ctx.arc(baseX, baseY, Math.min(ring, 2400), 0, Math.PI * 2); ctx.stroke();
       ctx.setLineDash([]);
       ctx.globalAlpha = 1;
-      drawAsset('external/rover', player.x, player.y + 4, 84, 66);
-      drawAsset('crew/walk', player.x, player.y - 16, 30, 56, { flip: player.facing < 0 });
-      ellipse(player.x, player.y + 2, 16, 4, 'rgba(8,10,18,.35)');
+      for (const puff of dustPuffs) {
+        ctx.globalAlpha = Math.max(0, puff.life * 1.1);
+        px(puff.x - 1, puff.y - 1, 3, 2, '#b9c0d6');
+      }
+      ctx.globalAlpha = 1;
+      const rollBob = player.moving ? Math.round(Math.sin((state.rover.roll || 0) / 9)) : 0;
+      const drewRide = drawAsset('rover/ride', player.x, player.y + 4 + rollBob, 92, 88, { flip: player.facing < 0 });
+      if (!drewRide) {
+        drawAsset('external/rover', player.x, player.y + 4, 84, 66);
+        drawAsset('crew/walk', player.x, player.y - 16, 30, 56, { flip: player.facing < 0 });
+      }
+      ellipse(player.x, player.y + 2, 18, 4, 'rgba(8,10,18,.35)');
+      window.__jamtAnimDraw = {
+        name: drewRide ? 'ride' : 'fallback', frame: 0, x: player.x, y: player.y,
+        footX: player.x, footY: player.y, flipped: player.facing < 0,
+        screenX: player.x - Math.round(camera.x), screenY: player.y - Math.round(camera.y),
+      };
       return;
     }
     if (state.action) {
@@ -1785,6 +1805,7 @@
     const st = nearestInteractable();
     const action = actionFor(st);
     if (!action || action.disabled) { Sound.warn(); return; }
+    state.coachActed = true;
 
     if (action.minutes === 0) { action.run(); render(); return; }
     hold.active = true; hold.t = 0; hold.action = action; hold.station = st;
@@ -2126,7 +2147,7 @@
       positionTracker();
       return;
     }
-    if (info.mode !== 'air' && dist(player.x, player.y, info.target.x, info.target.y) > camera.h * 1.35) {
+    if (info.mode !== 'air' && dist(player.x, player.y, info.target.x, info.target.y) > camera.h * 1.0) {
       info = { ...info, text: 'That is far. Use the rover!', mode: 'far' };
     }
     const arrow = coachArrow(info.target);
@@ -2134,6 +2155,7 @@
     els.coach.hidden = false;
     els.coachText.textContent = info.text;
     els.coachIcon.textContent = info.icon || '▲';
+    els.coach.classList.toggle('is-faded', !!s.coachActed);
     els.coachSkip.hidden = !on;
     positionTracker();
   }
@@ -2153,6 +2175,82 @@
     tracker.style.left = 'auto';
     tracker.style.right = '8px';
     tracker.style.width = '126px';
+  }
+
+  function isCompactUi() {
+    return window.matchMedia('(max-width: 820px), (max-height: 520px)').matches
+      || document.body.classList.contains('touch-on');
+  }
+
+  function panelsMode() {
+    if (settings.panels === 'full' || settings.panels === 'focus') return settings.panels;
+    if (isCompactUi()) return 'focus';
+    return state.levelId === '1.1' && state.sol === 1 ? 'full' : 'focus';
+  }
+
+  function applyPanelsMode(remeasure = true) {
+    const compact = isCompactUi();
+    const mode = panelsMode();
+    document.body.classList.toggle('panels-compact', compact);
+    document.body.classList.toggle('panels-focus', mode === 'focus');
+    document.body.classList.toggle('panels-full', mode === 'full');
+    if (remeasure && typeof measureConsole === 'function') measureConsole();
+    positionPanelToggle();
+    buddy?.position();
+    if (typeof positionTracker === 'function') positionTracker();
+    if (state.screen === 'game' && typeof snapCamera === 'function') snapCamera();
+  }
+
+  function positionPanelToggle() {
+    const btn = els.panelToggle;
+    if (!btn) return;
+    if (!isCompactUi() || state.screen !== 'game') {
+      btn.style.top = ''; btn.style.left = ''; btn.style.right = ''; btn.style.bottom = '';
+      return;
+    }
+    btn.style.top = '';
+    btn.style.right = '';
+    btn.style.left = 'max(12px, env(safe-area-inset-left))';
+    const full = document.body.classList.contains('panels-full');
+    if (full) {
+      // Sit just above the open drawer, clear of Buddy on the other side.
+      const pr = els.panel?.getBoundingClientRect();
+      const bottom = pr ? Math.max(8, Math.round(window.innerHeight - pr.top + 8)) : 116;
+      btn.style.bottom = `${bottom}px`;
+    } else {
+      // Above the thumbstick, in the safe-area thumb zone.
+      btn.style.bottom = 'calc(140px + env(safe-area-inset-bottom))';
+    }
+  }
+
+  function togglePanels() {
+    const mode = panelsMode();
+    settings.panels = mode === 'full' ? 'focus' : 'full';
+    saveSettings();
+    applyPanelsMode();
+    applySettings();
+    addLog(`Panels: <b>${settings.panels === 'full' ? 'Full' : 'Focus'}</b> (P)`, 'muted');
+  }
+
+  function updateHudExtras() {
+    const s = state;
+    if (!els.hudGoal || !s.level) return;
+    const plan = COACH_PLANS[s.levelId] || [];
+    const next = plan.find((p) => !p.done(s));
+    let goal = next ? next.text : (s.phase === 'plan' ? 'Set power, then go outside.' : s.phase === 'eva' ? 'Finish jobs, then end the day.' : 'End the day.');
+    goal = goal.split(' from ')[0].split(' (')[0].trim();
+    if (goal.length > 42) goal = `${goal.slice(0, 39)}...`;
+    els.hudGoal.textContent = `Goal: ${goal}`;
+    const alerts = [];
+    if (s.air < 25) alerts.push('Low air');
+    if (s.leakActive) alerts.push('Leak');
+    if (s.stormStarted) alerts.push('Storm');
+    else if (s.levelId === '1.3' && s.stormKnown && s.sol === s.stormArrival) alerts.push('Storm today');
+    if (s.hearts < MAX_HEARTS) alerts.push(`Heart lost ${MAX_HEARTS - s.hearts}`);
+    if (els.hudAlert) {
+      els.hudAlert.hidden = !alerts.length;
+      els.hudAlert.textContent = alerts.join(' · ');
+    }
   }
 
   function drawCoachFx(time) {
@@ -2293,6 +2391,7 @@
     }
 
     // battery / draw
+    updateHudExtras();
     els.batteryVal.textContent = `${Math.round(s.battery)}/${RULES.batteryCap.value}`;
     els.drawBtn.disabled = !((s.phase === 'plan' || s.phase === 'eva') && s.battery > 0 && s.draws < RULES.maxDrawPerSol.value);
     els.drawBtn.textContent = `Draw +1${s.draws ? ` (${s.draws}/2)` : ''}`;
@@ -2524,7 +2623,7 @@
     player.x = 512; player.y = 430; player.path = []; player.facing = 1;
     player.animDist = 0; player.animFrame = 0; player.animMode = 'idle'; player.stuckT = 0;
     s.action = null;
-    s.tutorialStep = 0; s.tutorialMoved = false; s.tutorialSkipped = false; s.tutorialDelivered = false; s.tutorialDone = false;
+    s.tutorialStep = 0; s.tutorialMoved = false; s.tutorialSkipped = false; s.tutorialDelivered = false; s.tutorialDone = false; s.coachActed = false;
     for (const n of npcs) { n.x = n.id === 'npc1' ? 470 : 620; n.y = n.id === 'npc1' ? 400 : 420; n.tx = n.x; n.ty = n.y; n.atBunker = false; }
     snapCamera();
 
@@ -2532,7 +2631,9 @@
     els.log.innerHTML = '';
     showScreen('game');
     els.panel.classList.remove('is-collapsed');
+    document.querySelectorAll('.dock-left, .dock-right').forEach((d) => d.classList.remove('is-collapsed'));
     resize();
+    applyPanelsMode();
     renderTracker();
     addLog(`<b>${COACH_GOALS[L.id]}</b>`, 'head');
     startSol(true);
@@ -2584,6 +2685,7 @@
       addLog('🚨 <b>Water leak!</b> A recycler pipe burst. Get to the recycler deck.', 'bad');
       Sound.warn();
     }
+    applyPanelsMode();
     render();
     startEVAPhaseIfDebug();
   }
@@ -3055,6 +3157,19 @@
     measureConsole();
     setTimeout(snapCamera, 60);
   });
+  for (const [id, cls] of [['dock-left-collapse', 'dock-left'], ['dock-right-collapse', 'dock-right']]) {
+    const btn = document.getElementById(id);
+    const dock = document.querySelector('.' + cls);
+    if (!btn || !dock) continue;
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const collapsed = dock.classList.toggle('is-collapsed');
+      btn.setAttribute('aria-expanded', String(!collapsed));
+      btn.textContent = collapsed ? '+' : '-';
+      measureConsole();
+      setTimeout(snapCamera, 60);
+    });
+  }
 
   els.interact.addEventListener('pointerdown', (e) => { e.preventDefault(); startHold(); });
   els.interact.addEventListener('pointerup', cancelHold);
@@ -3074,6 +3189,7 @@
     if (state.screen === 'debrief') { if (e.key === 'Enter') { e.preventDefault(); if (!els.next.hidden) els.next.click(); else els.retry.click(); } return; }
     if (state.screen !== 'game') return;
     if (e.code === 'KeyH' && !e.repeat) { e.preventDefault(); buddy?.toggle(); return; }
+    if (e.code === 'KeyP' && !e.repeat) { e.preventDefault(); togglePanels(); return; }
 
     const k = e.key.toLowerCase();
     if (e.code === 'KeyW' || e.key === 'ArrowUp') { e.preventDefault(); keys.up = true; return; }
@@ -3176,6 +3292,7 @@
     const t = now / 1000;
     const dt = lastT ? Math.min(0.05, t - lastT) : 0.016;
     lastT = t;
+    document.body.classList.toggle('panels-temp-hidden', !!(hold.active || state.action || buddy?.isOpen));
     if (state.screen === 'game') {
       updatePlayer(dt);
       updateSwitchboardStatus();
@@ -3342,7 +3459,7 @@
 
 
   /* ============ iteration 2: loading, menus, briefing, pause, touch ====== */
-  const BUILD_VERSION = '3.2.6';
+  const BUILD_VERSION = '3.3.0';
   const TIPS = [
     'Did you know? ISS life support recovers about 98% of the crew’s water (NASA ECLSS).',
     'Did you know? Water ice hides in permanently shadowed craters at the lunar south pole (LRO/LCROSS).',
@@ -3384,7 +3501,8 @@
 
   const flowEls = {
     loading: $('#screen-loading'), gate: $('#start-gate'), bar: $('#load-bar'),
-    count: $('#load-count'), tip: $('#load-tip'),
+    count: $('#load-count'), tip: $('#load-tip'), track: $('#screen-loading .load-track'),
+    runner: $('#load-runner'), astronaut: $('#load-astronaut'),
     brief: $('#screen-brief'), briefTitle: $('#brief-title'), briefKicker: $('#brief-kicker'),
     briefGoal: $('#brief-goal'), briefWhy: $('#brief-why'), briefTable: $('#brief-table'),
     briefControls: $('#brief-controls'),
@@ -3408,12 +3526,14 @@
     set('set-motion', settings.motion ? 'ON' : 'OFF');
     set('set-hints', settings.hints ? 'ON' : 'OFF');
     set('set-unlock', settings.unlock ? 'ON' : 'OFF');
+    set('set-panels', settings.panels === 'auto' ? 'AUTO' : settings.panels.toUpperCase());
     set('set-buddy-proactive', settings.buddyProactive ? 'ON' : 'OFF');
     set('set-buddy-cloud', settings.buddyCloud ? 'ON' : 'OFF');
     set('set-buddy-speak', settings.buddySpeak ? 'ON' : 'OFF');
     const bn = document.getElementById('set-buddy-name');
     if (bn && document.activeElement !== bn) bn.value = settings.buddyName;
     document.body.classList.toggle('hints-off', !settings.hints);
+    applyPanelsMode(false);
     if (buddy) buddy.applySettings();
   }
 
@@ -3428,7 +3548,7 @@
   }
   function closePause() { flowEls.pause.hidden = true; state.paused = false; buddy?.onPause(false); }
 
-  const UI_SAD = 'assets/ui/sad_astronaut.png?v=3.2.6';
+  const UI_SAD = 'assets/ui/sad_astronaut.png?v=3.3.0';
   function askConfirm(text, onYes, art = null) {
     flowEls.confirmText.textContent = text;
     if (flowEls.confirmArt) {
@@ -3599,6 +3719,12 @@
     document.getElementById('set-motion').addEventListener('click', () => { settings.motion = !settings.motion; saveSettings(); applySettings(); updateCoach(); });
     document.getElementById('set-hints').addEventListener('click', () => { settings.hints = !settings.hints; saveSettings(); applySettings(); updateCoach(); });
     document.getElementById('set-unlock').addEventListener('click', () => { settings.unlock = !settings.unlock; saveSettings(); applySettings(); if (state.screen === 'select') renderSelect(); });
+    document.getElementById('set-panels').addEventListener('click', () => {
+      const next = panelsMode() === 'full' ? 'focus' : 'full';
+      settings.panels = next; saveSettings(); applySettings();
+    });
+    els.panelToggle?.addEventListener('click', togglePanels);
+    els.panelsKey?.addEventListener('click', togglePanels);
     const buddyName = document.getElementById('set-buddy-name');
     if (buddyName) {
       buddyName.addEventListener('input', () => {
@@ -4154,14 +4280,21 @@
       const tr = tracker && !tracker.hidden ? tracker.getBoundingClientRect() : null;
       const short = window.innerHeight <= 520;
       const size = short ? 34 : 58;
+      const fullDrawer = document.body.classList.contains('panels-full');
       let top;
-      if (short) {
-        // Landscape phone: the only clear band is between the tracker and the
-        // bottom console. Keep the button in that band.
-        top = Math.max(2, tr ? tr.bottom + 1 : 40);
-        if (top + size > ar.top - 6) top = Math.max(2, ar.top - size - 6);
+      if (fullDrawer) {
+        // The phone drawer hides the touch controls. Keep Buddy just above it.
+        const pr = document.getElementById('panel')?.getBoundingClientRect();
+        top = Math.max(2, (pr ? pr.top : window.innerHeight * 0.55) - size - 10);
+      } else if (short) {
+        // Landscape phone: the only clear band is between the HUD/tracker and
+        // the bottom console. Keep the button in that band.
+        const hr = document.getElementById('hud')?.getBoundingClientRect();
+        top = Math.max(2, hr ? hr.bottom + 4 : 40, tr ? tr.bottom + 1 : 0);
+        if (ar.width && top + size > ar.top - 6) top = Math.max(2, ar.top - size - 6);
       } else {
-        top = Math.max(2, ar.top - size - 10);
+        const hr = document.getElementById('hud')?.getBoundingClientRect();
+        top = ar.width ? Math.max(2, ar.top - size - 10) : Math.max(2, hr ? hr.bottom + 6 : 44);
       }
       el.fab.style.width = `${size}px`;
       el.fab.style.height = `${size}px`;
@@ -4826,23 +4959,50 @@
   }
 
   function initLoading() {
+    for (const img of document.querySelectorAll('[data-loading-sprite]')) {
+      const key = img.dataset.loadingSprite;
+      const rec = manifest[key];
+      if (rec && rec.src) img.src = rec.src;
+    }
     const started = performance.now();
     let tipIdx = 0;
+    let finished = false;
     flowEls.tip.textContent = TIPS[0];
     const tipTimer = setInterval(() => { tipIdx = (tipIdx + 1) % TIPS.length; flowEls.tip.textContent = TIPS[tipIdx]; }, 2600);
-    const timer = setInterval(() => {
-      const L = window.__jamtLoad || { done: 1, total: 1 };
-      const pct = Math.max(4, Math.min(100, Math.round((L.done / L.total) * 100)));
+    const placeRunner = (pct) => {
+      if (!flowEls.runner || !flowEls.track) return;
+      const w = flowEls.track.clientWidth || 0;
+      const rw = flowEls.runner.offsetWidth || 58;
+      const x = Math.max(0, Math.min(Math.max(0, w - rw), (w - rw) * pct / 100));
+      flowEls.runner.style.left = `${Math.round(x)}px`;
+    };
+    const paint = (done, total, forceDone = false) => {
+      const pct = total > 0 ? Math.max(0, Math.min(100, Math.round((done / total) * 100))) : 0;
       flowEls.bar.style.width = `${pct}%`;
-      flowEls.count.textContent = `Loading outpost… ${L.done}/${L.total}`;
-      if (L.done >= L.total || performance.now() - started > 7000) {
+      placeRunner(pct);
+      flowEls.count.textContent = `Loading... ${done}/${total}`;
+      const doneNow = forceDone || (total > 0 && done >= total);
+      if (doneNow && !finished) {
+        finished = true;
         clearInterval(timer); clearInterval(tipTimer);
-        flowEls.count.textContent = 'Ready, Commander.';
+        flowEls.runner?.classList.add('is-done');
         flowEls.bar.style.width = '100%';
+        placeRunner(100);
+        flowEls.count.textContent = 'Ready, Commander.';
         flowEls.gate.disabled = false;
         flowEls.gate.textContent = 'TAP / PRESS TO START';
       }
-    }, 120);
+      return pct;
+    };
+    const timer = setInterval(() => {
+      const L = window.__jamtLoad || { done: 1, total: 1 };
+      paint(L.done, L.total, performance.now() - started > 7000);
+    }, 100);
+    window.__jamtLoadingSet = (done, total) => {
+      window.__jamtLoad = { done, total };
+      const pct = paint(done, total);
+      return { pct, left: flowEls.runner?.style.left };
+    };
     flowEls.gate.addEventListener('click', () => {
       Sound.init(); Sound.click();
       flowEls.loading.hidden = true;

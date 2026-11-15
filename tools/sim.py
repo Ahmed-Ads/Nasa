@@ -25,10 +25,15 @@ import argparse
 import json
 import os
 import random
+import re
 from dataclasses import dataclass, field
+from pathlib import Path
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
 OUT = os.path.join(HERE, "sim_results.json")
+BUILD_VERSION = re.search(r"BUILD_VERSION = '([^']+)'",
+                          Path(ROOT, "game.js").read_text(encoding="utf-8")).group(1)
 
 # ---------------------------------------------------------------- constants
 R = {
@@ -635,7 +640,7 @@ def main():
         print(f"  [{'PASS' if ok else 'FAIL'}] {label}")
 
     with open(OUT, "w", encoding="utf-8") as f:
-        json.dump({"runs": args.runs, "table": table, "strategies": strategy_rows, "checks": [{"label": l, "pass": p} for l, p in checks]}, f, indent=1)
+        json.dump({"runs": args.runs, "buildVersion": BUILD_VERSION, "table": table, "strategies": strategy_rows, "checks": [{"label": l, "pass": p} for l, p in checks]}, f, indent=1)
     print(f"\nwrote {OUT}")
 
 

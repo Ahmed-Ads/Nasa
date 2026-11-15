@@ -32,6 +32,35 @@ for state in BUDDY_STATES:
         print(f"manifest missing buddy/{state}")
         sys.exit(1)
 
+# Sliced ice outcrops; the source JPG is intentionally uncommitted.
+ICE_SPRITES = ("deposit", "chunk")
+for name in ICE_SPRITES:
+    refs.add(f"assets/ice/{name}.png")
+    if f'"ice/{name}"' not in text:
+        print(f"manifest missing ice/{name}")
+        sys.exit(1)
+ROVER_SPRITES = ("ride",)
+for name in ROVER_SPRITES:
+    refs.add(f"assets/rover/{name}.png")
+    if f'"rover/{name}"' not in text:
+        print(f"manifest missing rover/{name}")
+        sys.exit(1)
+LOADING_SPRITES = ("astronaut", "planet_orange", "planet_blue", "planet_ring", "planet_bottom",
+                   "satellite_top", "satellite_left", "asteroid_right", "asteroid_left")
+for name in LOADING_SPRITES:
+    refs.add(f"assets/loading/{name}.png")
+    if f'"loading/{name}"' not in text:
+        print(f"manifest missing loading/{name}")
+        sys.exit(1)
+ICON_FILES = ("favicon.svg", "favicon.ico", "favicon-16.png", "favicon-32.png", "favicon-48.png",
+              "favicon-180.png", "favicon-192.png", "favicon-512.png")
+for name in ICON_FILES:
+    refs.add(f"assets/icons/{name}")
+for size in (16, 32, 48, 180, 192, 512):
+    if f'"icons/favicon_{size}"' not in text:
+        print(f"manifest missing icons/favicon_{size}")
+        sys.exit(1)
+
 missing = []
 for ref in sorted(refs):
     ref = ref.split("?")[0]

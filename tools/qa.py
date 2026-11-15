@@ -26,6 +26,9 @@ import json
 import re
 import os
 import sys
+from urllib.error import HTTPError, URLError
+from urllib.parse import urljoin
+from urllib.request import urlopen
 
 from PIL import Image
 
@@ -298,10 +301,30 @@ def main():
           const J = window.__JAMT__;
           const visible = innerHeight - J.consolePx;
           const sy = (J.player.y - J.camera.y) * 2;
-          return { visible, sy, consolePx: J.consolePx, canvasH: document.getElementById('scene').height };
+          const panel = document.getElementById('panel');
+          return { visible, sy, consolePx: J.consolePx, canvasH: document.getElementById('scene').height,
+                   panelHidden: !!panel && getComputedStyle(panel).display === 'none',
+                   focus: document.body.classList.contains('panels-focus'),
+                   full: document.body.classList.contains('panels-full') };
         }""")
         check("B3 player is above the console on mobile", mobile["sy"] < mobile["visible"] - 10, str(mobile))
-        check("B3 console is bottom-docked on mobile", mobile["consolePx"] > 100, str(mobile))
+        check("B3 mobile starts in Focus with the console hidden",
+              mobile["focus"] and mobile["panelHidden"] and mobile["consolePx"] == 0, str(mobile))
+        js(page6, "() => document.getElementById('panel-toggle').click()")
+        page6.wait_for_timeout(250)
+        mobile_full = js(page6, """() => {
+          const J = window.__JAMT__;
+          const visible = innerHeight - J.consolePx;
+          const sy = (J.player.y - J.camera.y) * 2;
+          return { visible, sy, consolePx: J.consolePx,
+                   full: document.body.classList.contains('panels-full') };
+        }""")
+        check("B3 P opens a bottom-docked Full console on mobile",
+              mobile_full["full"] and mobile_full["consolePx"] > 100, str(mobile_full))
+        check("B3 player stays above the Full console on mobile",
+              mobile_full["sy"] < mobile_full["visible"] - 10, str(mobile_full))
+        js(page6, "() => document.getElementById('panel-toggle').click()")
+        page6.wait_for_timeout(200)
 
         # B2 resize keeps the player position
         before_pos = js(page6, "() => ({x: window.__JAMT__.player.x, y: window.__JAMT__.player.y})")
@@ -348,7 +371,7 @@ def main():
           const x0 = J.player.x; T.setKey('right', true);
           for (let i = 0; i < 20; i++) T.step(0.05);
           T.setKey('right', false); out.dx = J.player.x - x0;
-          T.teleport(70, 700); T.pick('ice'); out.cargo1 = s.rover.cargo.length;
+          T.teleport(150, 556); T.pick('ice'); out.cargo1 = s.rover.cargo.length;
           T.teleport(730, 452); T.deliver('water-slot'); out.cargo2 = s.rover.cargo.length;
           out.ring = T.walkBackRadius();
           T.dismountRover(); out.dismounted = !s.rover.mounted;
@@ -700,7 +723,7 @@ def main():
                                 timeout=7000)
         ice = js(apage, """() => {
           const J = window.__JAMT__, T = window.__T;
-          window.__JAMT_FREEZE = true; J.startEVA(); T.teleport(95, 700); J.snapCamera();
+          window.__JAMT_FREEZE = true; J.startEVA(); T.teleport(150, 556); J.snapCamera();
           const before = J.action;
           J.startHold();
           const start = J.action, samples = [];
@@ -743,7 +766,7 @@ def main():
           const J = window.__JAMT__, T = window.__T;
           if (T.carry()) T.drop();
           J.state.groundItems = [];
-          T.teleport(95, 700); J.snapCamera();
+          T.teleport(150, 556); J.snapCamera();
           const stock0 = T.sources().find(s => s.id === 'ice-src').stock;
           J.startHold();
           for (let i = 0; i < 15; i++) J.stepHold(0.04);
@@ -769,7 +792,7 @@ def main():
         restart = js(rpage2, """() => {
           const J = window.__JAMT__, T = window.__T;
           window.__JAMT_FREEZE = true;
-          J.startEVA(); T.teleport(95, 700); J.snapCamera();
+          J.startEVA(); T.teleport(150, 556); J.snapCamera();
           J.startHold(); for (let i = 0; i < 15; i++) J.stepHold(0.04);
           const during = !!J.action;
           J.resetLevelState();
@@ -840,7 +863,7 @@ def main():
                                 timeout=7000)
         touch = js(tpage, """() => {
           const J = window.__JAMT__, T = window.__T;
-          window.__JAMT_FREEZE = true; J.startEVA(); T.teleport(95, 700); J.snapCamera();
+          window.__JAMT_FREEZE = true; J.startEVA(); T.teleport(150, 556); J.snapCamera();
           const btn = document.getElementById('act-btn');
           btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 11, pointerType: 'touch' }));
           const started = !!J.action;
@@ -870,7 +893,7 @@ def main():
         fb = js(fbpage, """() => {
           const J = window.__JAMT__, T = window.__T;
           window.__JAMT_FREEZE = true;
-          J.startEVA(); T.teleport(95, 700); J.snapCamera(); J.startHold();
+          J.startEVA(); T.teleport(150, 556); J.snapCamera(); J.startHold();
           const started = !!J.action;
           for (let i = 0; i < 70; i++) J.stepHold(0.04);
           return { started, action: J.action, carry: T.carry() };
@@ -898,7 +921,7 @@ def main():
                     "width": w, "height": h}
 
         action_shots = []
-        for kind, query, tx, ty in (("ice", "?debug&level=1.1", 95, 700),
+        for kind, query, tx, ty in (("ice", "?debug&level=1.1", 150, 556),
                                     ("dig", "?debug&level=1.3", 300, 350)):
             sctx, spage = new_page(browser, 1280, 720, query)
             spage.wait_for_function("() => window.__jamtLoad && window.__jamtLoad.done >= window.__jamtLoad.total",
@@ -1059,6 +1082,7 @@ def main():
             lctx, lpage = new_page(browser, 1280, 720, f"?debug&level={lid}")
             lpage.wait_for_timeout(900)
             level_bad[lid + "-game"] = bad_words.findall(lpage.inner_text("body"))
+            lpage.keyboard.press("p"); lpage.wait_for_timeout(120)
             lpage.click("#tracker-info"); lpage.wait_for_timeout(100)
             level_bad[lid + "-brief"] = bad_words.findall(lpage.inner_text("#screen-brief"))
             lpage.evaluate("() => window.__JAMT__.endLevel(true)")
@@ -1327,6 +1351,394 @@ def main():
             check(f"Layout {w}x{h}: objectives clear of panel, HUD, coach, player, ACT",
                   not issues, str(issues))
 
+        # ---------------------------------------- Space Buddy polish regressions
+        print("\nSpace Buddy polish: panels / loading / icons / assets")
+
+        def saved_settings(pg):
+            raw = js(pg, "() => localStorage.getItem('jamt.settings')")
+            try:
+                return json.loads(raw or "{}")
+            except Exception:
+                return {}
+
+        def rect_map(pg):
+            return js(pg, """() => {
+              const R = (sel) => {
+                const e = document.querySelector(sel);
+                if (!e) return null;
+                const r = e.getBoundingClientRect();
+                return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height };
+              };
+              return { hud: R('#hud'), coach: R('#coach'), toggle: R('#panel-toggle'),
+                       buddy: R('#buddy-fab'), act: R('#act-btn'), stick: R('#stick'),
+                       left: R('.dock-left'), right: R('.dock-right'), panel: R('#panel') };
+            }""")
+
+        def overlaps(a, b):
+            return bool(a and b and a["w"] > 0 and b["w"] > 0
+                        and not (a["r"] <= b["l"] or a["l"] >= b["r"]
+                                 or a["b"] <= b["t"] or a["t"] >= b["b"]))
+
+        # U1/U2/U3: default mode, P persistence, typing safety, auto-hide, fade.
+        uctx = browser.new_context(viewport={"width": 1280, "height": 720})
+        up = uctx.new_page()
+        uerrs = []
+        up.on("pageerror", lambda e: uerrs.append(str(e)))
+        up.on("console", lambda m: uerrs.append(m.text) if m.type == "error" else None)
+        up.goto((LIVE_URL or URL) + "?debug&level=1.1")
+        up.wait_for_timeout(900)
+        u0 = js(up, """() => {
+          const p = document.getElementById('panel');
+          return { cls: document.body.className, full: document.body.classList.contains('panels-full'),
+                   focus: document.body.classList.contains('panels-focus'),
+                   panel: getComputedStyle(p).display,
+                   key: (document.getElementById('panels-key')?.textContent || '').trim(),
+                   saved: localStorage.getItem('jamt.settings') };
+        }""")
+        check("U1 desktop 1.1 Day 1 starts Full and shows the P hint",
+              u0["full"] and u0["panel"] == "block" and "P panels" in u0["key"], str(u0))
+        for lid in ("1.2", "1.3"):
+            c = browser.new_context(viewport={"width": 1280, "height": 720})
+            pg = c.new_page()
+            pg.goto((LIVE_URL or URL) + f"?debug&level={lid}")
+            pg.wait_for_timeout(850)
+            v = js(pg, """() => ({
+              full: document.body.classList.contains('panels-full'),
+              focus: document.body.classList.contains('panels-focus'),
+              panel: getComputedStyle(document.getElementById('panel')).display
+            })""")
+            check(f"U1 desktop {lid} starts in Focus", v["focus"] and not v["full"] and v["panel"] == "none", str(v))
+            c.close()
+        up.keyboard.press("p")
+        up.wait_for_timeout(180)
+        u1 = js(up, """() => ({
+          cls: document.body.className, focus: document.body.classList.contains('panels-focus'),
+          panel: getComputedStyle(document.getElementById('panel')).display,
+          saved: JSON.parse(localStorage.getItem('jamt.settings') || '{}').panels || ''
+        })""")
+        check("U2 P toggles Focus and stores the explicit choice",
+              u1["focus"] and u1["panel"] == "none" and u1["saved"] == "focus", str(u1))
+        up.reload()
+        up.wait_for_timeout(900)
+        u2 = js(up, """() => ({
+          focus: document.body.classList.contains('panels-focus'),
+          saved: JSON.parse(localStorage.getItem('jamt.settings') || '{}').panels || ''
+        })""")
+        check("U2 Focus survives a reload", u2["focus"] and u2["saved"] == "focus", str(u2))
+        up.keyboard.press("p")
+        up.wait_for_timeout(180)
+        u3 = js(up, """() => ({
+          full: document.body.classList.contains('panels-full'),
+          saved: JSON.parse(localStorage.getItem('jamt.settings') || '{}').panels || ''
+        })""")
+        check("U2 P returns to Full and persists Full", u3["full"] and u3["saved"] == "full", str(u3))
+
+        up.evaluate("() => window.JuniorBuddy.open()")
+        up.click("#buddy-input")
+        up.keyboard.press("p")
+        up.wait_for_timeout(120)
+        u4 = js(up, """() => ({
+          full: document.body.classList.contains('panels-full'),
+          focus: document.body.classList.contains('panels-focus'),
+          saved: JSON.parse(localStorage.getItem('jamt.settings') || '{}').panels || ''
+        })""")
+        check("U2 P is ignored while typing in Buddy chat",
+              u4["full"] and not u4["focus"] and u4["saved"] == "full", str(u4))
+        up.evaluate("() => window.JuniorBuddy.close()")
+        up.wait_for_timeout(120)
+
+        up.evaluate("""() => {
+          const J = window.__JAMT__, T = window.__T;
+          J.startEVA(); T.teleport(150, 556); J.snapCamera(); J.startHold();
+        }""")
+        up.wait_for_timeout(200)
+        u5 = js(up, """() => ({
+          temp: document.body.classList.contains('panels-temp-hidden'),
+          panel: getComputedStyle(document.getElementById('panel')).display,
+          coach: getComputedStyle(document.getElementById('coach')).display,
+          action: !!window.__JAMT__.action
+        })""")
+        up.evaluate("() => window.__JAMT__.cancelHold()")
+        up.wait_for_timeout(250)
+        u6 = js(up, """() => ({
+          temp: document.body.classList.contains('panels-temp-hidden'),
+          panel: getComputedStyle(document.getElementById('panel')).display,
+          faded: document.getElementById('coach').classList.contains('is-faded'),
+          white: getComputedStyle(document.getElementById('coach-text')).whiteSpace,
+          coach: getComputedStyle(document.getElementById('coach')).display,
+          acted: !!window.__JAMT__.state.coachActed
+        })""")
+        check("U3 holding a station hides panels, then restores a faded one-line coach",
+              u5["temp"] and u5["panel"] == "none" and u5["coach"] == "none" and u5["action"]
+              and not u6["temp"] and u6["panel"] == "block" and u6["faded"]
+              and u6["white"] == "nowrap" and u6["coach"] == "flex" and u6["acted"],
+              str({"during": u5, "after": u6}))
+        up.evaluate("() => window.JuniorBuddy.open()")
+        up.wait_for_timeout(180)
+        u7 = js(up, """() => ({
+          temp: document.body.classList.contains('panels-temp-hidden'),
+          panel: getComputedStyle(document.getElementById('panel')).display
+        })""")
+        up.evaluate("() => window.JuniorBuddy.close()")
+        up.wait_for_timeout(180)
+        u8 = js(up, """() => ({
+          temp: document.body.classList.contains('panels-temp-hidden'),
+          panel: getComputedStyle(document.getElementById('panel')).display
+        })""")
+        check("U3 Buddy chat auto-hides and restores the panels",
+              u7["temp"] and u7["panel"] == "none" and not u8["temp"] and u8["panel"] == "block",
+              str({"open": u7, "closed": u8}))
+
+        up.evaluate("() => document.getElementById('dock-left-collapse').click()")
+        up.wait_for_timeout(120)
+        u9 = js(up, """() => ({
+          cls: document.querySelector('.dock-left').className,
+          expanded: document.getElementById('dock-left-collapse').getAttribute('aria-expanded'),
+          h: document.querySelector('.dock-left').getBoundingClientRect().height
+        })""")
+        up.evaluate("() => document.getElementById('dock-right-collapse').click()")
+        up.wait_for_timeout(120)
+        u10 = js(up, """() => ({
+          cls: document.querySelector('.dock-right').className,
+          expanded: document.getElementById('dock-right-collapse').getAttribute('aria-expanded'),
+          h: document.querySelector('.dock-right').getBoundingClientRect().height
+        })""")
+        check("U4 each panel header collapses its own dock",
+              "is-collapsed" in u9["cls"] and u9["expanded"] == "false" and u9["h"] < 40
+              and "is-collapsed" in u10["cls"] and u10["expanded"] == "false" and u10["h"] < 40,
+              str({"left": u9, "right": u10}))
+        up.evaluate("""() => {
+          document.getElementById('dock-left-collapse').click();
+          document.getElementById('dock-right-collapse').click();
+        }""")
+        up.wait_for_timeout(120)
+        check("U4 panels/coach/hotkeys produce no console errors", not uerrs, str(uerrs[:2]))
+        uctx.close()
+
+        # U5: phone thumb button and one-tap power drawer.
+        pctx = browser.new_context(viewport={"width": 390, "height": 844},
+                                   has_touch=True, is_mobile=True)
+        pp = pctx.new_page()
+        pp.goto((LIVE_URL or URL) + "?debug&level=1.1")
+        pp.wait_for_timeout(900)
+        p0 = js(pp, """() => {
+          const b = document.getElementById('panel-toggle');
+          const r = b.getBoundingClientRect();
+          return { focus: document.body.classList.contains('panels-focus'),
+                   panel: getComputedStyle(document.getElementById('panel')).display,
+                   w: r.width, h: r.height, left: r.left, bottom: innerHeight - r.bottom,
+                   display: getComputedStyle(b).display };
+        }""")
+        check("U5 phone starts Focus with a >=44px safe-area thumb button",
+              p0["focus"] and p0["panel"] == "none" and p0["display"] == "flex"
+              and p0["w"] >= 44 and p0["h"] >= 44 and p0["left"] >= 8 and p0["bottom"] >= 8,
+              str(p0))
+        pr = rect_map(pp)
+        p_clear = not any(overlaps(pr["toggle"], pr[k]) for k in ("stick", "act", "buddy"))
+        check("U5 phone button is clear of the thumbstick, ACT and Buddy", p_clear, str(pr))
+        pp.click("#panel-toggle")
+        pp.wait_for_timeout(250)
+        p1 = js(pp, """() => {
+          const p = document.getElementById('panel');
+          const d = document.getElementById('draw-btn');
+          const pr = p.getBoundingClientRect(), dr = d.getBoundingClientRect();
+          const t = document.getElementById('panel-toggle').getBoundingClientRect();
+          return { full: document.body.classList.contains('panels-full'),
+                   panel: getComputedStyle(p).display, panelTop: pr.top,
+                   toggleBottom: t.bottom, draw: dr.width > 0 && dr.height > 0
+                     && dr.bottom > pr.top && dr.top < pr.bottom,
+                   drawDisabled: d.disabled,
+                   goalVisible: (() => { const e = document.getElementById('hud-goal'); const r = e.getBoundingClientRect();
+                     return getComputedStyle(e).display !== 'none' && r.width > 0 && r.bottom <= innerHeight; })(),
+                   dayVisible: (() => { const e = document.getElementById('hud-sol'); const r = e.getBoundingClientRect();
+                     return getComputedStyle(e).display !== 'none' && r.width > 0 && r.bottom <= innerHeight; })(),
+                   plan: document.getElementById('panel-phase').textContent };
+        }""")
+        check("U5 one tap opens the drawer with Plan power and HUD facts reachable",
+              p1["full"] and p1["panel"] != "none" and p1["draw"]
+              and p1["goalVisible"] and p1["dayVisible"]
+              and "Plan" in p1["plan"] and p1["toggleBottom"] <= p1["panelTop"] + 1,
+              str(p1))
+        pp.click("#panel-toggle")
+        pp.wait_for_timeout(200)
+        p2 = js(pp, "() => ({ focus: document.body.classList.contains('panels-focus'), panel: getComputedStyle(document.getElementById('panel')).display })")
+        check("U5 one tap returns to Focus", p2["focus"] and p2["panel"] == "none", str(p2))
+        pctx.close()
+
+        # U6: both modes clear at the six test sizes.
+        print("\nPolish layout: HUD / coach / panels / Buddy / thumb controls")
+        polish_issues = []
+        for w, h, touch in ((1920, 1080, False), (1280, 720, False), (768, 1024, True),
+                            (390, 844, True), (360, 640, True), (844, 390, True)):
+            for mode in ("focus", "full"):
+                c = browser.new_context(viewport={"width": w, "height": h},
+                                        has_touch=touch, is_mobile=touch)
+                pg = c.new_page()
+                pg.add_init_script(
+                    "localStorage.setItem('jamt.settings', JSON.stringify({panels:'%s'}))" % mode)
+                pg.goto((LIVE_URL or URL) + "?debug&level=1.1")
+                pg.wait_for_timeout(850)
+                r = rect_map(pg)
+                bad = []
+                for a, b in (("toggle", "stick"), ("toggle", "act"), ("toggle", "buddy"),
+                             ("buddy", "hud"), ("buddy", "coach"), ("buddy", "act"),
+                             ("buddy", "stick"), ("coach", "hud"),
+                             ("left", "hud"), ("right", "hud")):
+                    if overlaps(r[a], r[b]):
+                        bad.append(f"{a}/{b}")
+                if mode == "full" and touch:
+                    if overlaps(r["buddy"], r["panel"]):
+                        bad.append("buddy/panel")
+                    if overlaps(r["toggle"], r["panel"]):
+                        bad.append("toggle/panel")
+                if bad:
+                    polish_issues.append(f"{w}x{h} {mode}: {','.join(bad)}")
+                c.close()
+        check("U6 Full/Focus at six sizes keeps HUD, coach, panels and controls clear",
+              not polish_issues, str(polish_issues))
+
+        # L1-L3: loading scene, real runner, budget and reduced motion.
+        lctx, lp = new_page(browser, 1280, 720, "")
+        lp.wait_for_timeout(700)
+        lp.wait_for_function("() => window.__jamtLoadingSet && window.__jamtLoad", timeout=4000)
+        l0 = js(lp, """() => {
+          const sprites = [...document.querySelectorAll('[data-loading-sprite]')].map((i) => ({
+            key: i.dataset.loadingSprite, src: i.getAttribute('src'), w: i.naturalWidth
+          }));
+          return { total: window.__jamtLoad?.total || 0, done: window.__jamtLoad?.done || 0,
+                   gate: document.getElementById('start-gate').disabled,
+                   count: document.getElementById('load-count').textContent,
+                   sprites };
+        }""")
+        check("L1 loading sprites all resolve from the manifest",
+              len(l0["sprites"]) == 9 and all(s["src"] and s["w"] > 0 for s in l0["sprites"])
+              and l0["total"] > 0, str(l0))
+        check("L1 loading gate enables and announces Ready at completion",
+              not l0["gate"] and l0["done"] >= l0["total"] and "Ready" in l0["count"], str(l0))
+        total = l0["total"]
+        lr = []
+        for pct in (0, 50, 100):
+            js(lp, f"() => window.__jamtLoadingSet({pct * total // 100}, {total})")
+            lp.wait_for_timeout(60)
+            lr.append(js(lp, """() => ({
+              count: document.getElementById('load-count').textContent,
+              bar: document.getElementById('load-bar').style.width,
+              left: parseFloat(document.getElementById('load-runner').style.left) || 0
+            })"""))
+        check("L2 astronaut follows real Loading... N/M progress",
+              "Loading... 0/" in lr[0]["count"] and lr[0]["left"] == 0
+              and lr[0]["left"] < lr[1]["left"] < lr[2]["left"]
+              and lr[1]["bar"] == "50%" and lr[2]["bar"] == "100%",
+              str(lr))
+        load_dir = os.path.join(ROOT, "assets", "loading")
+        load_bytes = sum(os.path.getsize(os.path.join(load_dir, f))
+                         for f in os.listdir(load_dir) if f.endswith(".png"))
+        check("L2 loading art stays under 300 KB", load_bytes < 300 * 1024, f"{load_bytes} bytes")
+        lctx.close()
+        rctx = browser.new_context(viewport={"width": 1280, "height": 720},
+                                   reduced_motion="reduce")
+        rp = rctx.new_page()
+        rp.goto((LIVE_URL or URL) + "")
+        rp.wait_for_timeout(800)
+        rm = js(rp, """() => ({
+          reduce: matchMedia('(prefers-reduced-motion: reduce)').matches,
+          sprites: [...document.querySelectorAll('[data-loading-sprite]')].every((i) => i.naturalWidth > 0),
+          gate: document.getElementById('start-gate').disabled
+        })""")
+        check("L3 loading art is reduced-motion safe and still gates correctly",
+              rm["reduce"] and rm["sprites"] and not rm["gate"], str(rm))
+        rctx.close()
+
+        # I1: favicon files, alpha, dimensions, versioned links and no 404s.
+        html = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
+        icon_tags = re.findall(
+            r'<link[^>]+rel="(?:icon|shortcut icon|apple-touch-icon)"[^>]*>', html)
+        icon_hrefs = []
+        for tag in icon_tags:
+            m = re.search(r'href="([^"]+)"', tag)
+            if m:
+                icon_hrefs.append(m.group(1))
+        icon_dims = {"favicon-16.png": (16, 16), "favicon-32.png": (32, 32),
+                     "favicon-48.png": (48, 48), "favicon-180.png": (180, 180),
+                     "favicon-192.png": (192, 192), "favicon-512.png": (512, 512)}
+        icon_issues = []
+        for href in icon_hrefs:
+            if "?v=" not in href or href.split("?v=")[-1] != BUILD_VERSION:
+                icon_issues.append(f"{href}: version")
+            rel = href.split("?")[0]
+            path = os.path.join(ROOT, rel.replace("/", os.sep))
+            if not os.path.exists(path):
+                icon_issues.append(f"{href}: missing")
+                continue
+            if LIVE_URL:
+                try:
+                    if urlopen(urljoin(LIVE_URL, rel), timeout=5).status != 200:
+                        icon_issues.append(f"{href}: HTTP")
+                except (HTTPError, URLError, OSError) as exc:
+                    icon_issues.append(f"{href}: {exc}")
+            if rel.endswith(".png"):
+                im = Image.open(path)
+                if im.size != icon_dims.get(os.path.basename(path)):
+                    icon_issues.append(f"{href}: {im.size}")
+                if im.mode != "RGBA" or any(im.getpixel(p)[3] != 0
+                                            for p in ((0, 0), (im.width - 1, 0),
+                                                      (0, im.height - 1),
+                                                      (im.width - 1, im.height - 1))):
+                    icon_issues.append(f"{href}: alpha")
+            if rel.endswith(".ico"):
+                im = Image.open(path)
+                if im.size[0] < 16:
+                    icon_issues.append(f"{href}: ico")
+        check("I1 moon favicons exist, are transparent, sized, versioned and return no 404",
+              len(icon_hrefs) == 8 and all("data:" not in h for h in icon_hrefs)
+              and not icon_issues, str(icon_issues))
+
+        # A1: sliced art is committed, transparent and registered.
+        slices = {"assets/ice/deposit.png": (128, 58),
+                  "assets/ice/chunk.png": (40, 33),
+                  "assets/rover/ride.png": (128, 122)}
+        slice_issues = []
+        for rel, size in slices.items():
+            path = os.path.join(ROOT, rel.replace("/", os.sep))
+            if not os.path.exists(path):
+                slice_issues.append(f"{rel}: missing")
+                continue
+            im = Image.open(path)
+            if im.size != size:
+                slice_issues.append(f"{rel}: {im.size}")
+            # A cutout may legitimately touch a crop edge (the ice chunk does),
+            # so require a transparent field rather than four empty corners.
+            transparent = im.getchannel("A").histogram()[0]
+            if im.mode != "RGBA" or transparent < 100:
+                slice_issues.append(f"{rel}: alpha ({transparent} transparent px)")
+        check("A1 ice/rover sliced art is present, transparent and correctly sized",
+              not slice_issues, str(slice_issues))
+
+        # A2: ice source uses the deposit and remains the farthest source.
+        actx, ap = new_page(browser, 1280, 720, "?debug&level=1.1")
+        ice = js(ap, """() => {
+          const J = window.__JAMT__, s = J.state;
+          const src = s.sources.find((x) => x.id === 'ice-src');
+          const base = { x: 512, y: 430 };
+          const d = (o) => Math.hypot(o.x - base.x, o.y - base.y);
+          const others = s.sources.filter((x) => x.id !== 'ice-src').map(d);
+          return { x: src.x, y: src.y, farthest: d(src) > Math.max(...others),
+                   station: J.STATIONS.some((x) => x.id === 'ice'),
+                   key: window.JAMT_ASSETS['ice/deposit']?.src || '',
+                   chunk: window.JAMT_ASSETS['ice/chunk']?.src || '' };
+        }""")
+        check("A2 ice source moved to the deposit and is still the farthest source",
+              ice["x"] == 148 and ice["y"] == 552 and ice["farthest"]
+              and not ice["station"] and ice["key"].endswith("assets/ice/deposit.png")
+              and ice["chunk"].endswith("assets/ice/chunk.png"), str(ice))
+        actx.close()
+
+        # A3: rover rider asset is registered; existing A4 covers fallback/speed.
+        a3ctx, a3p = new_page(browser, 1280, 720, "?debug&level=1.1")
+        rpatch = js(a3p, "() => window.JAMT_ASSETS['rover/ride']?.src || ''")
+        check("A3 rover rider sprite is registered", rpatch.endswith("assets/rover/ride.png"), rpatch)
+        a3ctx.close()
+
         # version text in loading + credits
         vctx, vpage = new_page(browser, 1280, 720, "")
         vpage.wait_for_timeout(700)
@@ -1511,14 +1923,17 @@ def main():
         before_keys = js(kp, """() => {
           const J = window.__JAMT__;
           return { x: J.player.x, y: J.player.y, phase: J.state.phase,
-                   alloc: { ...J.state.alloc }, action: !!J.state.action, hold: J.holdActive() };
+                   alloc: { ...J.state.alloc }, action: !!J.state.action, hold: J.holdActive(),
+                   panels: JSON.parse(localStorage.getItem('jamt.settings') || '{}').panels || '' };
         }""")
         kp.keyboard.type("wasd 12e")
         kp.keyboard.press("Space")
+        kp.keyboard.press("p")
         after_keys = js(kp, """() => {
           const J = window.__JAMT__;
           return { x: J.player.x, y: J.player.y, phase: J.state.phase,
                    alloc: { ...J.state.alloc }, action: !!J.state.action, hold: J.holdActive(),
+                   panels: JSON.parse(localStorage.getItem('jamt.settings') || '{}').panels || '',
                    input: document.getElementById('buddy-input').value };
         }""")
         kp.keyboard.press("Escape")
@@ -1526,7 +1941,7 @@ def main():
         kp.keyboard.press("h")
         h_opened = js(kp, "() => window.JuniorBuddy.isOpen")
         unchanged = all(before_keys[k] == after_keys[k] for k in before_keys)
-        check("Chat input blocks WASD/E/Space/1-3 hotkeys; Esc closes; H opens",
+        check("Chat input blocks WASD/E/Space/1-3/P hotkeys; Esc closes; H opens",
               unchanged and after_keys["input"].startswith("wasd 12e")
               and esc_closed and h_opened, str({"before": before_keys, "after": after_keys,
                                                 "esc": esc_closed, "h": h_opened}))
