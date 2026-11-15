@@ -3323,7 +3323,7 @@
 
 
   /* ============ iteration 2: loading, menus, briefing, pause, touch ====== */
-  const BUILD_VERSION = '3.1.8';
+  const BUILD_VERSION = '3.1.9';
   const TIPS = [
     'Did you know? ISS life support recovers about 98% of the crew’s water (NASA ECLSS).',
     'Did you know? Water ice hides in permanently shadowed craters at the lunar south pole (LRO/LCROSS).',
@@ -3401,7 +3401,7 @@
   }
   function closePause() { flowEls.pause.hidden = true; state.paused = false; }
 
-  const UI_SAD = 'assets/ui/sad_astronaut.png?v=3.1.8';
+  const UI_SAD = 'assets/ui/sad_astronaut.png?v=3.1.9';
   function askConfirm(text, onYes, art = null) {
     flowEls.confirmText.textContent = text;
     if (flowEls.confirmArt) {
