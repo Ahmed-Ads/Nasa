@@ -51,6 +51,19 @@ def magenta_mask(rgb: np.ndarray, loose: bool = False) -> np.ndarray:
     return (r > 110) & (b > 110) & (g < mn * 0.55) & (np.abs(r - b) < 55)
 
 
+def fringe_mask(rgb: np.ndarray) -> np.ndarray:
+    """Strict leftover-magenta test for QA.
+
+    Deliberately narrower than the keyer: dark purple art outlines (r ~ 95,
+    b ~ 140) are intended pixels, not key fringe, so they must not be counted.
+    """
+    r = rgb[:, :, 0].astype(np.int16)
+    g = rgb[:, :, 1].astype(np.int16)
+    b = rgb[:, :, 2].astype(np.int16)
+    mn = np.minimum(r, b)
+    return (r >= 135) & (b >= 110) & (g < 0.5 * mn) & (np.abs(r - b) < 40)
+
+
 def key_frame(rgb: np.ndarray):
     """Magenta -> transparent, 1 px erode, edge decontamination."""
     from scipy import ndimage
@@ -129,6 +142,170 @@ FRAMES = {
     4: [(f"drill_{i:02d}", i) for i in range(1, 6)] + [(f"idle{3 + i}", 5 + i) for i in range(1, 5)],
     5: [(f"carry_{i:02d}", i) for i in range(1, 6)] + [("idle8", 9)],
 }
+
+
+
+
+def slice_img12(report_lines: list[str]):
+    """Key the whole sheet first (shadows touch), then split by components."""
+    from scipy import ndimage
+
+    path = find_sheet("img12")
+    im = Image.open(path).convert("RGB")
+    rgb = np.asarray(im)
+    h, w = rgb.shape[:2]
+    rgba = key_frame(rgb)
+    alpha = rgba[:, :, 3]
+    report_lines.append(f"sheet: {os.path.basename(path)} {w}x{h}")
+
+    mask = alpha > 8
+    lab, n = ndimage.label(mask, structure=np.ones((3, 3)))
+    objs = ndimage.find_objects(lab)
+    boxes = []
+    for i, sl in enumerate(objs, 1):
+        if sl is None:
+            continue
+        y0, y1 = sl[0].start, sl[0].stop
+        x0, x1 = sl[1].start, sl[1].stop
+        area = int((lab[sl] == i).sum())
+        if area < 40:
+            continue
+        boxes.append({"x0": x0, "x1": x1, "y0": y0, "y1": y1, "area": area,
+                      "cx": (x0 + x1) / 2, "cy": (y0 + y1) / 2})
+    report_lines.append(f"components: {len(boxes)}")
+    report_lines.append("pink metric: strict fringe only (purple art outlines excluded)")
+
+    # --- rows by vertical gaps in component centres -----------------------
+    boxes.sort(key=lambda b: b["cy"])
+    rows = []
+    gap = 0.045 * h
+    for b in boxes:
+        if rows and b["cy"] - rows[-1][-1]["cy"] <= gap:
+            rows[-1].append(b)
+        else:
+            rows.append([b])
+    # keep the three heaviest bands; fold any stray band into the nearest row
+    rows.sort(key=lambda r: sum(b["area"] for b in r), reverse=True)
+    rows = rows[:3]
+    rows.sort(key=lambda r: min(b["cy"] for b in r))
+    report_lines.append(f"row bands: {[len(r) for r in rows]} components")
+
+    os.makedirs(os.path.join(ASSETS, "anim", "img12"), exist_ok=True)
+    outdir = os.path.join(ASSETS, "anim", "img12")
+    os.makedirs(PROOF, exist_ok=True)
+
+    row_names = [
+        [f"console_{i:02d}" for i in range(1, 5)],
+        [f"ice_alt_{i:02d}" for i in range(1, 9)],
+        [f"ice_mine_{i:02d}" for i in range(1, 9)],
+    ]
+    expected = [4, 8, 8]
+    frames = []
+    rejected = []
+
+    # --- anchor one frame per big component, absorb small props ----------
+    for ri, row in enumerate(rows):
+        row.sort(key=lambda b: b["x0"])
+        max_area = max(b["area"] for b in row)
+        big = [b for b in row if b["area"] >= 0.35 * max_area]
+        small = [b for b in row if b["area"] < 0.35 * max_area]
+        report_lines.append(f"row {ri + 1}: {len(big)} large components "
+                            f"(expected {expected[ri]}), {len(small)} small")
+        if len(big) != expected[ri]:
+            report_lines.append("STOP: frame count differs from the expected map; no frames written for this row")
+            continue
+
+        groups = [dict(b) for b in big]
+        for s in small:
+            # a shard/spark/glow belongs to the frame it overlaps the most;
+            # rows are already separated, so it can never jump rows
+            best, best_ov = None, 0
+            for g in groups:
+                ov = max(0, min(g["x1"], s["x1"]) - max(g["x0"], s["x0"]))
+                if ov > best_ov:
+                    best, best_ov = g, ov
+            if best is None:
+                best = min(groups, key=lambda g: abs((g["x0"] + g["x1"]) - (s["x0"] + s["x1"])))
+            best["x0"] = min(best["x0"], s["x0"]); best["x1"] = max(best["x1"], s["x1"])
+            best["y0"] = min(best["y0"], s["y0"]); best["y1"] = max(best["y1"], s["y1"])
+
+        for gi, g in enumerate(groups):
+            name = row_names[ri][gi]
+            y0, y1 = max(0, g["y0"]), min(h, g["y1"])
+            x0, x1 = max(0, g["x0"]), min(w, g["x1"])
+            crop = Image.fromarray(rgba[y0:y1, x0:x1], "RGBA")
+            fw, fh = crop.size
+            arr = np.asarray(crop)
+            pink = int((fringe_mask(arr[:, :, :3]) & (arr[:, :, 3] > 0)).sum())
+            # crop is tight by construction; the only real clipping risk is
+            # the sheet border, where source pixels are lost for good
+            lost_border = bool(g["x0"] <= 0 or g["y0"] <= 0 or g["x1"] >= w or g["y1"] >= h)
+            bottom_margin = h - g["y1"] if ri == 2 else None
+            crop.save(os.path.join(outdir, name + ".png"))
+            frames.append({
+                "name": name, "file": f"assets/anim/img12/{name}.png",
+                "w": fw, "h": fh, "footX": round(fw / 2, 1), "footY": fh,
+                "bakedPropSide": "right",
+                "sheet": "img12", "row": ri + 1, "col": gi + 1,
+            })
+            note = ""
+            if bottom_margin is not None:
+                note = f" boot-margin={bottom_margin}px" + (" LOST-BOOTS" if bottom_margin <= 0 else "")
+            report_lines.append(f"{name:14s} {fw:3d}x{fh:<3d} pink={pink:<3d} "
+                                f"sheet-edge={'YES' if lost_border else 'no'}{note}")
+            if pink > 6 or lost_border or (bottom_margin is not None and bottom_margin <= 0):
+                rejected.append(name)
+
+    # helmet width on frame 1 of each animation
+    for anim in ("console", "ice_alt", "ice_mine"):
+        fr = next((f for f in frames if f["name"] == f"{anim}_01"), None)
+        if not fr:
+            continue
+        arr = np.asarray(Image.open(os.path.join(ROOT, fr["file"])))[:, :, 3] > 8
+        top = arr[:max(2, int(fr["h"] * 0.35)), :]
+        width = 0
+        for line in top:
+            run = best = 0
+            for v in line:
+                run = run + 1 if v else 0
+                best = max(best, run)
+            width = max(width, best)
+        fr["helmetWidth"] = width
+
+    with open(os.path.join(outdir, "frames.json"), "w", encoding="utf-8") as f:
+        json.dump({"sheet": "img12", "frameCount": len(frames),
+                   "bakedProps": {"console": "desk right", "ice": "ice block right"},
+                   "frames": frames}, f, indent=1)
+
+    write_contact12(frames, report_lines)
+    return frames, rejected
+
+
+def write_contact12(frames, report_lines):
+    if not frames:
+        report_lines.append("no frames to contact-sheet")
+        return
+    try:
+        font = ImageFont.truetype("arial.ttf", 12)
+    except Exception:
+        font = ImageFont.load_default()
+    cw, ch = 170, 210
+    cols = 5
+    rows = (len(frames) + cols - 1) // cols
+    sheet = Image.new("RGB", (cw * cols, ch * rows), (20, 22, 32))
+    d = ImageDraw.Draw(sheet)
+    for i, fr in enumerate(frames):
+        im = Image.open(os.path.join(ROOT, fr["file"])).convert("RGBA")
+        im.thumbnail((cw - 16, ch - 66))
+        x = (i % cols) * cw; y = (i // cols) * ch
+        d.rectangle([x, y, x + cw, y + (ch - 40) // 2], fill=(18, 20, 34))
+        d.rectangle([x, y + (ch - 40) // 2, x + cw, y + ch - 40], fill=(214, 218, 228))
+        sheet.paste(im, (x + (cw - im.width) // 2, y + (ch - 40 - im.height) // 2), im)
+        d.text((x + 4, y + ch - 36), fr["name"], fill=(255, 235, 120), font=font)
+        d.text((x + 4, y + ch - 22), f'{fr["w"]}x{fr["h"]}', fill=(150, 160, 190), font=font)
+    sheet.save(os.path.join(PROOF, "img12_contact.png"))
+    report_lines.append("")
+    report_lines.append(f"contact sheet: tools/out/img12_contact.png ({len(frames)} frames)")
 
 
 def find_sheet(which: str) -> str:
@@ -263,16 +440,16 @@ def write_contact(frames, report_lines):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("sheet", choices=["img10"])
+    ap.add_argument("sheet", choices=["img10", "img12"])
     args = ap.parse_args()
     report = []
-    frames, rejected = slice_img10(report)
+    frames, rejected = (slice_img10(report) if args.sheet == "img10" else slice_img12(report))
     report.append("")
     report.append(f"frames: {len(frames)}   rejected: {len(rejected)}")
     if rejected:
         report.append("REJECT: " + ", ".join(sorted(set(rejected))))
     os.makedirs(PROOF, exist_ok=True)
-    with open(os.path.join(PROOF, "img10_report.txt"), "w", encoding="utf-8") as f:
+    with open(os.path.join(PROOF, f"{args.sheet}_report.txt"), "w", encoding="utf-8") as f:
         f.write("\n".join(report) + "\n")
     print("\n".join(report))
 

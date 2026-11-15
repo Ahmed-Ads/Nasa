@@ -1,0 +1,31 @@
+sheet: img12.jpg 2752x1536
+components: 43
+pink metric: strict fringe only (purple art outlines excluded)
+row bands: [4, 12, 17] components
+row 1: 4 large components (expected 4), 0 small
+console_01     447x493 pink=0   sheet-edge=no
+console_02     444x489 pink=0   sheet-edge=no
+console_03     450x488 pink=0   sheet-edge=no
+console_04     451x483 pink=0   sheet-edge=no
+row 2: 8 large components (expected 8), 4 small
+ice_alt_01     263x292 pink=0   sheet-edge=no
+ice_alt_02     263x290 pink=0   sheet-edge=no
+ice_alt_03     264x288 pink=0   sheet-edge=no
+ice_alt_04     265x280 pink=0   sheet-edge=no
+ice_alt_05     267x282 pink=0   sheet-edge=no
+ice_alt_06     290x284 pink=0   sheet-edge=no
+ice_alt_07     269x284 pink=0   sheet-edge=no
+ice_alt_08     218x264 pink=0   sheet-edge=no
+row 3: 8 large components (expected 8), 9 small
+ice_mine_01    264x288 pink=0   sheet-edge=no boot-margin=1px
+ice_mine_02    262x288 pink=0   sheet-edge=no boot-margin=1px
+ice_mine_03    263x281 pink=0   sheet-edge=no boot-margin=1px
+ice_mine_04    264x280 pink=0   sheet-edge=no boot-margin=1px
+ice_mine_05    294x282 pink=0   sheet-edge=no boot-margin=1px
+ice_mine_06    285x283 pink=0   sheet-edge=no boot-margin=1px
+ice_mine_07    264x283 pink=0   sheet-edge=no boot-margin=1px
+ice_mine_08    217x266 pink=0   sheet-edge=no boot-margin=16px
+
+contact sheet: tools/out/img12_contact.png (20 frames)
+
+frames: 20   rejected: 0
