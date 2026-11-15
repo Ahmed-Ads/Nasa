@@ -657,7 +657,7 @@
 
   // ---------------- carry / deliver economy (v3 session 1) ----------------
   const ITEM_META = {
-    ice: { name: 'Ice chunk', sprite: 'terrain/ice' },
+    ice: { name: 'Ice chunk', sprite: 'ice/chunk' },
     bag: { name: 'Regolith bag', sprite: 'icons/shield' },
     battery: { name: 'Battery canister', sprite: 'power/battery_green' },
     panel: { name: 'Solar panel', sprite: 'power/solar_b' },
@@ -667,7 +667,7 @@
     repair: { name: 'Repair parts', sprite: 'repair/gears' },
   };
   const SOURCES = [
-    { id: 'ice-src', item: 'ice', x: 70, y: 700, cap: 4, stock: 4, hold: 1.4, minutes: 1, label: 'Mine ice chunk' },
+    { id: 'ice-src', item: 'ice', x: 148, y: 552, cap: 4, stock: 4, hold: 1.4, minutes: 1, label: 'Mine ice chunk' },
     { id: 'panel-src', item: 'panel', x: 644, y: 548, cap: 3, stock: 3, minutes: 0, label: 'Take solar panel', levels: ['1.1', '1.3'] },
     { id: 'battery-src', item: 'battery', x: 692, y: 548, cap: 4, stock: 4, minutes: 0, label: 'Take battery canister' },
     { id: 'o2-src', item: 'o2', x: 596, y: 548, cap: 2, stock: 2, minutes: 0, label: 'Take O2 canister (game assumption)', levels: ['1.1'] },
@@ -868,16 +868,7 @@
       t.beginPath(); t.ellipse(x, y, r, r * 0.6, 0, Math.PI * 0.9, Math.PI * 1.9); t.stroke();
     }
 
-    // shaded ice patch (SW)
-    const ice = SPR['terrain/ice'];
-    if (ice && ice.ok) {
-      t.globalAlpha = 0.9;
-      t.drawImage(ice.img, 100, 505, 96, 96);
-      t.globalAlpha = 1;
-    } else {
-      t.fillStyle = '#bfe9ff';
-      t.beginPath(); t.ellipse(148, 552, 48, 26, 0, 0, Math.PI * 2); t.fill();
-    }
+    // The ice outcrop itself is drawn by drawSource() at the interaction point.
 
     // dusty paths between stations
     t.strokeStyle = 'rgba(210,216,235,.16)';
@@ -1362,13 +1353,16 @@
     if (state.action && state.action.hiddenSourceId === src.id) return;
     const m = ITEM_META[src.item];
     const bob = Math.sin(performance.now() / 500 + src.x) * 1.5;
-    drawAsset(m.sprite, src.x, src.y - 4 + bob, 20, 20);
+    const iceDeposit = src.item === 'ice';
+    if (iceDeposit) drawAsset('ice/deposit', src.x, src.y - 4 + bob, 74, 44);
+    else drawAsset(m.sprite, src.x, src.y - 4 + bob, 20, 20);
+    const labelY = iceDeposit ? src.y - 48 : src.y - 30;
     ctx.fillStyle = '#0b0f1c';
-    ctx.fillRect(src.x - 13, src.y - 30, 26, 10);
+    ctx.fillRect(src.x - 13, labelY, 26, 10);
     ctx.fillStyle = '#eaf1ff';
     ctx.font = '8px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText(`${src.stock}/${src.cap}`, src.x, src.y - 22);
+    ctx.fillText(`${src.stock}/${src.cap}`, src.x, labelY + 8);
     ctx.textAlign = 'left';
   }
   function drawGroundItem(it) {

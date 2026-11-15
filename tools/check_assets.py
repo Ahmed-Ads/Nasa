@@ -32,6 +32,14 @@ for state in BUDDY_STATES:
         print(f"manifest missing buddy/{state}")
         sys.exit(1)
 
+# Sliced ice outcrops; the source JPG is intentionally uncommitted.
+ICE_SPRITES = ("deposit", "chunk")
+for name in ICE_SPRITES:
+    refs.add(f"assets/ice/{name}.png")
+    if f'"ice/{name}"' not in text:
+        print(f"manifest missing ice/{name}")
+        sys.exit(1)
+
 missing = []
 for ref in sorted(refs):
     ref = ref.split("?")[0]
