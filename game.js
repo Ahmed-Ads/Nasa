@@ -125,12 +125,12 @@
   const CRITICAL = 20;
 
   const ROWS = {
-    o2: { name: 'Oxygen', short: 'O₂', glyph: 'O₂', color: '#5ac8ff', sprite: 'icons/o2' },
-    water: { name: 'Water', short: 'Water', glyph: 'H₂O', color: '#56c8ff', sprite: 'icons/water' },
-    repair: { name: 'Repair', short: 'Repair', glyph: '🛠', color: '#ffb02e', sprite: 'icons/shield' },
-    shielding: { name: 'Shielding', short: 'Shield', glyph: '🛡', color: '#ffb02e', sprite: 'icons/shield' },
-    surface: { name: 'Surface', short: 'Work', glyph: '⛏', color: '#c48bff', sprite: 'external/drill' },
-    battery: { name: 'Battery', short: 'Battery', glyph: '🔋', color: '#7ce38b', sprite: 'icons/battery', kind: 'cells' },
+    o2:        { name: 'Oxygen', short: 'O₂', glyph: 'O₂', color: '#5ac8ff', sprite: 'icons/o2', hint: 'Power cells produce oxygen for the crew.' },
+    water:     { name: 'Water', short: 'Water', glyph: 'H₂O', color: '#56c8ff', sprite: 'icons/water' },
+    repair:    { name: 'Repair', short: 'Repair', glyph: '🛠', color: '#ffb02e', sprite: 'icons/shield', hint: 'Use power to help seal the leak.' },
+    shielding: { name: 'Shielding', short: 'Shield', glyph: '🛡', color: '#ffb02e', sprite: 'icons/shield', hint: 'Shielding helps protect the crew from storms.' },
+    surface:   { name: 'Surface', short: 'Work', glyph: '⛏', color: '#c48bff', sprite: 'external/drill', hint: 'Use power for surface research.' },
+    battery:   { name: 'Battery', short: 'Battery', glyph: '🔋', color: '#7ce38b', sprite: 'icons/battery', kind: 'cells', hint: 'Store power for later.' },
   };
 
   const LEVELS = {
@@ -157,6 +157,7 @@
       art: 'select/moon_base',
       rows: ['o2', 'repair'],
       start: { o2: 65, water: 68 },
+      goals: { water: 40, repair: RULES.patchNeeded.value },
       maxSols: 6,
       schedule: ['calm', 'calm', 'dust', 'cold', 'calm', 'calm'],
       hints: { 1: 'Go to the leak. Close the hatch first.' },
@@ -173,6 +174,7 @@
       art: 'select/planet_moon',
       rows: ['o2', 'shielding', 'surface'],
       start: { o2: 75, shielding: 30, water: 60 },
+      goals: { o2: 30, dose: RULES.doseLimit.value },
       dose: true,
       maxSols: 6,
       schedule: ['calm', 'cme', 'calm', 'calm', 'calm', 'calm'],
@@ -312,6 +314,15 @@
     lastDoseCause: '',
   };
 
+  function resourceGoal(key) {
+    const goals = state.level && state.level.goals;
+    if (!goals || goals[key] == null) return null;
+    const value = goals[key];
+    const max = key === 'battery' ? RULES.batteryCap.value
+      : key === 'repair' ? RULES.patchNeeded.value : 100;
+    return { value, max, unit: key === 'o2' || key === 'water' ? '%' : '' };
+  }
+
   const player = {
     x: 512, y: 430, tx: 512, ty: 430,
     path: [], facing: 1, moving: false, walk: 0, radius: 7, stuckT: 0,
@@ -441,7 +452,7 @@
     sound: $('#sound-btn'),
     title: $('#screen-title'), select: $('#screen-select'), debrief: $('#screen-debrief'),
     panel: $('#panel'), toggle: $('#console-toggle'),
-    phaseChip: $('#panel-phase'), phaseHint: $('#phase-hint'),
+    phaseHint: $('#phase-hint'), phaseChip: $('#panel-phase'),
     cellsLeft: $('#cells-left'),
     batteryLine: $('#battery-line'), batteryVal: $('#battery-val'), drawBtn: $('#draw-btn'),
     systems: $('#systems'),
@@ -1927,15 +1938,12 @@
           <span class="sys-name">${meta.name}</span>
           <span class="sys-value" id="val-${row}">${isCells ? '0/6' : '0%'}</span>
         </div>
-        <div class="meter" id="meter-${row}" role="progressbar" aria-label="${meta.name}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div class="meter" id="meter-${row}" data-key="${row}" role="button" tabindex="0" aria-label="${meta.name}. Click to assign a cell; Shift-click to remove one." title="Click to assign a cell; Shift-click to remove one. Touch and hold to remove.">
           <div class="meter-fill" id="bar-${row}"></div><div class="meter-risk" aria-hidden="true"></div>
+          <span class="meter-target" id="target-${row}" hidden aria-hidden="true"></span>
         </div>
-        <div class="alloc">
-          <button class="step" type="button" data-act="minus" data-key="${row}" aria-label="One less cell for ${meta.name}">−</button>
-          <div class="cells" id="cells-${row}" aria-hidden="true"></div>
-          <span class="alloc-num" id="alloc-${row}" aria-hidden="true">0</span>
-          <button class="step" type="button" data-act="plus" data-key="${row}" aria-label="One more cell for ${meta.name}">+</button>
-        </div>`;
+        <p class="system-note">${meta.hint}</p>
+        `;
       els.systems.appendChild(card);
     }
   }
@@ -2170,6 +2178,38 @@
     ctx.restore();
   }
 
+  let lastSwitchboardNearby = null;
+  function updateSwitchboardStatus(updateWater = false) {
+    const nearSwitch = dist(player.x, player.y, 376, 378) < 56;
+    const changed = nearSwitch !== lastSwitchboardNearby;
+    state.atSwitchboard = nearSwitch;
+    if (changed) {
+      els.panel.classList.toggle('at-switchboard', nearSwitch);
+      lastSwitchboardNearby = nearSwitch;
+    }
+    if (changed || updateWater) {
+      const wl = document.getElementById('water-line');
+      if (wl) {
+        const water = Math.round(state.res.water || 0);
+        const goal = resourceGoal('water');
+        const goalLabel = goal ? `/${goal.value}%` : '%';
+        const goalMarker = goal
+          ? `<span class="water-target${water >= goal.value ? ' is-met' : ''}" style="left:${(goal.value / goal.max) * 100}%" aria-hidden="true"></span>`
+          : '';
+        wl.innerHTML = `
+          <div class="water-head"><span>💧 Water</span><b>${water}${goalLabel}</b></div>
+          <div class="water-track" role="img" aria-label="Water ${water}%${goal ? `, goal ${goal.value}%` : ''}">
+            <div class="water-fill" style="width:${clamp(water)}%"></div>${goalMarker}
+          </div>
+          <span class="water-note">${nearSwitch ? 'At the battery bank: set power.' : 'Go to the battery bank to set power.'}<br>Deliver ice to the water tank to add water.</span>`;
+      }
+    }
+    const enabled = (state.phase === 'plan' || state.phase === 'eva') && nearSwitch;
+    for (const meter of els.systems.querySelectorAll('.meter')) {
+      if (meter.getAttribute('aria-disabled') !== String(!enabled)) meter.setAttribute('aria-disabled', String(!enabled));
+    }
+  }
+
   function render() {
     const s = state;
     if (!s.level) return;
@@ -2185,15 +2225,13 @@
     els.hudPhase.dataset.phase = s.phase;
     els.hudEva.textContent = `Air ${Math.round(s.air)}%`;
     els.hudEva.classList.toggle('is-low', s.air < 25);
-    els.phaseChip.textContent = PHASE_LABEL[s.phase] || s.phase;
-    els.phaseChip.dataset.phase = s.phase;
     els.phaseHint.textContent = s.phase === 'plan' ? 'Set power' : s.phase === 'eva' ? 'Do jobs outside' : 'Ending the day';
+    if (els.phaseChip) {
+      els.phaseChip.textContent = PHASE_LABEL[s.phase] || s.phase;
+      els.phaseChip.dataset.phase = s.phase;
+    }
 
-    const nearSwitch = dist(player.x, player.y, 376, 378) < 56;
-    s.atSwitchboard = nearSwitch;
-    els.panel.classList.toggle('at-switchboard', nearSwitch);
-    const wl = document.getElementById('water-line');
-    if (wl) wl.innerHTML = `💧 Water <b>${Math.round(s.res.water || 0)}%</b><span>${nearSwitch ? 'switchboard: allocate cells' : 'walk to the switchboard to change cells'} · ice → water tank</span>`;
+    updateSwitchboardStatus(true);
     els.cellsLeft.textContent = String(Math.max(0, leftCells()));
     els.cellsLeft.classList.toggle('is-empty', leftCells() === 0);
 
@@ -2202,40 +2240,41 @@
       const v = ROWS[row].kind === 'cells' ? clamp(s.res[row] || 0, 0, RULES.batteryCap.value)
         : row === 'repair' ? 0 : clamp(s.res[row] || 0, 0, 100);
       const value = document.getElementById(`val-${row}`);
+      const allocated = s.alloc[row] || 0;
+      const goal = resourceGoal(row);
+      const current = row === 'repair' ? s.patch : v;
+      const resourceValue = row === 'repair' ? `${s.patch}/${RULES.patchNeeded.value}`
+        : meta.kind === 'cells' ? `${Math.round(v)}/6` : `${Math.round(v)}%`;
       if (value) {
-        if (row === 'repair') value.textContent = `${s.patch}/${RULES.patchNeeded.value}`;
-        else value.textContent = meta.kind === 'cells' ? `${Math.round(v)}/6` : `${Math.round(v)}%`;
+        value.textContent = `${goal ? `${Math.round(current)}/${goal.value}${goal.unit}` : resourceValue} · ⚡${allocated}`;
         value.classList.toggle('is-low', meta.kind !== 'cells' && row !== 'repair' && v < CRITICAL);
       }
       const meter = document.getElementById(`meter-${row}`);
       const bar = document.getElementById(`bar-${row}`);
+      const target = document.getElementById(`target-${row}`);
+      if (meter) {
+        const enabled = (s.phase === 'plan' || s.phase === 'eva') && s.atSwitchboard;
+        const goalLabel = goal ? ` Goal: at least ${goal.value}${goal.unit}.` : '';
+        meter.setAttribute('aria-label', `${meta.name}: ${resourceValue}.${goalLabel} ${allocated} cells assigned. Click to add a cell; Shift-click or touch and hold to remove one.`);
+        meter.setAttribute('aria-disabled', String(!enabled));
+      }
+      if (target) {
+        target.hidden = !goal;
+        if (goal) {
+          target.style.left = `${(goal.value / goal.max) * 100}%`;
+          target.classList.toggle('is-met', current >= goal.value);
+          target.title = `Goal: at least ${goal.value}${goal.unit}`;
+        }
+      }
       if (row === 'repair') {
         const pct = (s.patch / RULES.patchNeeded.value) * 100;
-        if (meter) meter.setAttribute('aria-valuenow', String(Math.round(pct)));
         if (bar) { bar.style.width = `${pct}%`; bar.style.backgroundColor = s.patched ? '#7ce38b' : '#ffb02e'; }
       } else {
         const pct = meta.kind === 'cells' ? (v / RULES.batteryCap.value) * 100 : v;
-        if (meter) meter.setAttribute('aria-valuenow', String(Math.round(pct)));
         if (bar) {
           bar.style.width = `${pct}%`;
           bar.style.backgroundColor = meta.kind !== 'cells' && v < CRITICAL ? '#ff4d6d' : meta.color;
         }
-      }
-      const allocEl = document.getElementById(`alloc-${row}`);
-      if (allocEl) allocEl.textContent = String(s.alloc[row] || 0);
-      const cells = document.getElementById(`cells-${row}`);
-      if (cells) {
-        cells.innerHTML = '';
-        for (let i = 0; i < s.budget; i++) {
-          const cell = document.createElement('span');
-          cell.className = 'cell' + (i < (s.alloc[row] || 0) ? ' is-on' : '');
-          cells.appendChild(cell);
-        }
-      }
-      const enabled = (s.phase === 'plan' || s.phase === 'eva') && s.atSwitchboard;
-      for (const btn of els.systems.querySelectorAll(`[data-key="${row}"]`)) {
-        if (btn.dataset.act === 'plus') btn.disabled = !enabled || leftCells() <= 0 || (s.alloc[row] || 0) >= s.budget;
-        else btn.disabled = !enabled || (s.alloc[row] || 0) <= 0;
       }
     }
 
@@ -2267,9 +2306,12 @@
       els.hudDose.hidden = false;
       els.hudDose.textContent = `☢ ${Math.round(s.dose)}`;
       els.hudDose.classList.toggle('is-high', s.dose > RULES.doseLimit.value);
-      els.doseVal.textContent = `${Math.round(s.dose)} / ${RULES.doseLimit.value}`;
+      const doseGoal = resourceGoal('dose');
+      els.doseVal.textContent = `${Math.round(s.dose)} / ${doseGoal ? doseGoal.value : RULES.doseLimit.value}`;
       els.doseBar.style.width = `${clamp(s.dose, 0, 100)}%`;
       els.doseBar.style.backgroundColor = s.dose > RULES.doseLimit.value ? '#ff4d6d' : '#ff8da1';
+      const doseTarget = els.doseBox.querySelector('.dose-risk');
+      if (doseTarget && doseGoal) doseTarget.style.left = `${(doseGoal.value / doseGoal.max) * 100}%`;
       els.doseNote.textContent = s.sheltered
         ? 'Crew sheltered — storm dose cut by 90%.'
         : s.dose > RULES.doseLimit.value ? 'Over the limit — the crew is losing hearts!' : `Safe under ${RULES.doseLimit.value}. Shielding slows it down.`;
@@ -2810,16 +2852,16 @@
       }
       return null;
     }
-    if (L.id === '1.2') return sol >= L.maxSols ? (s.reopened && s.res.water >= 40 ? 'win' : 'fail') : null;
-    if (L.id === '1.3') return sol >= L.maxSols ? (s.dose <= RULES.doseLimit.value && s.res.o2 >= 30 ? 'win' : 'fail') : null;
+    if (L.id === '1.2') return sol >= L.maxSols ? (s.reopened && s.res.water >= L.goals.water ? 'win' : 'fail') : null;
+    if (L.id === '1.3') return sol >= L.maxSols ? (s.dose <= L.goals.dose && s.res.o2 >= L.goals.o2 ? 'win' : 'fail') : null;
     return null;
   }
 
   function failReason(s) {
     const L = s.level;
     if (L.id === '1.1') return 'The outpost was still not ready after two landing slips.';
-    if (L.id === '1.2') return s.reopened ? `Water fell to ${Math.round(s.res.water)}% — the crew needs at least 40%.` : 'The leak was never sealed.';
-    if (L.id === '1.3') return s.dose > RULES.doseLimit.value ? `Radiation dose reached ${Math.round(s.dose)} — over the limit.` : `Oxygen fell to ${Math.round(s.res.o2)}%.`;
+    if (L.id === '1.2') return s.reopened ? `Water fell to ${Math.round(s.res.water)}% — the crew needs at least ${L.goals.water}%.` : 'The leak was never sealed.';
+    if (L.id === '1.3') return s.dose > L.goals.dose ? `Radiation dose reached ${Math.round(s.dose)} — over the limit.` : `Oxygen fell to ${Math.round(s.res.o2)}%.`;
     return 'The outpost could not hold on.';
   }
 
@@ -2945,10 +2987,45 @@
   }
 
   /* ================================================================ inputs == */
+  const consumedMeterClicks = new WeakSet();
+  let meterLongPressTimer = 0;
+  let meterLongPressTarget = null;
+  function clearMeterLongPress(cancelled = false) {
+    clearTimeout(meterLongPressTimer);
+    meterLongPressTimer = 0;
+    if (cancelled && meterLongPressTarget) consumedMeterClicks.delete(meterLongPressTarget);
+    meterLongPressTarget = null;
+  }
+  els.systems.addEventListener('pointerdown', (e) => {
+    const meter = e.target.closest('.meter[data-key]');
+    if (!meter || e.pointerType !== 'touch' || meter.getAttribute('aria-disabled') === 'true') return;
+    clearMeterLongPress();
+    meterLongPressTarget = meter;
+    meterLongPressTimer = setTimeout(() => {
+      consumedMeterClicks.add(meter);
+      removeCell(meter.dataset.key);
+      meterLongPressTimer = 0;
+    }, 550);
+  });
+  els.systems.addEventListener('pointerup', clearMeterLongPress);
+  els.systems.addEventListener('pointercancel', () => clearMeterLongPress(true));
   els.systems.addEventListener('click', (e) => {
-    const btn = e.target.closest('button[data-act]');
-    if (!btn || btn.disabled) return;
-    if (btn.dataset.act === 'plus') addCell(btn.dataset.key); else removeCell(btn.dataset.key);
+    const meter = e.target.closest('.meter[data-key]');
+    if (!meter || meter.getAttribute('aria-disabled') === 'true') return;
+    if (consumedMeterClicks.has(meter)) {
+      consumedMeterClicks.delete(meter);
+      meterLongPressTarget = null;
+      return;
+    }
+    if (e.shiftKey) removeCell(meter.dataset.key); else addCell(meter.dataset.key);
+  });
+  els.systems.addEventListener('keydown', (e) => {
+    const meter = e.target.closest('.meter[data-key]');
+    if (!meter || !['Enter', ' '].includes(e.key)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (meter.getAttribute('aria-disabled') === 'true') return;
+    if (e.shiftKey) removeCell(meter.dataset.key); else addCell(meter.dataset.key);
   });
 
   els.run.addEventListener('click', () => {
@@ -2988,6 +3065,7 @@
     if (e.code === 'KeyE') { if (!e.repeat) startHold(); return; }
     if (e.code === 'KeyB') { drawBattery(); return; }
     if (e.code === 'KeyQ') { if (dropItem()) render(); return; }
+    if (e.code === 'KeyO' && !e.repeat) { e.preventDefault(); toggleObjectives(); return; }
 
     // B14: use e.code so Shift+1/2/3 works on every layout
     if (['Digit1', 'Digit2', 'Digit3'].includes(e.code) && state.level) {
@@ -3082,6 +3160,7 @@
     lastT = t;
     if (state.screen === 'game') {
       updatePlayer(dt);
+      updateSwitchboardStatus();
       updateNPCs(dt);
       if (!window.__JAMT_FREEZE) {
         updateHold(dt);
@@ -3356,8 +3435,8 @@
       + '</tbody>';
     const coarse = window.matchMedia('(pointer: coarse)').matches;
     flowEls.briefControls.innerHTML = coarse
-      ? '<span>Joystick: walk</span><span>ACT: pick up / use</span><span>Tap a highlighted object</span><span>⏸ Pause</span>'
-      : '<span>WASD / arrows: walk</span><span>Click: move</span><span>Hold E: use</span><span>1–3 / Shift: cells</span><span>Space: Go outside</span><span>Esc: pause</span>';
+      ? '<span>Joystick: walk</span><span>ACT: pick up / use</span><span>Tap a highlighted object</span><span>Tap bars to add; hold to remove cells</span><span>O: objectives</span><span>⏸ Pause</span>'
+      : '<span>WASD / arrows: walk</span><span>Click: move</span><span>Hold E: use</span><span>Click bar to add; Shift-click to remove cells</span><span>1–3 / Shift: cells</span><span>O: objectives</span><span>Space: Go outside</span><span>Esc: pause</span>';
   }
   function openBriefing(id) { renderBrief(id); showScreen('brief'); }
 
@@ -3369,30 +3448,56 @@
     let items = [];
     if (L.id === '1.1') {
       items = [
-        { label: 'O₂ reserve', value: `${Math.round(s.res.o2 || 0)}/70`, done: (s.res.o2 || 0) >= 70 },
-        { label: 'Water reserve', value: `${Math.round(s.res.water || 0)}/60`, done: (s.res.water || 0) >= 60 },
-        { label: 'Battery charge', value: `${Math.round(getBattery())}/3`, done: getBattery() >= 3 },
+        { label: 'O₂ reserve', value: `${Math.round(s.res.o2 || 0)}/${L.goals.o2}`, done: (s.res.o2 || 0) >= L.goals.o2 },
+        { label: 'Water reserve', value: `${Math.round(s.res.water || 0)}/${L.goals.water}`, done: (s.res.water || 0) >= L.goals.water },
+        { label: 'Battery charge', value: `${Math.round(getBattery())}/${L.goals.battery}`, done: getBattery() >= L.goals.battery },
         { label: 'Crew landing', value: s.slip ? `slip ${s.slip}` : 'Day 5', done: false },
       ];
     } else if (L.id === '1.2') {
       items = [
         { label: 'Isolate hatch', value: s.isolated ? 'done' : '—', done: s.isolated },
         { label: 'Kapton tape', value: s.taped ? 'done' : '—', done: s.taped },
-        { label: 'Cure patch', value: `${s.patch}/2`, done: s.patched },
+        { label: 'Cure patch', value: `${s.patch}/${L.goals.repair}`, done: s.patched },
         { label: 'Reopen hatch', value: s.reopened ? 'done' : '—', done: s.reopened },
-        { label: 'Water ≥ 40%', value: `${Math.round(s.res.water || 0)}%`, done: (s.res.water || 0) >= 40 },
+        { label: `Water ≥ ${L.goals.water}%`, value: `${Math.round(s.res.water || 0)}%`, done: (s.res.water || 0) >= L.goals.water },
       ];
     } else {
       items = [
         { label: 'Check the dish', value: s.stormKnown ? 'done' : '—', done: !!s.stormKnown },
         { label: 'Shelter crew', value: s.sheltered ? 'done' : '—', done: !!s.sheltered },
-        { label: 'Dose ≤ 60', value: `${Math.round(s.dose || 0)}`, done: (s.dose || 0) <= RULES.doseLimit.value },
-        { label: 'O₂ ≥ 30%', value: `${Math.round(s.res.o2 || 0)}%`, done: (s.res.o2 || 0) >= 30 },
+        { label: `Dose ≤ ${L.goals.dose}`, value: `${Math.round(s.dose || 0)}`, done: (s.dose || 0) <= L.goals.dose },
+        { label: `O₂ ≥ ${L.goals.o2}%`, value: `${Math.round(s.res.o2 || 0)}%`, done: (s.res.o2 || 0) >= L.goals.o2 },
       ];
     }
     listEl.innerHTML = items.map((i) =>
       `<li class="${i.done ? 'done' : ''}"><span>${i.label}</span><b>${i.value}</b></li>`).join('');
     countEl.textContent = `${items.filter((i) => i.done).length}/${items.length}`;
+  }
+
+  function setObjectivesExpanded(expanded) {
+    const tracker = document.getElementById('tracker');
+    const button = document.getElementById('tracker-toggle');
+    if (!tracker || !button) return;
+    // Desktop: a collapsed tracker is hidden (O toggles it). Compact: the strip
+    // stays in the corner and only the list opens, so the panel never covers the player.
+    if (window.matchMedia('(max-width: 820px), (max-height: 520px)').matches) {
+      tracker.classList.remove('is-collapsed');
+      tracker.classList.toggle('is-open', expanded);
+    } else {
+      tracker.classList.remove('is-open');
+      tracker.classList.toggle('is-collapsed', !expanded);
+    }
+    button.setAttribute('aria-expanded', String(expanded));
+    positionTracker();
+  }
+  function toggleObjectives() {
+    const tracker = document.getElementById('tracker');
+    if (!tracker) return;
+    const compact = window.matchMedia('(max-width: 820px), (max-height: 520px)').matches;
+    const open = compact
+      ? !tracker.classList.contains('is-open')
+      : tracker.classList.contains('is-collapsed');
+    setObjectivesExpanded(open);
   }
 
   function wireHelpDots() {
@@ -3443,13 +3548,7 @@
     document.getElementById('brief-back').addEventListener('click', () => { Sound.click(); goSelect(); });
     document.getElementById('brief-back2').addEventListener('click', () => { Sound.click(); goSelect(); });
     document.getElementById('tracker-info').addEventListener('click', () => renderBrief(state.levelId) || showScreen('brief'));
-    document.getElementById('tracker-toggle').addEventListener('click', () => {
-      const compact = window.matchMedia('(max-width: 820px), (max-height: 520px)').matches;
-      const tracker = document.getElementById('tracker');
-      if (compact) tracker.classList.toggle('is-open');
-      else tracker.classList.toggle('is-collapsed');
-      positionTracker();
-    });
+    document.getElementById('tracker-toggle').addEventListener('click', toggleObjectives);
 
     document.getElementById('pause-btn').addEventListener('click', openPause);
     document.getElementById('pause-continue').addEventListener('click', () => { closePause(); Sound.click(); });
