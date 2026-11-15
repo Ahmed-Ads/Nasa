@@ -2631,7 +2631,11 @@
     els.log.innerHTML = '';
     showScreen('game');
     els.panel.classList.remove('is-collapsed');
-    document.querySelectorAll('.dock-left, .dock-right').forEach((d) => d.classList.remove('is-collapsed'));
+    document.querySelectorAll('.dock-left, .dock-right').forEach((d) => {
+      d.classList.remove('is-collapsed');
+      const b = d.querySelector('.dock-collapse');
+      if (b) { b.setAttribute('aria-expanded', 'true'); b.textContent = '-'; }
+    });
     resize();
     applyPanelsMode();
     renderTracker();
