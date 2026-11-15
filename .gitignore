@@ -2,3 +2,8 @@ assets/img*.jpg
 tools/preview_sprites.png
 tools/qa_shots/
 __pycache__/
+assets/ui/assistant_sheet.jpg
+server/.dev.vars
+server/.wrangler/
+server/node_modules/
+.env

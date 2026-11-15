@@ -96,4 +96,12 @@ window.JAMT_ASSETS = {
   "fx/capsule": { "src": "assets/sprites/fx/capsule.png", "w": 96, "h": 57 },
   "fx/lander": { "src": "assets/sprites/fx/lander.png", "w": 128, "h": 59 },
   "ui/launch_window": { "src": "assets/sprites/ui/launch_window.png", "w": 160, "h": 13 },
+  "buddy/idle": { "src": "assets/ui/buddy/idle.png", "w": 512, "h": 512 },
+  "buddy/listen": { "src": "assets/ui/buddy/listen.png", "w": 512, "h": 512 },
+  "buddy/think": { "src": "assets/ui/buddy/think.png", "w": 512, "h": 512 },
+  "buddy/talk": { "src": "assets/ui/buddy/talk.png", "w": 512, "h": 512 },
+  "buddy/happy": { "src": "assets/ui/buddy/happy.png", "w": 512, "h": 512 },
+  "buddy/alert": { "src": "assets/ui/buddy/alert.png", "w": 512, "h": 512 },
+  "buddy/confused": { "src": "assets/ui/buddy/confused.png", "w": 512, "h": 512 },
+  "buddy/sleep": { "src": "assets/ui/buddy/sleep.png", "w": 512, "h": 512 },
 };

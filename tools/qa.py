@@ -977,13 +977,17 @@ def main():
                      visible: r.width > 60 && r.height > 30 && s.display !== 'none' && s.visibility !== 'hidden' };
           });
           const title = document.querySelector('#screen-title .title-main');
-          const astro = document.querySelector('#screen-title .title-astronaut');
-          const ar = astro ? astro.getBoundingClientRect() : null;
+          // The hero figure is whatever big astronaut image the landing uses;
+          // check it by size instead of by class name so redesigns still pass.
+          const hero = [...document.querySelectorAll('#screen-title img')]
+            .map((i) => ({ el: i, r: i.getBoundingClientRect() }))
+            .sort((a, b) => b.r.width - a.r.width)[0];
+          const ar = hero ? hero.r : null;
           return {
             buttons,
             jersey: document.fonts.check("40px 'Jersey 20'"),
-            astronaut: ar ? { w: Math.round(ar.width), bottom: Math.round(innerHeight - ar.bottom) } : null,
-            footer: (document.querySelector('#screen-title .title-footer') || {}).textContent || '',
+            astronaut: ar ? { w: Math.round(ar.width), h: Math.round(ar.height), src: hero.el.getAttribute('src') } : null,
+            footer: (document.querySelector('#screen-title .title-footer, #screen-title .figma-footer, #screen-title footer') || {}).textContent || '',
           };
         }""")
         check("Landing menu has the five design buttons at clickable size",
@@ -1379,6 +1383,300 @@ def main():
         # screenshots
         page.screenshot(path=os.path.join(SHOTS, "desktop.png"))
         ctx.close()
+
+        # ---------------------------------------------------------- Buddy ----
+        print("\nBuddy: layout, states, hints, privacy, proxy, voice")
+        buddy_sizes = [(1920, 860, False), (1280, 720, False), (768, 1024, True),
+                       (390, 844, True), (360, 640, True), (844, 390, True)]
+
+        def rect_js(page):
+            return js(page, """() => {
+              const R = (e) => {
+                if (!e) return null;
+                const b = e.getBoundingClientRect();
+                if (!e.offsetWidth && !e.offsetHeight) return null;
+                return { l: b.left, t: b.top, r: b.right, b: b.bottom };
+              };
+              const q = (s) => document.querySelector(s);
+              return {
+                fab: R(q('#buddy-fab')), hud: R(q('#hud')), coach: R(q('#coach')),
+                tracker: R(q('#tracker')), left: R(q('.dock-left')), right: R(q('.dock-right')),
+                act: R(q('#act-btn')), stick: R(q('#stick')), toggle: R(q('#console-toggle')),
+                panel: R(q('#buddy-panel')),
+                panelVisible: !q('#buddy-panel').hidden,
+                fabHidden: q('#buddy-fab').hidden || getComputedStyle(q('#buddy-fab')).display === 'none',
+                bodyOpen: document.body.classList.contains('buddy-open'),
+              };
+            }""")
+
+        def overlaps(a, b):
+            return bool(a and b and not (a["r"] <= b["l"] or a["l"] >= b["r"]
+                                         or a["b"] <= b["t"] or a["t"] >= b["b"]))
+
+        for bw, bh, btouch in buddy_sizes:
+            bctx = browser.new_context(viewport={"width": bw, "height": bh},
+                                       has_touch=btouch, is_mobile=btouch)
+            bp = bctx.new_page()
+            berr = []
+            bp.on("pageerror", lambda e: berr.append(str(e)))
+            bp.on("console", lambda m: berr.append(m.text) if m.type == "error" else None)
+            bp.goto((LIVE_URL or URL) + "?debug&level=1.3")
+            bp.wait_for_timeout(900)
+            closed = rect_js(bp)
+            issues = []
+            for key in ("hud", "coach", "tracker", "left", "right", "act", "stick", "toggle"):
+                if overlaps(closed["fab"], closed[key]):
+                    issues.append(key)
+            opened_ok = js(bp, "() => window.JuniorBuddy.open()")
+            bp.wait_for_timeout(250)
+            opened = rect_js(bp)
+            open_issues = []
+            for key in ("hud", "coach", "tracker", "left", "right", "act", "stick", "toggle"):
+                if opened[key] is not None and overlaps(opened["panel"], opened[key]):
+                    open_issues.append(key)
+            clean = (not issues and opened_ok and opened["panelVisible"] and opened["fabHidden"]
+                     and opened["bodyOpen"] and not open_issues
+                     and not [e for e in berr if not any(s in e.lower() for s in IGNORE)])
+            check(f"Buddy opens/closes clear of HUD/objectives/coach/console/ACT/joystick at {bw}x{bh}",
+                  clean, str({"closed": issues, "open": open_issues, "opened": opened_ok, "errs": berr[:1]}))
+            js(bp, "() => window.JuniorBuddy.close()")
+            bctx.close()
+
+        # State mapping: trigger every state through the debug hooks.
+        bctx = browser.new_context(viewport={"width": 1280, "height": 720})
+        bp = bctx.new_page()
+        bp.goto((LIVE_URL or URL) + "?debug&level=1.1")
+        bp.wait_for_timeout(800)
+        js(bp, "() => window.JuniorBuddy.open()")
+        state_map = {}
+        for state_name in ("idle", "listen", "think", "talk", "happy", "alert", "confused", "sleep"):
+            bp.evaluate("(s) => window.JuniorBuddy.trigger(s)", state_name)
+            bp.wait_for_timeout(60)
+            state_map[state_name] = js(bp, """() => ({
+              state: window.JuniorBuddy.state,
+              label: document.getElementById('buddy-state-label').textContent,
+              icon: document.getElementById('buddy-head-icon').getAttribute('src'),
+            })""")
+        check("Buddy renders all 8 states through their triggers",
+              all(state_map[k]["state"] == k and k in state_map[k]["icon"] for k in state_map),
+              str(state_map))
+        bctx.close()
+
+        # Hint ladder: three different hints, in order, for each level.
+        ladder_ok = True
+        ladder_detail = {}
+        for lid in ("1.1", "1.2", "1.3"):
+            hctx, hp = new_page(browser, 1280, 720, f"?debug&level={lid}")
+            hints = [js(hp, "() => window.JuniorBuddy.debugHint()") for _ in range(3)]
+            ladder_detail[lid] = hints
+            ladder_ok = ladder_ok and len(set(hints)) == 3 and all(hints)
+            hctx.close()
+        check("Buddy hint ladder gives 3 different steps on 1.1/1.2/1.3", ladder_ok, str(ladder_detail))
+
+        # Keyboard isolation + H/Esc.
+        kctx, kp = new_page(browser, 1280, 720, "?debug&level=1.1")
+        js(kp, "() => { window.JuniorBuddy.open(); document.getElementById('buddy-input').focus(); }")
+        before_keys = js(kp, """() => {
+          const J = window.__JAMT__;
+          return { x: J.player.x, y: J.player.y, phase: J.state.phase,
+                   alloc: { ...J.state.alloc }, action: !!J.state.action, hold: J.holdActive() };
+        }""")
+        kp.keyboard.type("wasd 12e")
+        kp.keyboard.press("Space")
+        after_keys = js(kp, """() => {
+          const J = window.__JAMT__;
+          return { x: J.player.x, y: J.player.y, phase: J.state.phase,
+                   alloc: { ...J.state.alloc }, action: !!J.state.action, hold: J.holdActive(),
+                   input: document.getElementById('buddy-input').value };
+        }""")
+        kp.keyboard.press("Escape")
+        esc_closed = not js(kp, "() => window.JuniorBuddy.isOpen")
+        kp.keyboard.press("h")
+        h_opened = js(kp, "() => window.JuniorBuddy.isOpen")
+        unchanged = all(before_keys[k] == after_keys[k] for k in before_keys)
+        check("Chat input blocks WASD/E/Space/1-3 hotkeys; Esc closes; H opens",
+              unchanged and after_keys["input"].startswith("wasd 12e")
+              and esc_closed and h_opened, str({"before": before_keys, "after": after_keys,
+                                                "esc": esc_closed, "h": h_opened}))
+        kctx.close()
+
+        # Offline / empty proxy: scripted-only, no fetch.
+        octx = browser.new_context(viewport={"width": 1280, "height": 720})
+        op = octx.new_page()
+        oerr = []
+        op.on("pageerror", lambda e: oerr.append(str(e)))
+        op.on("console", lambda m: oerr.append(m.text) if m.type == "error" else None)
+        op.add_init_script("window.__fetchCalls = 0; window.fetch = () => { window.__fetchCalls += 1; return Promise.reject(new Error('blocked')); };")
+        op.goto((LIVE_URL or URL) + "?debug&level=1.1")
+        op.wait_for_timeout(800)
+        js(op, "() => { window.JuniorBuddy.open(); window.JuniorBuddy.debugSetCloud(false); }")
+        js(op, "() => window.JuniorBuddy.ask('Tell me a joke about potatoes')")
+        op.wait_for_timeout(450)
+        off_result = js(op, "() => ({ calls: window.__fetchCalls, state: window.JuniorBuddy.state, messages: window.JuniorBuddy.messages.length })")
+        js(op, "() => { window.JuniorBuddy.debugSetCloud(true); window.JuniorBuddy.setProxy(''); window.JuniorBuddy.ask('Tell me a joke about potatoes'); }")
+        op.wait_for_timeout(500)
+        empty_result = js(op, "() => ({ calls: window.__fetchCalls, state: window.JuniorBuddy.state })")
+        octx.set_offline(True)
+        js(op, "() => window.JuniorBuddy.ask('I am stuck')")
+        op.wait_for_timeout(450)
+        offline_result = js(op, """() => ({
+          calls: window.__fetchCalls, state: window.JuniorBuddy.state,
+          messages: window.JuniorBuddy.messages.length, online: navigator.onLine,
+        })""")
+        check("Buddy works offline with cloud off and an empty proxy (no requests)",
+              off_result["calls"] == 0 and empty_result["calls"] == 0
+              and offline_result["calls"] == 0 and offline_result["messages"] >= 4
+              and off_result["state"] == "confused" and empty_result["state"] == "confused"
+              and not [e for e in oerr if not any(x in e.lower() for x in IGNORE)],
+              str({"off": off_result, "empty": empty_result, "offline": offline_result, "errs": oerr[:2]}))
+        octx.close()
+
+        # Mocked cloud: success, timeout, error, rate limit.
+        cloud_modes = {
+            "success": "window.fetch=(u,o)=>{window.__fetchCalls++;return Promise.resolve({ok:true,status:200,json:async()=>({answer:'Mock cloud answer.'})});};",
+            "error": "window.fetch=(u,o)=>{window.__fetchCalls++;return Promise.resolve({ok:false,status:500,json:async()=>({})});};",
+            "rate": "window.fetch=(u,o)=>{window.__fetchCalls++;return Promise.resolve({ok:false,status:429,json:async()=>({error:'rate'})});};",
+            "timeout": "window.fetch=(u,o)=>{window.__fetchCalls++;return new Promise((_,rej)=>setTimeout(()=>rej(Object.assign(new Error('abort'),{name:'AbortError'})),10));};",
+        }
+        cloud_results = {}
+        for mode, script in cloud_modes.items():
+            cctx = browser.new_context(viewport={"width": 1280, "height": 720})
+            cp = cctx.new_page()
+            cp.add_init_script("window.__fetchCalls=0; " + script)
+            cp.goto((LIVE_URL or URL) + "?debug&level=1.3")
+            cp.wait_for_timeout(700)
+            js(cp, "() => { window.JuniorBuddy.open(); window.JuniorBuddy.debugSetCloud(true); window.JuniorBuddy.setProxy('/mock'); }")
+            js(cp, "() => window.JuniorBuddy.ask('Tell me a joke about potatoes')")
+            cp.wait_for_timeout(1300)
+            cloud_results[mode] = js(cp, """() => ({
+              calls: window.__fetchCalls, state: window.JuniorBuddy.state,
+              last: window.JuniorBuddy.messages.slice(-1)[0]?.text || '',
+              note: document.getElementById('buddy-note').textContent || '',
+            })""")
+            cctx.close()
+        check("Mocked cloud success path shows a friendly reply",
+              cloud_results["success"]["calls"] >= 1 and "Mock cloud answer" in cloud_results["success"]["last"]
+              and cloud_results["success"]["state"] in ("talk", "idle"), str(cloud_results["success"]))
+        check("Mocked cloud timeout/error/rate-limit end friendly with confused state",
+              all(cloud_results[m]["state"] == "confused" and cloud_results[m]["last"] for m in ("timeout", "error", "rate"))
+              and cloud_results["timeout"]["calls"] >= 2 and cloud_results["error"]["calls"] >= 2
+              and cloud_results["rate"]["calls"] >= 1, str(cloud_results))
+
+        # EN / AR direction, overflow, and mixed technical terms.
+        lctx = browser.new_context(viewport={"width": 390, "height": 844}, has_touch=True, is_mobile=True)
+        lp = lctx.new_page()
+        lp.goto((LIVE_URL or URL) + "?debug&level=1.3")
+        lp.wait_for_timeout(800)
+        js(lp, "() => { window.JuniorBuddy.open(); window.JuniorBuddy.setLanguage('ar'); }")
+        lp.wait_for_timeout(250)
+        ar = js(lp, """() => {
+          const p = document.getElementById('buddy-panel');
+          return { dir: p.dir, lang: p.lang, chips: document.getElementById('buddy-chips').innerText,
+                   overflow: p.scrollWidth - p.clientWidth,
+                   bodyOverflow: document.body.scrollWidth - innerWidth };
+        }""")
+        js(lp, "() => window.JuniorBuddy.ask('أخبرني عن solar panel')")
+        lp.wait_for_timeout(600)
+        mixed = js(lp, """() => ({
+          last: window.JuniorBuddy.messages.slice(-1)[0]?.text || '',
+          bdi: Array.from(document.querySelectorAll('#buddy-messages bdi')).map((b) => b.textContent),
+          overflow: document.getElementById('buddy-panel').scrollWidth - document.getElementById('buddy-panel').clientWidth,
+        })""")
+        js(lp, "() => window.JuniorBuddy.setLanguage('en')")
+        lp.wait_for_timeout(250)
+        en = js(lp, "() => ({ dir: document.getElementById('buddy-panel').dir, overflow: document.getElementById('buddy-panel').scrollWidth - document.getElementById('buddy-panel').clientWidth })")
+        check("EN/AR switches dir, avoids horizontal overflow, and isolates mixed terms",
+              ar["dir"] == "rtl" and ar["lang"] == "ar" and ar["overflow"] <= 1 and ar["bodyOverflow"] <= 1
+              and "solar panel" in mixed["last"] and any("solar panel" in b for b in mixed["bdi"])
+              and mixed["overflow"] <= 1 and en["dir"] == "ltr" and en["overflow"] <= 1,
+              str({"ar": ar, "mixed": mixed, "en": en}))
+        lctx.close()
+
+        # Voice stubs: listen + talk, then unsupported degradation.
+        voice_script = """
+          class FakeSR {
+            constructor(){ this.lang='en-US'; }
+            start(){ setTimeout(()=>this.onstart&&this.onstart(),5);
+              setTimeout(()=>this.onresult&&this.onresult({results:[[{transcript:'What do I do next?'}]]}),45);
+              setTimeout(()=>this.onend&&this.onend(),500); }
+            stop(){ this.onend&&this.onend(); }
+          }
+          window.SpeechRecognition=FakeSR; window.webkitSpeechRecognition=FakeSR;
+          class FakeU { constructor(t){this.text=t;} }
+          window.SpeechSynthesisUtterance=FakeU;
+          Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: {
+            getVoices:()=>[{lang:'en-US',name:'Test'}], cancel:()=>{},
+            speak:(u)=>{setTimeout(()=>u.onstart&&u.onstart(),10);setTimeout(()=>u.onend&&u.onend(),600);}
+          }});
+        """
+        vctx = browser.new_context(viewport={"width": 1280, "height": 720})
+        vp = vctx.new_page()
+        vp.add_init_script(voice_script)
+        vp.goto((LIVE_URL or URL) + "?debug&level=1.1")
+        vp.wait_for_timeout(800)
+        js(vp, "() => window.JuniorBuddy.open()")
+        vp.click("#buddy-mic")
+        vp.wait_for_timeout(35)
+        listen = js(vp, "() => ({ state: window.JuniorBuddy.state, recording: !document.getElementById('buddy-recording').hidden, disabled: document.getElementById('buddy-mic').disabled })")
+        vp.wait_for_timeout(100)
+        transcript = js(vp, "() => document.getElementById('buddy-input').value")
+        js(vp, "() => { window.JuniorBuddy.debugSetSpeak(true); window.JuniorBuddy.ask('Why does this matter?'); }")
+        vp.wait_for_timeout(290)
+        talk = js(vp, "() => ({ state: window.JuniorBuddy.state, stop: !document.getElementById('buddy-stop').hidden })")
+        vp.wait_for_timeout(260)
+        idle = js(vp, "() => window.JuniorBuddy.state")
+        vctx.close()
+        uctx, up = new_page(browser, 1280, 720, "?debug&level=1.1")
+        up.add_init_script("try{Object.defineProperty(window,'SpeechRecognition',{value:undefined});Object.defineProperty(window,'webkitSpeechRecognition',{value:undefined});}catch(e){}")
+        up.goto((LIVE_URL or URL) + "?debug&level=1.1")
+        up.wait_for_timeout(700)
+        unsupported = js(up, "() => ({ disabled: document.getElementById('buddy-mic').disabled, title: document.getElementById('buddy-mic').title })")
+        js(up, "() => window.JuniorBuddy.open()")
+        js(up, "() => window.JuniorBuddy.ask('I am stuck')")
+        up.wait_for_timeout(450)
+        text_ok = js(up, "() => window.JuniorBuddy.messages.length >= 2")
+        uctx.close()
+        check("Voice stubs switch listen/talk states and unsupported browsers degrade to text",
+              listen["state"] == "listen" and listen["recording"] and not listen["disabled"]
+              and transcript == "What do I do next?" and talk["state"] == "talk" and talk["stop"]
+              and idle in ("idle", "talk") and unsupported["disabled"] and unsupported["title"] and text_ok,
+              str({"listen": listen, "transcript": transcript, "talk": talk, "idle": idle, "unsupported": unsupported, "text": text_ok}))
+
+        # Privacy / opt-in.
+        pctx, pp = new_page(browser, 1280, 720, "")
+        pp.wait_for_timeout(500)
+        privacy = js(pp, """() => ({
+          cloud: localStorage.getItem('jamt.settings') || '',
+          loading: document.getElementById('load-version').textContent,
+          credits: document.getElementById('credits-version').textContent,
+          note: document.getElementById('privacy-note').textContent,
+          cloudBtn: document.getElementById('set-buddy-cloud').textContent,
+        })""")
+        pp.evaluate("document.getElementById('set-buddy-cloud').click()")
+        pp.wait_for_timeout(100)
+        saved = js(pp, "() => JSON.parse(localStorage.getItem('jamt.settings') || '{}').buddyCloud")
+        privacy_ok = ("offline" in privacy["loading"].lower() and "privacy" in privacy["note"].lower()
+                      and "question" in privacy["note"].lower() and "last 4" in privacy["note"].lower()
+                      and saved is True)
+        pp.evaluate("document.getElementById('set-buddy-cloud').click()")
+        pctx.close()
+        check("Buddy cloud is opt-in, persisted, and privacy text names what is sent", privacy_ok, str(privacy))
+
+        # Mid-action guard.
+        actx, ap = new_page(browser, 1280, 720, "?debug&level=1.1&auto")
+        ap.wait_for_timeout(900)
+        mid = js(ap, """() => {
+          const J = window.__JAMT__, s = J.state;
+          const old = s.action;
+          s.action = { dummy: true };
+          const opened = window.JuniorBuddy.open();
+          const result = { opened, isOpen: window.JuniorBuddy.isOpen };
+          s.action = old;
+          return result;
+        }""")
+        actx.close()
+        check("Buddy refuses to cover the game during a hold/action", mid["opened"] is False and mid["isOpen"] is False, str(mid))
+
 
         # ------------------------------------------------------- sim freshness
         print("\nSim freshness")
