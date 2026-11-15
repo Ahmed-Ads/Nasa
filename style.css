@@ -3581,6 +3581,8 @@ body.touch-on .tracker {
   z-index: 3;
   display: flex;
   align-items: flex-end;
+  animation: astronautFloat 6s ease-in-out infinite;
+  will-change: transform;
 }
 
 .figma-astronaut-img {
@@ -4803,4 +4805,317 @@ body.reduce-motion .buddy-mic { transition: none; animation: none; }
 @media (max-width: 600px) {
   .buddy-panel { width: calc(100vw - 16px); max-height: calc(100vh - 16px); }
   .buddy-msg { max-width: 96%; }
+}
+
+/* ================================================== Space Stars & Floating Animations === */
+.space-stars {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 1;
+}
+
+/* Shooting Stars */
+.shooting-star {
+  position: absolute;
+  width: 140px;
+  height: 2px;
+  background: linear-gradient(-90deg, #ffffff, rgba(140, 210, 255, 0.8), transparent);
+  border-radius: 999px;
+  filter: drop-shadow(0 0 6px #7fdcff);
+  opacity: 0;
+  pointer-events: none;
+  transform: rotate(-35deg);
+}
+
+.shoot-1 {
+  top: 12%;
+  left: 65%;
+  animation: shootStar1 7s cubic-bezier(0.25, 0.1, 0.25, 1) infinite;
+  animation-delay: 1.2s;
+}
+
+.shoot-2 {
+  top: 32%;
+  left: 38%;
+  animation: shootStar2 9s cubic-bezier(0.25, 0.1, 0.25, 1) infinite;
+  animation-delay: 5s;
+}
+
+@keyframes shootStar1 {
+  0% {
+    transform: translateX(0) translateY(0) rotate(-35deg) scale(0);
+    opacity: 0;
+  }
+  4% {
+    opacity: 1;
+    transform: translateX(-40px) translateY(28px) rotate(-35deg) scale(1);
+  }
+  14% {
+    transform: translateX(-280px) translateY(196px) rotate(-35deg) scale(0.6);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(-280px) translateY(196px) rotate(-35deg) scale(0);
+    opacity: 0;
+  }
+}
+
+@keyframes shootStar2 {
+  0% {
+    transform: translateX(0) translateY(0) rotate(-32deg) scale(0);
+    opacity: 0;
+  }
+  5% {
+    opacity: 1;
+    transform: translateX(-50px) translateY(32px) rotate(-32deg) scale(1.1);
+  }
+  16% {
+    transform: translateX(-340px) translateY(215px) rotate(-32deg) scale(0.5);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(-340px) translateY(215px) rotate(-32deg) scale(0);
+    opacity: 0;
+  }
+}
+
+/* 4-Point Sparkle Stars (Drifting & Twinkling) */
+.star-sparkle {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+}
+
+.star-sparkle::before,
+.star-sparkle::after {
+  content: '';
+  position: absolute;
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.95) 45%, rgba(255, 255, 255, 0.95) 55%, transparent);
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+}
+
+.star-sparkle::before {
+  width: 30px;
+  height: 2px;
+}
+
+.star-sparkle::after {
+  width: 2px;
+  height: 30px;
+}
+
+.star-sparkle-core {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 10px #ffffff, 0 0 20px rgba(130, 200, 255, 0.9);
+}
+
+/* Glowing Moving Star Dots */
+.star-twinkle {
+  position: absolute;
+  border-radius: 50%;
+  background: #ffffff;
+  pointer-events: none;
+  box-shadow: 0 0 7px rgba(255, 255, 255, 0.95), 0 0 14px rgba(140, 200, 255, 0.7);
+}
+
+/* Moving animation assignments & positions */
+.s-sp1 { top: 15%; left: 9%; animation: sparkleFloatA 6s ease-in-out infinite; animation-delay: 0s; }
+.s-sp2 { top: 22%; left: 36%; animation: sparkleFloatB 7s ease-in-out infinite; animation-delay: 1.8s; }
+.s-sp3 { top: 12%; right: 24%; animation: sparkleFloatA 6.5s ease-in-out infinite; animation-delay: 0.9s; }
+.s-sp4 { top: 52%; left: 50%; animation-delay: 2.6s; animation: sparkleFloatB 8s ease-in-out infinite; }
+.s-sp5 { top: 74%; right: 28%; animation-delay: 1.4s; animation: sparkleFloatA 7s ease-in-out infinite; }
+
+.s-dot1 { width: 4px; height: 4px; top: 18%; left: 22%; animation: starFloatDriftA 5s ease-in-out infinite; animation-delay: 0.4s; }
+.s-dot2 { width: 5px; height: 5px; top: 35%; left: 15%; animation: starFloatDriftB 6s ease-in-out infinite; animation-delay: 1.3s; }
+.s-dot3 { width: 4px; height: 4px; top: 26%; left: 62%; animation: starFloatDriftA 5.5s ease-in-out infinite; animation-delay: 2.2s; }
+.s-dot4 { width: 5px; height: 5px; top: 44%; right: 34%; animation: starFloatDriftB 6.5s ease-in-out infinite; animation-delay: 0.7s; }
+.s-dot5 { width: 4px; height: 4px; top: 68%; left: 42%; animation: starFloatDriftA 7s ease-in-out infinite; animation-delay: 1.6s; }
+.s-dot6 { width: 6px; height: 6px; top: 80%; left: 25%; animation: starFloatDriftB 5.8s ease-in-out infinite; animation-delay: 2.9s; }
+.s-dot7 { width: 4px; height: 4px; top: 20%; right: 12%; animation: starFloatDriftA 6.2s ease-in-out infinite; animation-delay: 0.2s; }
+.s-dot8 { width: 5px; height: 5px; top: 62%; right: 16%; animation: starFloatDriftB 6.8s ease-in-out infinite; animation-delay: 1.9s; }
+.s-dot9 { width: 4px; height: 4px; top: 30%; left: 48%; animation: starFloatDriftA 5.6s ease-in-out infinite; animation-delay: 3.1s; }
+.s-dot10 { width: 5px; height: 5px; top: 56%; left: 10%; animation: starFloatDriftB 7.2s ease-in-out infinite; animation-delay: 0.9s; }
+
+/* Atmospheric pulse on background planet (Title Screen) */
+.title-planet-glow {
+  position: absolute;
+  top: clamp(14px, 5vh, 48px);
+  right: clamp(16px, 4vw, 56px);
+  width: clamp(110px, 15vw, 175px);
+  height: clamp(110px, 15vw, 175px);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+  background: radial-gradient(circle, rgba(140, 200, 255, 0.18) 0%, rgba(100, 160, 255, 0.08) 55%, transparent 72%);
+  filter: drop-shadow(0 0 22px rgba(130, 190, 255, 0.45));
+  animation: planetPulseTitle 8s ease-in-out infinite;
+}
+
+@keyframes planetPulseTitle {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+    opacity: 0.55;
+    filter: drop-shadow(0 0 16px rgba(120, 180, 255, 0.35));
+  }
+  50% {
+    transform: translateY(-9px) scale(1.06);
+    opacity: 0.95;
+    filter: drop-shadow(0 0 30px rgba(150, 215, 255, 0.7));
+  }
+}
+
+/* Visible movement: translating, floating, and pulsating */
+@keyframes starFloatDriftA {
+  0% {
+    transform: translate(0, 0) scale(0.7);
+    opacity: 0.3;
+  }
+  40% {
+    transform: translate(14px, -18px) scale(1.35);
+    opacity: 1;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 1), 0 0 18px rgba(160, 220, 255, 0.95);
+  }
+  75% {
+    transform: translate(24px, -30px) scale(0.9);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(0, 0) scale(0.7);
+    opacity: 0.3;
+  }
+}
+
+@keyframes starFloatDriftB {
+  0% {
+    transform: translate(0, 0) scale(0.65);
+    opacity: 0.25;
+  }
+  40% {
+    transform: translate(-16px, -15px) scale(1.4);
+    opacity: 1;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 1), 0 0 20px rgba(160, 220, 255, 1);
+  }
+  75% {
+    transform: translate(-28px, -26px) scale(0.85);
+    opacity: 0.75;
+  }
+  100% {
+    transform: translate(0, 0) scale(0.65);
+    opacity: 0.25;
+  }
+}
+
+@keyframes sparkleFloatA {
+  0% {
+    transform: translate(0, 0) rotate(0deg) scale(0.6);
+    opacity: 0.25;
+  }
+  35% {
+    transform: translate(14px, -16px) rotate(40deg) scale(1.4);
+    opacity: 1;
+    filter: drop-shadow(0 0 14px rgba(255, 255, 255, 1));
+  }
+  70% {
+    transform: translate(22px, -26px) rotate(75deg) scale(0.95);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(0, 0) rotate(90deg) scale(0.6);
+    opacity: 0.25;
+  }
+}
+
+@keyframes sparkleFloatB {
+  0% {
+    transform: translate(0, 0) rotate(0deg) scale(0.65);
+    opacity: 0.25;
+  }
+  35% {
+    transform: translate(-15px, -14px) rotate(-40deg) scale(1.35);
+    opacity: 1;
+    filter: drop-shadow(0 0 14px rgba(255, 255, 255, 1));
+  }
+  70% {
+    transform: translate(-24px, -24px) rotate(-70deg) scale(0.9);
+    opacity: 0.75;
+  }
+  100% {
+    transform: translate(0, 0) rotate(-90deg) scale(0.65);
+    opacity: 0.25;
+  }
+}
+
+@keyframes astronautFloat {
+  0% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-8px) rotate(-1deg);
+  }
+  50% {
+    transform: translateY(-16px) rotate(0.8deg);
+  }
+  75% {
+    transform: translateY(-7px) rotate(1.4deg);
+  }
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+}
+
+@keyframes planetFloatMoon {
+  0% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-7px) rotate(-1deg);
+  }
+  50% {
+    transform: translateY(-13px) rotate(0.6deg);
+  }
+  75% {
+    transform: translateY(-6px) rotate(1.2deg);
+  }
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+}
+
+@keyframes planetFloatMars {
+  0% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  30% {
+    transform: translateY(8px) rotate(0.8deg);
+  }
+  70% {
+    transform: translateY(-9px) rotate(-0.8deg);
+  }
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .figma-astronaut-wrap,
+  .d2-moon-img,
+  .d2-mars-img,
+  .star-sparkle,
+  .star-twinkle,
+  .shooting-star {
+    animation: none !important;
+  }
 }
