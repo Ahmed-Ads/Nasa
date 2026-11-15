@@ -21,6 +21,23 @@ tools/       slice_assets.py · sim.py · qa.py
 
 
 
+
+## v3.0.1 — Session 2A: gap closure
+
+- **Leak flow unified**: the old isolate/fetch/tape station shortcuts are gone. The only path is
+  physical — close the hatch with the toolbox at the leak slot (leak → 40%, recycler offline), tape
+  at the leak slot, two repair deliveries cure the patch, then the **Reopen hatch** action.
+- **Colliders**: every source and slot now has a 24×12 foot-box; they are in the y-sort drawables
+  and in the A* blocked grid (you cannot walk through crates, slots or patches).
+- **One source of truth**: `RESOURCE_DOCS` (built from `ITEM_META` + `SLOTS`) drives the briefing
+  resource table, the objective tracker counters and the new “Resources in Level 1” section in
+  Mission Science. Renaming or re-counting an item only needs that array.
+- **Switchboard marker**: a labelled sign at the battery bank with a blinking **!** while cells are
+  unspent; the 56 px interaction rule still gates `+/−`.
+- **QA**: 50/50 on `file://`. The stale v2 balance gate was removed; QA now prints
+  `SIM STALE for this build: sim build 2.0.0 != game 3.0.1` as a warning (not a pass).
+- **Version 3.0.1** in `index.html`, `game.js` and every `?v=` tag.
+
 ## v3.0.0 — Session 1: carry / deliver economy
 
 The switchboard no longer produces water. **Ice is the only new water**, and every big resource is

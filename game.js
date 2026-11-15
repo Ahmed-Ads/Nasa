@@ -466,14 +466,29 @@
     { id: 'bunker-slot', item: 'bag', x: 262, y: 286, cap: 5, label: 'Bunker wall slot', levels: ['1.3'] },
     { id: 'leak-slot', item: 'repair', x: 808, y: 452, cap: 3, label: 'Leak site', levels: ['1.2'] },
   ];
+  const RESOURCE_DOCS = [
+    { item: 'ice', source: 'Shaded crater (SW)', slot: 'water-slot', effect: '+12 water', need: 'mine' },
+    { item: 'panel', source: 'Cargo crates (lander pad)', slot: 'solar-slot', effect: '+1 solar cell / sol', need: 'take' },
+    { item: 'battery', source: 'Cargo crates', slot: 'battery-slot', effect: '+1 stored cell', need: 'take' },
+    { item: 'o2', source: 'Cargo crates (1.1, max 2)', slot: 'o2-slot', effect: '+25 O₂ (game assumption)', need: 'take' },
+    { item: 'bag', source: 'Soil near the bunker (1.3)', slot: 'bunker-slot', effect: '+8 shielding, bunker protection +8%', need: 'dig' },
+    { item: 'toolbox', source: 'Crates (1.2)', slot: 'leak-slot', effect: 'isolate the hatch', need: 'take' },
+    { item: 'tape', source: 'Crates (1.2)', slot: 'leak-slot', effect: 'tape the leak (Stage A)', need: 'take' },
+    { item: 'repair', source: 'Crates (1.2)', slot: 'leak-slot', effect: 'cure the permanent patch (2 deliveries)', need: 'take' },
+  ];
+  function slotById(id) { return state.slots.find((s) => s.id === id); }
+
   function buildInteractions() {
     const id = state.levelId;
     state.sources = SOURCES.filter((s) => !s.levels || s.levels.includes(id)).map((s) => ({ ...s, stock: s.cap }));
     state.slots = SLOTS.filter((s) => !s.levels || s.levels.includes(id)).map((s) => ({ ...s, filled: 0 }));
     state.groundItems = [];
     state.carry = null;
+    extraColliders = [];
     state.panelBonus = 0;
     state.bags = 0;
+    // foot-boxes: sources and slots block walking through them
+    extraColliders = [...state.sources, ...state.slots].map((o) => ({ x: o.x - 12, y: o.y - 12, w: 24, h: 12 }));
   }
   function restock() {
     for (const s of state.sources) s.stock = s.cap;
@@ -684,9 +699,10 @@
   }
 
   /* ------------------------------------------------------------- collision -- */
+  let extraColliders = [];
   function blockedAt(x, y) {
     const r = player.radius;
-    for (const c of colliders) {
+    for (const c of colliders.concat(extraColliders)) {
       if (x + r > c.x && x - r < c.x + c.w && y + r > c.y && y - r < c.y + c.h) return true;
     }
     return false;
@@ -942,6 +958,23 @@
     ctx.strokeStyle = 'rgba(255,207,58,.6)';
     ctx.strokeRect(Math.round(it.x) - 9, Math.round(it.y) - 16, 18, 16);
   }
+  function drawSwitchboard() {
+    ctx.fillStyle = '#0b0f1c';
+    ctx.fillRect(346, 344, 60, 12);
+    ctx.fillStyle = '#9fd0ff';
+    ctx.font = '7px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('SWITCHBOARD', 376, 353);
+    ctx.textAlign = 'left';
+    if (leftCells() > 0) {
+      const bob = Math.round(Math.sin(performance.now() / 300) * 2);
+      ctx.fillStyle = '#ffcf3a';
+      ctx.fillRect(370, 326 + bob, 9, 11);
+      ctx.fillStyle = '#2a1d00';
+      ctx.fillRect(373, 329 + bob, 3, 5);
+      ctx.fillRect(374, 336 + bob, 1, 2);
+    }
+  }
   function drawSlot(slot) {
     const matching = state.carry && slotAccepts(slot, state.carry);
     const pulse = 0.35 + 0.35 * Math.sin(performance.now() / 240);
@@ -1053,6 +1086,7 @@
     for (const src of state.sources) drawables.push({ id: 'src-' + src.id, y: src.y, draw: () => drawSource(src) });
     for (const slot of state.slots) drawables.push({ id: 'slot-' + slot.id, y: slot.y, draw: () => drawSlot(slot) });
     state.groundItems.forEach((it, i) => drawables.push({ id: 'item' + i, y: it.y, draw: () => drawGroundItem(it) }));
+    drawables.push({ id: 'switchboard', y: 378, draw: drawSwitchboard });
     for (const n of npcs) drawables.push({ id: n.id, y: n.y, draw: () => drawNPC(n) });
     drawables.push({ id: 'player', y: player.y, draw: drawPlayer });
     drawables.sort((a, b) => a.y - b.y);
@@ -1182,7 +1216,7 @@
       const used = s.iceUsedSol === s.sol;
       const what = L.id === '1.3' ? `+${RULES.iceO2.value} O₂` : `+${RULES.iceWater.value} water`;
       return {
-        id: 'ice', label: used ? 'Ice already hauled this sol' : `Haul ice ${what}`,
+        id: 'ice', label: used ? 'Ice already hauled this sol' : `Mine ice ${what}`,
         minutes: 2, disabled: noMinutes || used, run: () => doHaulIce(),
       };
     }
@@ -1195,19 +1229,52 @@
     }
     if (st.id === 'leak') {
       if (L.id !== '1.2') return null;
-      if (!s.isolated) return { id: 'isolate', label: 'Close hatch (isolate leak)', minutes: 2, disabled: noMinutes, run: () => doIsolate() };
-      if (s.isolated && !s.taped) {
-        if (s.carryingTape) return { id: 'tape', label: 'Apply Kapton tape', minutes: 1, disabled: noMinutes, run: () => doTape() };
-        return { id: 'needtape', label: 'Need toolbox + tape (crates)', minutes: 0, run: () => addLog('🧰 The toolbox and tape are in the crates south of the habitat.', 'warn') };
-      }
-      if (s.taped && !s.patched) return { id: 'patchwait', label: `Patch curing (${s.patch}/2 repair cells)`, minutes: 0, run: () => addLog('🔧 Allocate repair cells to cure the permanent patch.', 'muted') };
-      if (s.patched && !s.reopened) return { id: 'reopen', label: 'Reopen hatch', minutes: 1, disabled: noMinutes, run: () => doReopen() };
-      return { id: 'leakdone', label: 'Leak sealed', minutes: 0, run: () => addLog('✅ The recycler is sealed and running.', 'good') };
+      if (s.reopened) return { id: 'leakdone', label: 'Leak sealed', minutes: 0, run: () => addLog('✅ The recycler is sealed and running.', 'good') };
+      if (s.patched) return { id: 'reopen', label: 'Reopen hatch', minutes: 0, run: () => doReopen() };
+      const need = !s.isolated ? 'the toolbox' : (!s.taped ? 'Kapton tape' : `${RULES.patchNeeded.value - s.patch} repair deliveries`);
+      return { id: 'leakinfo', label: `Leak site — needs ${need}`, minutes: 0, run: () => addLog(`Carry <b>${need}</b> to the leak site.`, 'warn') };
     }
     return null;
   }
 
   /* ------------------------------------------------------------- EVA tasks -- */
+  function doReopen() {
+    spend(1);
+    state.reopened = true;
+    addLog('✅ Hatch reopened: the recycler is back online and the leak is sealed.', 'good');
+    Sound.ok();
+  }
+  function doReadDish() {
+    spend(1);
+    state.stormKnown = true;
+    addLog(`📡 Space weather: storm arrives on <b>Sol ${state.stormArrival}</b> and lasts ${state.stormDuration} sol${state.stormDuration > 1 ? 's' : ''}.`, 'good');
+    Sound.ok();
+  }
+  function doHaulIce() {
+    const s = state;
+    s.iceUsedSol = s.sol;
+    spend(2);
+    if (s.levelId === '1.3') {
+      s.res.o2 = clamp(s.res.o2 + RULES.iceO2.value);
+      addLog(`🧊 Hauled ice: <b>+${RULES.iceO2.value} O2</b> from electrolysis.`, 'good');
+      if (s.stormStarted) { s.dose = clamp(s.dose + RULES.iceDose.value, 0, 100); addLog(`☢ Exposed during the storm: <b>+${RULES.iceDose.value} dose</b>.`, 'warn'); }
+    } else {
+      s.res.water = clamp(s.res.water + RULES.iceWater.value);
+      addLog(`🧊 Hauled ice to the tank: <b>+${RULES.iceWater.value} water</b>.`, 'good');
+    }
+    Sound.ok();
+  }
+  function orderShelter(fromStation) {
+    const s = state;
+    if (s.sheltered) return;
+    if (fromStation) spend(1);
+    s.sheltered = true;
+    s.shelterSol = s.sol;
+    addLog('🛖 Shelter order given: the crew is moving to the regolith bunker.', 'good');
+    Sound.ok();
+    render();
+  }
+
   function spend(minutes) {
     state.eva = Math.max(0, state.eva - minutes);
     state.evaUsed += minutes;
@@ -1236,64 +1303,6 @@
     addLog('☀️ Spare panel installed: <b>+1 power cell</b> for the rest of the mission.', 'good');
     Sound.ok();
   }
-  function doFetchTape() {
-    spend(1);
-    state.carryingTape = true;
-    addLog('🧰 Fetched the toolbox and Kapton tape. Apply it at the recycler.', 'good');
-    Sound.ok();
-  }
-  function doIsolate() {
-    spend(2);
-    state.isolated = true;
-    addLog('🚪 Hatch closed: leak cut to 40%, but the recycler is offline (no water from cells).', 'warn');
-    Sound.ok();
-  }
-  function doTape() {
-    spend(1);
-    state.taped = true;
-    addLog('🩹 Kapton tape applied: leak down to 16%. Now cure the permanent patch.', 'good');
-    Sound.ok();
-  }
-  function doReopen() {
-    spend(1);
-    state.reopened = true;
-    addLog('✅ Hatch reopened: recycler is back online and the leak is sealed.', 'good');
-    Sound.ok();
-  }
-  function doReadDish() {
-    spend(1);
-    state.stormKnown = true;
-    addLog(`📡 Space weather: storm arrives on <b>Sol ${state.stormArrival}</b> and lasts ${state.stormDuration} sol${state.stormDuration > 1 ? 's' : ''}.`, 'good');
-    Sound.ok();
-  }
-  function doHaulIce() {
-    const s = state;
-    s.iceUsedSol = s.sol;
-    spend(2);
-    if (s.levelId === '1.3') {
-      s.res.o2 = clamp(s.res.o2 + RULES.iceO2.value);
-      addLog(`🧊 Hauled ice: <b>+${RULES.iceO2.value} O₂</b> from electrolysis.`, 'good');
-      if (s.stormStarted) {
-        s.dose = clamp(s.dose + RULES.iceDose.value, 0, 100);
-        addLog(`☢ Exposed during the storm: <b>+${RULES.iceDose.value} dose</b>.`, 'warn');
-      }
-    } else {
-      s.res.water = clamp(s.res.water + RULES.iceWater.value);
-      addLog(`🧊 Hauled ice to the tank: <b>+${RULES.iceWater.value} water</b>.`, 'good');
-    }
-    Sound.ok();
-  }
-  function orderShelter(fromStation) {
-    const s = state;
-    if (s.sheltered) return;
-    if (fromStation) spend(1);
-    s.sheltered = true;
-    s.shelterSol = s.sol;
-    addLog('🛖 Shelter order given: the crew is moving to the regolith bunker.', 'good');
-    Sound.ok();
-    render();
-  }
-
   /* --------------------------------------------------------- hold-to-do UI -- */
   const hold = { active: false, t: 0, action: null, station: null };
 
@@ -2280,7 +2289,7 @@
     slots() { return state.slots.map((s) => ({ id: s.id, filled: s.filled, cap: s.cap })); },
     sources() { return state.sources.map((s) => ({ id: s.id, item: s.item, stock: s.stock, cap: s.cap })); },
     nearest() { return nearestInteractable(); },
-    state,
+    state, RESOURCE_DOCS, ITEM_META, SLOTS, actionFor, blockedAt,
   };
   window.__JAMT__ = {
     get state() { return state; },
@@ -2348,7 +2357,7 @@
 
 
   /* ============ iteration 2: loading, menus, briefing, pause, touch ====== */
-  const BUILD_VERSION = '3.0.0';
+  const BUILD_VERSION = '3.0.1';
   const TIPS = [
     'Did you know? ISS life support recovers about 98% of the crew’s water (NASA ECLSS).',
     'Did you know? Water ice hides in permanently shadowed craters at the lunar south pole (LRO/LCROSS).',
@@ -2613,6 +2622,12 @@
     });
   }
 
+  (function renderScienceResources() {
+    const box = document.getElementById('science-resources');
+    if (!box) return;
+    box.innerHTML = RESOURCE_DOCS.filter((d) => d.slot !== 'leak-slot').map((d) =>
+      `<div class="station-row"><span>${ITEM_META[d.item].name} → ${(SLOTS.find((s) => s.id === d.slot) || {}).label || d.slot}</span><b>${d.effect}</b></div>`).join('');
+  })();
   applySettings();
   wireFlow();
   initLoading();

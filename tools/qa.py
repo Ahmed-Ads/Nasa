@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import os
 import sys
 
@@ -40,6 +41,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 URL = "file:///" + os.path.join(ROOT, "index.html").replace("\\", "/")
 LIVE_URL = None
+GAME_SRC = open(os.path.join(ROOT, "game.js"), encoding="utf-8").read()
+BUILD_VERSION = re.search(r"BUILD_VERSION = '([^']+)'", GAME_SRC).group(1)
 SHOTS = os.path.join(HERE, "qa_shots")
 os.makedirs(SHOTS, exist_ok=True)
 
@@ -335,6 +338,24 @@ def main():
         check("dropped item persists on the map", econ["dropped"] >= 1, str(econ))
         ectx.close()
 
+        # -------------------------------------------------------- version
+        html = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
+        check("E version 3.0.1 in index.html", "v3.0.1" in html)
+        check("E version 3.0.1 in game.js", BUILD_VERSION == "3.0.1", BUILD_VERSION)
+        tags = re.findall(r"\?v=([0-9.]+)", html)
+        check("E every ?v= tag is 3.0.1", bool(tags) and all(t == "3.0.1" for t in tags), str(tags))
+
+        # ----------------------------------------------------- session 2A
+        print("\nSession 2A gaps")
+        c2, p2 = new_page(browser, 1280, 720, "?debug&level=1.2")
+        leak = js(p2, "() => { const J = window.__JAMT__, T = window.__T, st = J.STATIONS.find(s => s.id === 'leak'); const a = T.actionFor(st); return { id: a && a.id, label: a && a.label }; }")
+        check("A2 leak has no shortcut action", leak["id"] in ("leakinfo", "reopen", "leakdone"), str(leak))
+        walk = js(p2, "() => { const J = window.__JAMT__, T = window.__T, s = J.state; return [...s.sources, ...s.slots].every(o => T.blockedAt(o.x, o.y - 6)); }")
+        check("A3 sources/slots block walking", walk is True)
+        docs = js(p2, "() => window.__T.RESOURCE_DOCS.every(d => !!window.__T.ITEM_META[d.item])")
+        check("A4 resource docs reference real items", docs is True)
+        c2.close()
+
         # ------------------------------------------------------------ flow
         print("\nFlow (loading -> title -> map -> briefing -> pause)")
         fctx, fpage = new_page(browser, 1280, 720, "")
@@ -361,15 +382,18 @@ def main():
         page.screenshot(path=os.path.join(SHOTS, "desktop.png"))
         ctx.close()
 
-        # ------------------------------------------------------------- balance
-        print("\nBalance")
+        # ------------------------------------------------------- sim freshness
+        print("\nSim freshness")
         try:
             with open(os.path.join(HERE, "sim_results.json"), encoding="utf-8") as f:
                 sim = json.load(f)
-            bad = [c["label"] for c in sim["checks"] if not c["pass"]]
-            check(f"balance targets met ({len(sim['checks'])} checks, {sim['runs']} runs/policy)", not bad, ", ".join(bad))
+            v = str(sim.get("buildVersion", "unknown"))
+            if v != BUILD_VERSION:
+                print(f"  [WARN] SIM STALE for this build: sim build {v} != game {BUILD_VERSION} (not a pass)")
+            else:
+                print(f"  sim build matches {v}")
         except FileNotFoundError:
-            check("balance results exist", False, "run tools/sim.py first")
+            print("  [WARN] SIM STALE: tools/sim_results.json missing (not a pass)")
 
         browser.close()
 

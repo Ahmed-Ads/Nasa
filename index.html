@@ -6,7 +6,7 @@
 <title>Junior Astronaut Mission Trainer — Level 1: The Moon</title>
 <meta name="description" content="A pixel-art mission trainer for ages 7–12. Plan power, walk the lunar outpost, and keep the crew alive across three missions. Built for the 2026 NASA Space Apps Challenge.">
 <meta name="theme-color" content="#06070f">
-<link rel="stylesheet" href="style.css?v=3.0.0">
+<link rel="stylesheet" href="style.css?v=3.0.1">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%2306070f'/%3E%3Ccircle cx='8' cy='8' r='5' fill='%23c2c6d4'/%3E%3Ccircle cx='6' cy='6.5' r='1.5' fill='%239a9fb2'/%3E%3Ccircle cx='10' cy='10' r='1' fill='%239a9fb2'/%3E%3C/svg%3E">
 </head>
 <body>
@@ -21,7 +21,7 @@
       <p class="load-count" id="load-count">Loading outpost…</p>
       <p class="load-tip" id="load-tip"></p>
       <button class="btn btn-primary btn-lg gate" id="start-gate" type="button" disabled>PRESS TO START</button>
-      <p class="loading-version">v3.0.0 · no data leaves your device</p>
+      <p class="loading-version">v3.0.1 · no data leaves your device</p>
     </div>
   </div>
   <div class="viewport" id="viewport">
@@ -76,7 +76,7 @@
           <button class="btn btn-sm" id="menu-quit" type="button">QUIT</button>
         </div>
       </div>
-      <p class="title-version" id="title-version">v3.0.0</p>
+      <p class="title-version" id="title-version">v3.0.1</p>
       <div class="level-chips" aria-hidden="true">
         <span class="level is-current">1.1 Prep</span>
         <span class="level">1.2 Leak</span>
@@ -283,6 +283,8 @@
   <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="science-title">
     <button class="modal-close" data-close type="button" aria-label="Close">✕</button>
     <h2 id="science-title">Mission Science</h2>
+    <p class="learn-label" style="color:var(--cyan)">Resources in Level 1</p>
+    <div id="science-resources" class="science-res"></div>
     <p>Every rule starts from real space engineering. Values we could verify on NASA pages are marked
       <strong>real</strong>; everything tuned for play is marked <strong>game assumption</strong>.</p>
     <table class="data-table">
@@ -352,7 +354,7 @@
   </div>
 </div>
 
-<script src="assets/manifest.js?v=3.0.0"></script>
-<script src="game.js?v=3.0.0" defer></script>
+<script src="assets/manifest.js?v=3.0.1"></script>
+<script src="game.js?v=3.0.1" defer></script>
 </body>
 </html>
