@@ -277,7 +277,7 @@
     penalty: 0,
     air: 100,
     airWarned: false,
-    rover: { mounted: false, cargo: [], usedThisSol: false, dead: false, x: 566, y: 536, turn: { x: 0, y: 1 } },
+    rover: { mounted: false, parked: true, cargo: [], usedThisSol: false, dead: false, x: 566, y: 536, turn: { x: 0, y: 1 } },
     sweepSol: 0,
     panelDeployed: false,
     panelBonus: 0, bags: 0, carry: null, groundItems: [], sources: [], slots: [], snap: null, atSwitchboard: false,
@@ -314,7 +314,7 @@
 
   const player = {
     x: 512, y: 430, tx: 512, ty: 430,
-    path: [], facing: 1, moving: false, walk: 0, radius: 7,
+    path: [], facing: 1, moving: false, walk: 0, radius: 7, stuckT: 0,
     animDist: 0, animFrame: 0, animMode: 'idle',
   };
   const npcs = [
@@ -596,6 +596,7 @@
     { id: 'boulder5', sprite: null, x: 470, y: 168, w: 30, h: 24, cx: 456, cy: 152, cw: 24, ch: 14 },
   ];
 
+  const ROVER_HOME = { x: 566, y: 536 };
   const STATIONS = [
     { id: 'solar', x: 216, y: 386, r: 62, label: 'Solar field' },
     { id: 'battery', x: 376, y: 378, r: 40, label: 'Battery bank' },
@@ -606,7 +607,7 @@
     { id: 'comms', x: 664, y: 240, r: 44, label: 'Comms dish' },
     { id: 'ice', x: 150, y: 556, r: 52, label: 'Ice patch' },
     { id: 'bunker', x: 262, y: 286, r: 52, label: 'Bunker' },
-    { id: 'rover', x: 566, y: 566, r: 38, label: 'Rover' },
+    { id: 'rover', x: 566, y: 536, r: 56, label: 'Rover' },
     { id: 'crates', x: 650, y: 564, r: 42, label: 'Crates' },
   ];
 
@@ -907,6 +908,7 @@
       }
     }
     for (const c of colliders.concat(extraColliders)) {
+      if (state.rover.mounted && c.id === 'rover') continue;
       if (x + r > c.x && x - r < c.x + c.w && y + r > c.y && y - r < c.y + c.h) return true;
     }
     return false;
@@ -988,23 +990,67 @@
   const keys = { up: false, down: false, left: false, right: false };
   let dustPuffs = [];
 
+  function parkRoverAt(x, y) {
+    const r = state.rover;
+    r.x = x; r.y = y; r.parked = true;
+    const prop = PROPS.find((p) => p.id === 'rover');
+    if (prop) { prop.x = x; prop.y = y; }
+    const col = colliders.find((c) => c.id === 'rover');
+    if (col) { col.x = x - 36; col.y = y - 26; col.w = 72; col.h = 30; }
+    const st = STATIONS.find((s2) => s2.id === 'rover');
+    if (st) { st.x = x; st.y = y; st.r = 56; }
+  }
+  function isFreePoint(x, y) {
+    return x >= 8 && x <= WORLD.w - 8 && y >= 24 && y <= WORLD.h - 8 && !blockedAt(x, y);
+  }
+  function nearestFreePoint(x, y) {
+    if (isFreePoint(x, y)) return { x, y };
+    for (let radius = 8; radius <= 96; radius += 8) {
+      for (let i = 0; i < 16; i++) {
+        const angle = (i * Math.PI) / 8;
+        const nx = Math.round(x + Math.cos(angle) * radius);
+        const ny = Math.round(y + Math.sin(angle) * radius);
+        if (isFreePoint(nx, ny)) return { x: nx, y: ny };
+      }
+    }
+    return null;
+  }
+  function unstickPlayer(puff = false) {
+    const free = nearestFreePoint(player.x, player.y);
+    if (!free) return false;
+    if (puff) {
+      dustPuffs.push({ x: player.x, y: player.y, life: 0.4 });
+      if (dustPuffs.length > 16) dustPuffs.shift();
+    }
+    player.x = free.x; player.y = free.y; player.stuckT = 0;
+    return true;
+  }
   function mountRover() {
     const r = state.rover;
     if (r.mounted) return;
-    if (r.dead || getBattery() <= 0) { r.dead = true; addLog('🔋 Rover battery is empty — charge a cell at the switchboard.', 'warn'); Sound.warn(); return; }
-    r.mounted = true; r.usedThisSol = true;
-    addLog('🚙 Rover powered: speed x2.5, cargo 4, lower air drain. ACT again on open ground to park.', 'good');
+    if (getBattery() <= 0) {
+      r.dead = true;
+      addLog('The rover has no power today.', 'warn');
+      Sound.warn(); return;
+    }
+    r.dead = false;
+    r.mounted = true; r.parked = false; r.usedThisSol = true;
+    r.x = player.x; r.y = player.y;
+    addLog('Rover ready. It is fast and holds 4 items. ACT again to park.', 'good');
     Sound.ok(); render();
   }
   function dismountRover() {
     const r = state.rover;
     if (!r.mounted) return;
+    const x = player.x, y = player.y;
     r.mounted = false;
-    r.x = player.x; r.y = player.y + 14;
-    const prop = PROPS.find((p) => p.id === 'rover');
-    if (prop) { prop.x = r.x; prop.y = r.y; const col = colliders.find((c) => c.id === 'rover'); if (col) { col.x = r.x - 36; col.y = r.y - 26; } }
-    const st = STATIONS.find((s2) => s2.id === 'rover'); if (st) { st.x = r.x; st.y = r.y + 30; }
-    addLog('🚙 Rover parked. Cargo stays on it.', 'muted'); Sound.click(); render();
+    r.x = x; r.y = y; r.parked = true;
+    parkRoverAt(x, y);
+    const free = nearestFreePoint(x, y);
+    if (free) { player.x = free.x; player.y = free.y; }
+    else { player.x = 512; player.y = 430; }
+    player.stuckT = 0;
+    addLog('Rover parked. Cargo stays on it.', 'muted'); Sound.click(); snapCamera(); render();
   }
   function walkBackRadius() { return (state.air / 0.55) * 82; }
 
@@ -1024,6 +1070,7 @@
   }
 
   function updatePlayer(dt) {
+    if (blockedAt(player.x, player.y)) unstickPlayer(false);
     let dx = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
     let dy = (keys.down ? 1 : 0) - (keys.up ? 1 : 0);
 
@@ -1046,11 +1093,17 @@
       dx = t.x / tl; dy = t.y / tl;
       if (getBattery() <= 0) { dismountRover(); addLog('Rover battery empty — walking from here.', 'warn'); }
     }
+    let moved = 0;
     if (player.moving) {
       const speed = state.rover.mounted ? 205 : 82;
       const fromX = player.x, fromY = player.y;
       movePlayer(dx * speed * dt, dy * speed * dt);
-      const moved = Math.hypot(player.x - fromX, player.y - fromY);
+      moved = Math.hypot(player.x - fromX, player.y - fromY);
+      if (moved > 0.01) player.stuckT = 0;
+      else {
+        player.stuckT += dt;
+        if (player.stuckT >= 1.5) unstickPlayer(true);
+      }
       if (!state.rover.mounted && moved > 0.01) {
         if (state.levelId === '1.1' && state.sol === 1 && state.phase === 'eva' && state.tutorialStep === 0) state.tutorialMoved = true;
         player.animDist += moved;
@@ -1071,6 +1124,11 @@
       }
     } else {
       player.animMode = 'idle';
+      player.stuckT = 0;
+    }
+    if (state.rover.mounted) {
+      state.rover.x = player.x;
+      state.rover.y = player.y;
     }
     if (state.air <= 25 && !state.airWarned) {
       state.airWarned = true;
@@ -1529,8 +1587,10 @@
     const s = state;
     const L = s.level;
     if (!L) return null;
+    if (s.rover.mounted && (!st || st.id === 'rover')) {
+      return { id: 'dismount', label: 'Park rover', minutes: 0, run: () => dismountRover() };
+    }
     if (!st) {
-      if (s.rover.mounted) return { id: 'dismount', label: 'Park rover', minutes: 0, run: () => dismountRover() };
       if (s.carry) return { id: 'drop', label: `Drop ${ITEM_META[s.carry].name}`, minutes: 0, run: () => dropItem() };
       return null;
     }
@@ -2361,8 +2421,11 @@
     }
 
     buildInteractions();
+    s.rover.mounted = false; s.rover.parked = true; s.rover.usedThisSol = false; s.rover.dead = false;
+    s.rover.turn = { x: 0, y: 1 };
+    parkRoverAt(ROVER_HOME.x, ROVER_HOME.y);
     player.x = 512; player.y = 430; player.path = []; player.facing = 1;
-    player.animDist = 0; player.animFrame = 0; player.animMode = 'idle';
+    player.animDist = 0; player.animFrame = 0; player.animMode = 'idle'; player.stuckT = 0;
     s.action = null;
     s.tutorialStep = 0; s.tutorialMoved = false; s.tutorialSkipped = false; s.tutorialDelivered = false; s.tutorialDone = false;
     for (const n of npcs) { n.x = n.id === 'npc1' ? 470 : 620; n.y = n.id === 'npc1' ? 400 : 420; n.tx = n.x; n.ty = n.y; n.atBunker = false; }
@@ -3212,7 +3275,7 @@
   }
   function closePause() { flowEls.pause.hidden = true; state.paused = false; }
 
-  const UI_SAD = 'assets/ui/sad_astronaut.png?v=3.1.6';
+  const UI_SAD = 'assets/ui/sad_astronaut.png?v=3.1.7';
   function askConfirm(text, onYes, art = null) {
     flowEls.confirmText.textContent = text;
     if (flowEls.confirmArt) {

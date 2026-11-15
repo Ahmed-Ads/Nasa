@@ -24,18 +24,27 @@ tools/       slice_assets.py · sim.py · qa.py
 
 
 
-## v3.1.7 - Repair the game screen after the merge
+## v3.1.7 - ROVER-FIX + the edit_design UI, merged for real
 
-- Restored the console/HUD markup that the `edit_design` merge dropped: forecast, suit air,
-  radiation dose, battery line, systems, leak patch, run block and the debrief/learn cards are
-  back, so `game.js` finds every element it wires up on boot.
-- The loading gate finishes ("Ready, Commander.") and the game starts again instead of hanging
-  on the loading screen.
-- Landing page keeps the v3.1.6 crest/start/quit art and drops the Google Fonts request, so the
-  game stays fully offline with system fonts.
-- Level map now scales to the viewport (`--map-scale`), so the Moon/Mars labels and the far
-  nodes are no longer clipped.
-- QA: **106/106** on `file://`; the sim build is still stale (v2 warning).
+- The rover now follows the rider exactly while mounted. Dismount parks it at that exact
+  point (`rover.parked = true`) and never snaps it back to its start.
+- Dismount places the player at the nearest free point with a 8 px spiral search up to 96 px,
+  outside the parked rover, dome, bunker, slots and sources. The player is never left inside
+  a collider.
+- ACT within 56 px of the parked rover re-mounts any number of times. The battery is still
+  handled once per day through `usedThisSol`; empty power shows "The rover has no power
+  today" and leaves the rover parked.
+- Added overlap recovery and a 1.5 s no-movement unstick with a small dust puff.
+- Restart/retry resets the rover to its home position, not its last parked spot.
+- The `edit_design` screens are back: the console/HUD markup the old merge dropped (forecast,
+  suit air, radiation dose, battery line, systems, leak patch, run block, debrief and learn
+  cards) is restored, so `game.js` finds every element it wires up on boot and the loading
+  gate reaches "Ready, Commander." again.
+- Landing keeps the v3.1.6 crest/start/quit art with no Google Fonts request, so the build
+  stays fully offline, and the level map scales to the viewport (`--map-scale`) instead of
+  clipping its labels and outer nodes.
+- QA: **112/112** on `file://` and the live GitHub Pages URL, including five desktop cycles,
+  phone ACT cycling, empty-battery remount and restart reset. Sim remains stale (v2 warning).
 
 ## v3.1.6 - Landing and quit art from img8/img9
 
