@@ -795,6 +795,268 @@ def main():
               dbg.get("actionPanels") == 4 and abs(dbg.get("img12Scale", 0) - 0.2082945881) < 1e-6,
               str(dbg))
 
+        # ---------------------------------------------------------- FIX-2
+        print("\nFIX-2: kid vocabulary + coach")
+        bad_words = re.compile(r"\b(Sol|EVA|RESOLVE)\b")
+
+        # title, how-to, briefing, HUD/log, pause, science
+        tctx, tpage = new_page(browser, 1280, 720, "")
+        tpage.wait_for_timeout(1600)
+        tpage.click("#start-gate"); tpage.wait_for_timeout(200)
+        fix_texts = {"title": tpage.inner_text("#screen-title")}
+        tpage.click("#how-btn"); tpage.wait_for_timeout(100)
+        fix_texts["how"] = tpage.inner_text("#modal-how")
+        tpage.click("#modal-how [data-close]")
+        tpage.click("#play-btn"); tpage.wait_for_timeout(200)
+        tpage.click(".mission-card"); tpage.wait_for_timeout(200)
+        fix_texts["brief"] = tpage.inner_text("#screen-brief")
+        tpage.click("#brief-start"); tpage.wait_for_timeout(900)
+        fix_texts["game"] = tpage.inner_text("body")
+        tpage.click("#pause-btn"); tpage.wait_for_timeout(100)
+        fix_texts["pause"] = tpage.inner_text("#modal-pause")
+        tpage.click("#pause-continue")
+        tpage.click("#science-btn-hud"); tpage.wait_for_timeout(100)
+        fix_texts["science"] = tpage.inner_text("#modal-science")
+        tpage.click("#modal-science [data-close]")
+        tpage.evaluate("() => window.__JAMT__.endLevel(true)")
+        tpage.wait_for_timeout(300)
+        fix_texts["debrief"] = tpage.inner_text("#screen-debrief")
+        readme_intro = "\n".join(open(os.path.join(ROOT, "README.md"), encoding="utf-8").read().splitlines()[:30])
+        found = {k: bad_words.findall(v) for k, v in fix_texts.items() if bad_words.search(v)}
+        check("FIX2 no EVA / RESOLVE / Sol in title, how-to, briefing, HUD, log, pause",
+              not found and not bad_words.search(readme_intro), f"{found} readme={bad_words.findall(readme_intro)}")
+        check("FIX2 debrief is kid-friendly", not bad_words.search(fix_texts["debrief"]),
+              str(bad_words.findall(fix_texts["debrief"])))
+        check("FIX2 briefing explains a game day with Real NASA",
+              "REAL NASA" in fix_texts["brief"].upper() and "29.5 Earth days" in fix_texts["brief"])
+        check("FIX2 goal headline + friendly phase chips",
+              "Day 1: Get the Moon base ready" in fix_texts["game"]
+              and "1. Plan power" in fix_texts["game"])
+        check("FIX2 Mission Science uses days, not Sol/EVA", not bad_words.search(fix_texts["science"]),
+              str(bad_words.findall(fix_texts["science"])))
+        tctx.close()
+
+        # 1.2 and 1.3 briefs/logs/debriefs
+        level_bad = {}
+        for lid in ("1.2", "1.3"):
+            lctx, lpage = new_page(browser, 1280, 720, f"?debug&level={lid}")
+            lpage.wait_for_timeout(900)
+            level_bad[lid + "-game"] = bad_words.findall(lpage.inner_text("body"))
+            lpage.click("#tracker-info"); lpage.wait_for_timeout(100)
+            level_bad[lid + "-brief"] = bad_words.findall(lpage.inner_text("#screen-brief"))
+            lpage.evaluate("() => window.__JAMT__.endLevel(true)")
+            lpage.wait_for_timeout(250)
+            level_bad[lid + "-debrief"] = bad_words.findall(lpage.inner_text("#screen-debrief"))
+            lctx.close()
+        check("FIX2 1.2/1.3 briefs, HUD, log and debriefs use Day",
+              all(not v for v in level_bad.values()), str(level_bad))
+
+        # coach targets: six states per sublevel
+        plans = {
+            "1.1": {"empty": "panel-src", "match": "solar-slot", "wrong": "panel-src",
+                    "carry": "panel", "wrongCarry": "toolbox"},
+            "1.2": {"empty": "toolbox-src", "match": "leak-slot", "wrong": "toolbox-src",
+                    "carry": "toolbox", "wrongCarry": "o2"},
+            "1.3": {"empty": "comms", "match": "bunker-slot", "wrong": "comms",
+                    "carry": "bag", "wrongCarry": "toolbox"},
+        }
+        coach_fail = {}
+        for lid, expected in plans.items():
+            cctx, cpage = new_page(browser, 1280, 720, f"?debug&level={lid}")
+            cpage.wait_for_timeout(1000)
+            if lid == "1.3":
+                setup_extra = "J.state.stormKnown = true;"
+                wrong_extra = "J.state.stormKnown = false;"
+                done_extra = "J.state.stormKnown = true; J.state.bags = 1; J.state.sheltered = true;"
+            elif lid == "1.2":
+                setup_extra = ""
+                wrong_extra = ""
+                done_extra = "J.state.isolated = true; J.state.taped = true; J.state.patched = true; J.state.reopened = true;"
+            else:
+                setup_extra = ""
+                wrong_extra = ""
+                done_extra = "J.state.panelDeployed = true; J.state.res.water = 60; J.state.res.o2 = 70;"
+            states = js(cpage, f"""() => {{
+              const J = window.__JAMT__, T = window.__T;
+              J.setHints(true); J.startEVA(); J.state.tutorialSkipped = true;
+              T.teleport(512, 430); J.state.air = 100; J.state.carry = null; J.render();
+              const out = {{}};
+              out.empty = J.coach;
+              J.state.carry = '{expected["carry"]}'; {setup_extra} J.updateCoach(); out.match = J.coach;
+              J.state.carry = '{expected["wrongCarry"]}'; {wrong_extra} J.updateCoach(); out.wrong = J.coach;
+              J.state.carry = null; {done_extra} J.state.atSwitchboard = false; J.updateCoach(); out.done = J.coach;
+              J.state.air = 20; J.updateCoach(); out.air = J.coach;
+              J.state.air = 100; T.teleport(960, 60); J.snapCamera(); J.updateCoach(); out.off = J.coach;
+              return out;
+            }}""")
+            ok = (states["empty"]["targetId"] == expected["empty"]
+                  and states["match"]["targetId"] == expected["match"]
+                  and states["wrong"]["targetId"] == expected["wrong"]
+                  and states["done"]["targetId"] == "switchboard"
+                  and states["air"]["targetId"] == "dome"
+                  and states["air"]["text"] == "Your suit air is low. Go back inside!"
+                  and states["off"]["offscreen"] is True
+                  and 18 <= states["off"]["arrow"]["x"] <= 622
+                  and 18 <= states["off"]["arrow"]["y"] <= 342)
+            if not ok:
+                coach_fail[lid] = states
+            cpage.close()
+        check("FIX2 coach targets match empty/match/wrong/done/low-air/off-screen in 1.1-1.3",
+              not coach_fail, str(coach_fail)[:500])
+
+        # far-target rover hint
+        hctx, hpage = new_page(browser, 1280, 720, "?debug&level=1.1")
+        hpage.wait_for_timeout(1000)
+        far = js(hpage, """() => {
+          const J = window.__JAMT__, T = window.__T;
+          J.setHints(true); J.startEVA(); J.state.tutorialSkipped = true;
+          T.teleport(512, 430); J.state.carry = null; J.state.air = 100;
+          J.state.panelDeployed = true; J.render(); J.updateCoach();
+          return J.coach;
+        }""")
+        check("FIX2 far target says use the rover", far["mode"] == "far" and "rover" in far["text"].lower(), str(far))
+
+        # tutorial + skip + hints
+        tutctx, tutpage = new_page(browser, 1280, 720, "?debug&level=1.1")
+        tutpage.wait_for_timeout(1000)
+        tut = js(tutpage, """() => {
+          const J = window.__JAMT__, T = window.__T;
+          J.setHints(true);
+          const plan = J.coach;
+          J.startEVA();
+          const start = J.coach;
+          T.setKey('right', true);
+          for (let i = 0; i < 10; i++) T.step(0.05);
+          T.setKey('right', false);
+          J.updateCoach();
+          const moved = J.coach;
+          const skipVisible = !document.getElementById('coach-skip').hidden;
+          document.getElementById('coach-skip').click();
+          return { plan, start, moved, skipVisible, afterSkip: J.coach, tutorial: J.tutorial };
+        }""")
+        check("FIX2 first 1.1 tutorial advances move -> pick up and can be skipped",
+              "Go outside" in tut["plan"]["text"] and "Move" in tut["start"]["text"]
+              and "pick up" in tut["moved"]["text"].lower()
+              and tut["skipVisible"] and tut["tutorial"]["skipped"] is True
+              and tut["afterSkip"]["mode"] == "source", str(tut))
+        tutctx.close()
+
+        # phone coach bar must not cover the player or ACT
+        tctx2 = browser.new_context(viewport={"width": 390, "height": 844},
+                                    has_touch=True, is_mobile=True)
+        tpage2 = tctx2.new_page()
+        terr = []
+        tpage2.on("pageerror", lambda e: terr.append(str(e)))
+        tpage2.on("console", lambda m: terr.append(m.text) if m.type == "error" else None)
+        tpage2.goto((LIVE_URL or URL) + "?debug&level=1.1")
+        tpage2.wait_for_timeout(1200)
+        tpage2.wait_for_function("() => window.__jamtLoad && window.__jamtLoad.done >= window.__jamtLoad.total",
+                                 timeout=7000)
+        geom = js(tpage2, """() => {
+          const J = window.__JAMT__, T = window.__T;
+          J.setHints(true); J.startEVA(); J.state.tutorialSkipped = true;
+          T.teleport(512, 430); J.snapCamera(); J.render();
+          document.getElementById('touch-controls').hidden = false;
+          document.body.classList.add('touch-on');
+          const c = document.getElementById('coach').getBoundingClientRect();
+          const s = document.getElementById('scene').getBoundingClientRect();
+          const sx = s.width / 640, sy = s.height / 360;
+          const px = s.x + (J.player.x - J.camera.x) * sx;
+          const py = s.y + (J.player.y - J.camera.y) * sy;
+          const playerBox = { left: px - 22 * sx, right: px + 22 * sx,
+                              top: py - 72 * sy, bottom: py + 3 * sy };
+          const a = document.getElementById('act-btn').getBoundingClientRect();
+          const overlap = (r1, r2) => !(r1.right <= r2.left || r1.left >= r2.right
+                                        || r1.bottom <= r2.top || r1.top >= r2.bottom);
+          return { coach: { left: c.left, right: c.right, top: c.top, bottom: c.bottom },
+                   player: playerBox, act: { left: a.left, right: a.right, top: a.top, bottom: a.bottom },
+                   coversPlayer: overlap(c, playerBox), coversAct: a.width > 0 && overlap(c, a),
+                   actVisible: a.width > 0, coachText: J.coach.text };
+        }""")
+        check("FIX2 phone coach bar never covers the player or ACT",
+              not geom["coversPlayer"] and not geom["coversAct"], str(geom))
+        check("FIX2 phone coach has no console errors",
+              len([e for e in terr if not any(s in e.lower() for s in IGNORE)]) == 0, str(terr[:2]))
+        tctx2.close()
+
+        # help dots
+        help_info = js(hpage, """() => {
+          const dots = [...document.querySelectorAll('.help-dot')];
+          return { count: dots.length, helps: dots.map((d) => d.dataset.help || '') };
+        }""")
+        hpage.locator(".term-help .help-dot").first.click()
+        hpage.wait_for_timeout(100)
+        help_pop = js(hpage, """() => { const p = document.querySelector('.help-pop');
+          return { open: !p.hidden, pop: p.textContent }; }""")
+        check("FIX2 help dots explain suit air, solar cells and battery cells",
+              help_info["count"] >= 3 and all(help_info["helps"]) and help_pop["open"]
+              and "Solar" in help_pop["pop"], f"{help_info} {help_pop}")
+        hints_off = js(hpage, """() => { const J = window.__JAMT__; J.setHints(false);
+          return { coach: J.coach, hidden: document.getElementById('coach').hidden }; }""")
+        js(hpage, "() => window.__JAMT__.setHints(true)")
+        check("FIX2 Hints off hides the coach and arrow", hints_off["coach"] is None and hints_off["hidden"] is True, str(hints_off))
+        hctx.close()
+
+        # coach proof: desktop + phone, 4 states
+        def coach_setup(pg, state):
+            js(pg, f"""() => {{
+              const J = window.__JAMT__, T = window.__T;
+              J.setHints(true); if (J.state.phase !== 'eva') J.startEVA();
+              J.state.tutorialSkipped = true; T.teleport(512, 430); J.snapCamera();
+              J.state.air = 100; J.state.carry = null; J.state.panelDeployed = false;
+              J.state.res.water = 48; J.state.res.o2 = 38; J.state.atSwitchboard = false;
+              if ('{state}' === 'match') J.state.carry = 'panel';
+              if ('{state}' === 'done') {{
+                J.state.panelDeployed = true; J.state.res.water = 60; J.state.res.o2 = 70;
+              }}
+              if ('{state}' === 'air') J.state.air = 20;
+              J.render(); J.updateCoach();
+            }}""")
+            pg.wait_for_timeout(120)
+
+        shot_ctx, shot_page = new_page(browser, 1280, 720, "?debug&level=1.1")
+        shot_page.wait_for_timeout(900)
+        shot_paths = []
+        for state in ("empty", "match", "done", "air"):
+            coach_setup(shot_page, state)
+            path = os.path.join(SHOTS, f"coach_desktop_{state}.png")
+            shot_page.screenshot(path=path)
+            ctext = js(shot_page, "() => window.__JAMT__.coach.text")
+            shot_paths.append(("desktop", state, path, ctext))
+        shot_ctx.close()
+        shot_ctx2 = browser.new_context(viewport={"width": 390, "height": 844},
+                                        has_touch=True, is_mobile=True)
+        shot_page2 = shot_ctx2.new_page()
+        shot_page2.goto((LIVE_URL or URL) + "?debug&level=1.1")
+        shot_page2.wait_for_timeout(1100)
+        for state in ("empty", "match", "done", "air"):
+            coach_setup(shot_page2, state)
+            path = os.path.join(SHOTS, f"coach_phone_{state}.png")
+            shot_page2.screenshot(path=path)
+            ctext = js(shot_page2, "() => window.__JAMT__.coach.text")
+            shot_paths.append(("phone", state, path, ctext))
+        shot_ctx2.close()
+
+        if len(shot_paths) == 8:
+            from PIL import ImageDraw as _Draw2
+            big = Image.new("RGB", (4 * 410 + 10, 2 * 470 + 30), (10, 13, 22))
+            bd = _Draw2.Draw(big)
+            for i, (view, state, path, ctext) in enumerate(shot_paths):
+                im = Image.open(path).convert("RGB")
+                if view == "desktop":
+                    im.thumbnail((400, 225))
+                    x, y = 10 + (i % 4) * 410, 30
+                else:
+                    im.thumbnail((190, 412))
+                    x, y = 110 + (i % 4) * 410, 300
+                big.paste(im, (x, y))
+                bd.text((x, y - 14), f"{view.upper()} {state}: {ctext[:52]}", fill=(235, 240, 255))
+            os.makedirs(os.path.join(ROOT, "tools", "out"), exist_ok=True)
+            big.save(os.path.join(ROOT, "tools", "out", "coach_check.png"))
+        check("FIX2 coach_check.png written (desktop + phone, 4 states)",
+              len(shot_paths) == 8 and os.path.isfile(os.path.join(ROOT, "tools", "out", "coach_check.png")),
+              f"{len(shot_paths)} shots")
+
         # -------------------------------------------------------- version
         html = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
         check(f"E version {BUILD_VERSION} in index.html", f"v{BUILD_VERSION}" in html)

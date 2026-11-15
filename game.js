@@ -107,7 +107,7 @@
     leakRate:          { value: 30, kind: 'game', source: 'balance' },
     leakIsolated:      { value: 0.40, kind: 'game', source: 'balance' },
     leakTaped:         { value: 0.15, kind: 'game', source: 'balance' },
-    patchNeeded:       { value: 2,  kind: 'game', source: 'balance (2 sols of repair cells)' },
+    patchNeeded:       { value: 2,  kind: 'game', source: 'balance (2 days of repair cells)' },
     rationCut:         { value: 0.40, kind: 'game', source: 'balance' },
     rationHeartAfter:  { value: 3,  kind: 'game', source: 'balance' },
     stormPower:        { value: 70, kind: 'game', source: 'balance' },
@@ -135,57 +135,102 @@
 
   const LEVELS = {
     '1.1': {
-      id: '1.1', index: 1, title: 'Lunar Outpost Prep', kicker: 'Tutorial · 5 sols',
-      location: 'Shackleton Rim', brief: 'Get the outpost ready before the crew lands. Balance oxygen, water and battery charge.',
+      id: '1.1', index: 1, title: 'Lunar Outpost Prep', kicker: 'Tutorial - 5 days',
+      location: 'Shackleton Rim', brief: 'Get the Moon base ready before the crew lands.',
       art: 'select/moon_satellite',
       rows: ['o2', 'battery'],
       start: { o2: 38, water: 48, battery: 0 },
       goals: { o2: 70, water: 60, battery: 3 },
       goalsSol: 5, maxSlip: 2,
       schedule: ['calm', 'calm', 'longshadow', 'calm', 'calm', 'dust', 'calm'],
-      hints: { 1: 'Sweep the solar field, then start the EVA. Leftover cells charge the battery.', 2: 'Long shadow next sol: top up the battery today.' },
+      hints: { 1: 'Sweep the solar field. Then go outside.', 2: 'The Sun will be low. Save battery power today.' },
       debrief: {
-        real: 'On the ISS, oxygen is made by electrolysing water with electricity. Power, water and oxygen are one linked system. South-pole crater rims also get near-constant sunlight, so arrays are shadowed by terrain rather than a 14-day night.',
+        real: 'On the ISS, power and water make oxygen. The Moon south pole gets sunlight almost all day.',
         source: 'Sources: NASA ECLSS (Oxygen Generation Assembly); NASA Moon / LRO.',
-        assume: 'Game assumption: 1 power cell = +10 O₂ and costs 2 water; crew of 3 uses 10 O₂ and 6 water per sol; the battery goal of 3/6 is tuned for play.',
-        choice: 'Real crews would charge the batteries and test life support before the crew arrives — solar power alone is not enough at the pole.',
+        assume: 'Game: power, water and oxygen are linked. The battery goal is tuned for play.',
+        choice: 'Real crews test power and air before the crew lands.',
       },
     },
     '1.2': {
-      id: '1.2', index: 2, title: 'Water Leak', kicker: 'Repair · 6 sols',
-      location: 'Recycler deck', brief: 'A recycler pipe ruptured. Isolate it, tape it, patch it, and keep enough water for the crew.',
+      id: '1.2', index: 2, title: 'Water Leak', kicker: 'Repair - 6 days',
+      location: 'Recycler deck', brief: 'A pipe is leaking water. Fix it!',
       art: 'select/moon_base',
       rows: ['o2', 'repair'],
       start: { o2: 65, water: 68 },
       maxSols: 6,
       schedule: ['calm', 'calm', 'dust', 'cold', 'calm', 'calm'],
-      hints: { 1: 'Walk to the recycler: close the hatch, fetch tape from the crates, then tape the leak.' },
+      hints: { 1: 'Go to the leak. Close the hatch first.' },
       debrief: {
-        real: 'ISS leak response: close hatches, locate the leak, seal it with Kapton tape, then cure epoxy over it. The 2018 Soyuz leak was a drilled hole — not a micrometeoroid.',
+        real: 'ISS crews close hatches. They find the leak, tape it, then seal it.',
         source: 'Sources: NASA / Roscosmos ISS leak reports, 2018–2020.',
-        assume: 'Game assumption: the burst drains 30 water/sol; isolation cuts it to 40% but takes the recycler offline; 2 repair-cell sols cure the patch; rationing saves 40% of crew water.',
-        choice: 'Real crews isolate the module first, then find and tape the leak before running the system again.',
+        assume: 'Game: a burst drains water each day. Tape slows it. Two repair days fix it.',
+        choice: 'Real crews isolate the module first. Then they tape the leak.',
       },
     },
     '1.3': {
-      id: '1.3', index: 3, title: 'Solar Storm', kicker: 'Space weather · 6 sols',
-      location: 'South pole surface', brief: 'A CME is on the way. Check the dish, shelter the crew, and watch the radiation dose.',
+      id: '1.3', index: 3, title: 'Solar Storm', kicker: 'Space weather - 6 days',
+      location: 'South pole surface', brief: 'A solar storm is coming. Keep the crew safe.',
       art: 'select/planet_moon',
       rows: ['o2', 'shielding', 'surface'],
       start: { o2: 75, shielding: 30, water: 60 },
       dose: true,
       maxSols: 6,
       schedule: ['calm', 'cme', 'calm', 'calm', 'calm', 'calm'],
-      hints: { 2: 'Space weather alert — walk to the comms dish to learn when the storm arrives.' },
+      hints: { 2: 'Go to the dish. Learn when the storm comes.' },
       debrief: {
-        real: 'For solar particle events, crews shelter in place. About 4 g/cm² of regolith is enough to get below 30-day exposure limits, and CMEs take roughly 1–4 days to arrive (NASA DONKI). Extra shielding barely reduces galactic cosmic rays.',
+        real: 'In a solar storm, crews shelter inside. Regolith blocks radiation.',
         source: 'Sources: NASA space radiation research / Artemis; NASA DONKI; NASA Space Weather.',
-        assume: 'Game assumption: dose 0–100, danger at 60; CME arrival Sol 3–5; early bunker shelter cuts 90% of the storm dose (late shelter only 15%); research is capped at ~10% of score.',
-        choice: 'Real crews would shelter during the particle event and schedule surface work around shelter access.',
+        assume: 'Game: the storm comes on Day 3-5. Early shelter cuts dose by 90%.',
+        choice: 'Real crews shelter during the storm.',
       },
     },
   };
   const LEVEL_ORDER = ['1.1', '1.2', '1.3'];
+  const PHASE_LABEL = { plan: '1. Plan power', eva: '2. Go outside', resolve: '3. End the day' };
+  const COACH_GOALS = {
+    '1.1': 'Day 1: Get the Moon base ready before the crew lands!',
+    '1.2': 'A pipe is leaking water! Fix it.',
+    '1.3': 'A solar storm is coming! Keep the crew safe.',
+  };
+  // One kid-sized step at a time. done() runs against the live state.
+  const COACH_PLANS = {
+    '1.1': [
+      { item: 'panel', slot: 'solar-slot', text: 'Pick up a solar panel from the crate.',
+        carry: 'Put the panel in the solar field.',
+        done: (s) => s.panelDeployed || slotFilled('solar-slot') > 0 },
+      { item: 'ice', slot: 'water-slot', text: 'Mine ice from the ice patch.',
+        carry: 'Put the ice in the water tank.',
+        done: (s) => (s.res.water || 0) >= 60 },
+      { item: 'o2', slot: 'o2-slot', text: 'Pick up oxygen from the crates.',
+        carry: 'Put the oxygen in the O2 rack.',
+        done: (s) => (s.res.o2 || 0) >= 70 },
+    ],
+    '1.2': [
+      { item: 'toolbox', slot: 'leak-slot', text: 'Pick up the toolbox from the crates.',
+        carry: 'Take the toolbox to the leak.',
+        done: (s) => s.isolated },
+      { item: 'tape', slot: 'leak-slot', text: 'Pick up the tape from the crates.',
+        carry: 'Take the tape to the leak.',
+        done: (s) => s.taped },
+      { item: 'repair', slot: 'leak-slot', text: 'Pick up repair parts from the crates.',
+        carry: 'Take the parts to the leak.',
+        done: (s) => s.patched },
+      { station: 'leak', text: 'Go to the leak and reopen the hatch.',
+        done: (s) => s.reopened },
+    ],
+    '1.3': [
+      { station: 'comms', text: 'Go to the dish and read the weather.',
+        done: (s) => s.stormKnown },
+      { item: 'bag', slot: 'bunker-slot', text: 'Dig a regolith bag near the bunker.',
+        carry: 'Put the bag on the bunker wall.',
+        done: (s) => s.bags >= 1 },
+      { station: 'bunker', text: 'Go to the bunker and shelter the crew.',
+        done: (s) => s.sheltered },
+    ],
+  };
+  const COACH_ICON = { source: '▲', slot: '▼', switch: '⚡', air: '!', station: '✦', end: '▶' };
+  const SWITCHBOARD_TARGET = { x: 376, y: 360 };
+
   const FUTURE = [
     { title: 'Level 2 · Mars', note: 'Dust storms, long nights', art: 'select/planet_mars', tag: 'NEXT' },
     { title: 'Level 3 · Ocean Worlds', note: 'Europa · Enceladus · Titan', art: 'select/planet_europa', tag: 'LOCKED' },
@@ -217,6 +262,7 @@
     panelDeployed: false,
     panelBonus: 0, bags: 0, carry: null, groundItems: [], sources: [], slots: [], snap: null, atSwitchboard: false,
     action: null,
+    tutorialStep: 0, tutorialMoved: false, tutorialSkipped: false, tutorialDelivered: false, tutorialDone: false,
     carryingPanel: false,
     carryingTape: false,
     isolated: false,
@@ -283,13 +329,16 @@
     return clean;
   })();
   const settings = (() => {
-    const d = { sound: true, touch: 'auto', motion: false, unlock: false };
+    // Hints start on for a brand-new player and off after the first star.
+    const d = { sound: true, touch: 'auto', motion: false, unlock: false,
+      hints: !Object.values(progress).some((n) => n > 0) };
     const raw = safeGet('jamt.settings', {});
     if (!raw || typeof raw !== 'object') return d;
     if (typeof raw.sound === 'boolean') d.sound = raw.sound;
     if (['auto', 'on', 'off'].includes(raw.touch)) d.touch = raw.touch;
     if (typeof raw.motion === 'boolean') d.motion = raw.motion;
     if (typeof raw.unlock === 'boolean') d.unlock = raw.unlock;
+    if (typeof raw.hints === 'boolean') d.hints = raw.hints;
     return d;
   })();
   function saveSettings() { safeSet('jamt.settings', settings); }
@@ -366,6 +415,7 @@
     app: $('#app'), scene: $('#scene'), minimap: $('#minimap'),
     hud: $('#hud'), hudHearts: $('#hud-hearts'), hudSol: $('#hud-sol'), hudLevel: $('#hud-level'),
     hudDose: $('#hud-dose'), hudPhase: $('#hud-phase'), hudEva: $('#hud-eva'),
+    coach: $('#coach'), coachText: $('#coach-text'), coachIcon: $('#coach-icon'), coachSkip: $('#coach-skip'),
     sound: $('#sound-btn'),
     title: $('#screen-title'), select: $('#screen-select'), debrief: $('#screen-debrief'),
     panel: $('#panel'), toggle: $('#console-toggle'),
@@ -404,6 +454,7 @@
     if (goodbye) goodbye.hidden = name !== 'goodbye';
     els.hud.hidden = name !== 'game';
     els.panel.hidden = name !== 'game';
+    if (els.coach) els.coach.hidden = name !== 'game';
     els.interact.hidden = name !== 'game';
     const tracker = document.getElementById('tracker');
     if (tracker) tracker.hidden = name !== 'game';
@@ -534,7 +585,7 @@
   ];
   const RESOURCE_DOCS = [
     { item: 'ice', source: 'Shaded crater (SW)', slot: 'water-slot', effect: '+12 water', need: 'mine' },
-    { item: 'panel', source: 'Cargo crates (lander pad)', slot: 'solar-slot', effect: '+1 solar cell / sol', need: 'take' },
+    { item: 'panel', source: 'Cargo crates (lander pad)', slot: 'solar-slot', effect: '+1 solar cell each day', need: 'take' },
     { item: 'battery', source: 'Cargo crates', slot: 'battery-slot', effect: '+1 stored cell', need: 'take' },
     { item: 'o2', source: 'Cargo crates (1.1, max 2)', slot: 'o2-slot', effect: '+25 O₂ (game assumption)', need: 'take' },
     { item: 'bag', source: 'Soil near the bunker (1.3)', slot: 'bunker-slot', effect: '+8 shielding, bunker protection +8%', need: 'dig' },
@@ -585,26 +636,26 @@
   function pickupSource(src) {
     if (state.rover.mounted) {
       if (state.rover.cargo.length >= 4) { addLog('Rover cargo is full (4/4).', 'warn'); return; }
-      if (src.stock <= 0) { addLog('Nothing left here until the next sol.', 'warn'); return; }
-      if (src.hold) { if (state.air < 8) { addLog('Not enough suit air to mine/dig.', 'warn'); return; } state.air = Math.max(0, state.air - 8); }
+      if (src.stock <= 0) { addLog('Nothing left here today.', 'warn'); return; }
+      if (src.hold) { if (state.air < 8) { addLog('Not enough air. Go back inside.', 'warn'); return; } state.air = Math.max(0, state.air - 8); }
       src.stock -= 1;
       state.rover.cargo.push(src.item);
       addLog(`Loaded ${ITEM_META[src.item].name} onto the rover (${state.rover.cargo.length}/4).`, 'good');
       Sound.ok(); return;
     }
-    if (state.carry) { addLog('Hands are full — drop it first (Q).', 'warn'); return; }
-    if (src.stock <= 0) { addLog('Nothing left here until the next sol — it restocks each sol.', 'warn'); return; }
+    if (state.carry) { addLog('Your hands are full. Press Q to drop.', 'warn'); return; }
+    if (src.stock <= 0) { addLog('Nothing left here today. It refills tomorrow.', 'warn'); return; }
     if (src.hold) {
-      if (state.air < 8) { addLog('Not enough suit air to mine/dig.', 'warn'); return; }
+      if (state.air < 8) { addLog('Not enough air. Go back inside.', 'warn'); return; }
       state.air = Math.max(0, state.air - 8);
     }
     src.stock -= 1;
     state.carry = src.item;
-    addLog(`Carrying <b>${ITEM_META[src.item].name}</b>. Deliver it to the highlighted slot (Q to drop).`, 'good');
+    addLog(`Carrying <b>${ITEM_META[src.item].name}</b>. Take it to the glowing slot.`, 'good');
     Sound.ok();
   }
   function pickupGround(it) {
-    if (state.carry) { addLog('Hands are full — drop it first (Q).', 'warn'); return; }
+    if (state.carry) { addLog('Your hands are full. Press Q to drop.', 'warn'); return; }
     state.groundItems = state.groundItems.filter((g) => g !== it);
     state.carry = it.type;
     addLog(`Picked up <b>${ITEM_META[it.type].name}</b>.`, 'good');
@@ -630,7 +681,7 @@
       const want = slot.id === 'leak-slot'
         ? (state.isolated ? (state.taped ? 'repair parts' : 'Kapton tape') : 'the toolbox')
         : ITEM_META[slot.item].name.toLowerCase();
-      addLog(`That doesn't fit — ${slot.label} needs <b>${want}</b>.`, 'warn');
+      addLog(`That does not fit. This slot needs <b>${want}</b>.`, 'warn');
       return;
     }
     if (cargoIdx >= 0) state.rover.cargo.splice(cargoIdx, 1); else state.carry = null;
@@ -644,7 +695,7 @@
       addLog(`🔋 Battery canister installed: <b>+1 stored cell</b> (${slot.filled}/${slot.cap}).`, 'good');
     } else if (slot.id === 'solar-slot') {
       state.panelBonus += 1;
-      addLog(`☀️ Solar panel installed: <b>+1 solar cell per sol</b> (${slot.filled}/${slot.cap}).`, 'good');
+      addLog(`Solar panel on. <b>+1 solar cell each day.</b>`, 'good');
     } else if (slot.id === 'o2-slot') {
       state.res.o2 = clamp((state.res.o2 || 0) + 25);
       addLog(`🫁 O2 canister installed: <b>+25 O₂</b> (game assumption) (${slot.filled}/${slot.cap}).`, 'good');
@@ -654,16 +705,17 @@
       addLog(`🛡 Regolith bag placed: <b>+8 shielding</b>, bunker protection ${Math.round((0.5 + 0.08 * state.bags) * 100)}% (${slot.filled}/5).`, 'good');
     } else if (slot.id === 'leak-slot') {
       if (state.carry === null) { /* noop */ }
-      if (!state.isolated) { state.isolated = true; addLog('🚪 Hatch isolated — the recycler is offline.', 'warn'); }
-      else if (!state.taped) { state.taped = true; addLog('🩹 Kapton tape applied — leak down to 15%.', 'good'); }
+      if (!state.isolated) { state.isolated = true; addLog('🚪 Hatch closed. The recycler is off.', 'warn'); }
+      else if (!state.taped) { state.taped = true; addLog('🩹 Tape on. The leak is smaller.', 'good'); }
       else if (!state.patched) {
         state.patch = Math.min(RULES.patchNeeded.value, state.patch + 1);
         if (state.patch >= RULES.patchNeeded.value) {
           state.patched = true;
-          addLog('🔧 Permanent patch cured. Reopen the hatch at the leak station.', 'good');
+          addLog('🔧 Patch done. Reopen the hatch.', 'good');
         } else addLog(`Patch curing: <b>${state.patch}/${RULES.patchNeeded.value}</b>.`, 'muted');
       }
     }
+    if (state.tutorialStep === 2) { state.tutorialDelivered = true; state.tutorialStep = 3; }
     Sound.ok();
   }
 
@@ -900,10 +952,10 @@
     const storm = s.levelId === '1.3' && s.sol >= s.stormArrival && s.sol < s.stormArrival + s.stormDuration;
     if (storm) { s.hearts -= 1; s.heartsLost = (s.heartsLost || 0) + 1; addLog('⚠️ Out of air in a storm — <b>−1 heart</b>.', 'bad'); }
     if (s.phase === 'eva') {
-      addLog('🫁 Suit air empty — the sol ends. Going inside refills at the next sol.', 'warn');
+      addLog('🫁 Suit air empty. The day ends. It refills tomorrow.', 'warn');
       endEVA();
     } else {
-      addLog('🫁 Suit air empty — start the EVA to go inside and end the sol.', 'warn');
+      addLog('🫁 Suit air empty. Go outside, then end the day.', 'warn');
     }
   }
 
@@ -936,6 +988,7 @@
       movePlayer(dx * speed * dt, dy * speed * dt);
       const moved = Math.hypot(player.x - fromX, player.y - fromY);
       if (!state.rover.mounted && moved > 0.01) {
+        if (state.levelId === '1.1' && state.sol === 1 && state.phase === 'eva' && state.tutorialStep === 0) state.tutorialMoved = true;
         player.animDist += moved;
         const stride = (ANIMS.walk && ANIMS.walk.strideDistance) || 8;
         const count = (ANIMS.walk && ANIMS.walk.frameCount) || 6;
@@ -1358,6 +1411,7 @@
       ctx.beginPath(); ctx.arc(sx, sy, 12, 0, Math.PI * 2); ctx.stroke();
       ctx.globalAlpha = 1;
     }
+    drawCoachFx(time);
   }
 
   function drawMinimap() {
@@ -1474,7 +1528,7 @@
       const used = s.iceUsedSol === s.sol;
       const what = L.id === '1.3' ? `+${RULES.iceO2.value} O₂` : `+${RULES.iceWater.value} water`;
       return {
-        id: 'ice', label: used ? 'Ice already hauled this sol' : `Mine ice ${what}`,
+        id: 'ice', label: used ? 'Ice already hauled today' : `Mine ice ${what}`,
         minutes: 2, disabled: noMinutes || used, run: () => doHaulIce(),
       };
     }
@@ -1482,8 +1536,8 @@
       if (L.id === '1.3' && s.stormArrival && !s.sheltered) {
         return { id: 'shelter', label: 'Order crew to shelter', minutes: 1, disabled: noMinutes, run: () => orderShelter(true) };
       }
-      if (s.sheltered) return { id: 'bunker', label: 'Crew is sheltering here', minutes: 0, run: () => addLog('🛖 The crew is inside the regolith bunker.', 'muted') };
-      return { id: 'bunkerinfo', label: 'Regolith bunker', minutes: 0, run: () => addLog('🛖 A tunnel dug into the crater rim — good radiation shelter.', 'muted') };
+      if (s.sheltered) return { id: 'bunker', label: 'Crew is sheltering here', minutes: 0, run: () => addLog('🛖 The crew is safe in the bunker.', 'muted') };
+      return { id: 'bunkerinfo', label: 'Regolith bunker', minutes: 0, run: () => addLog('🛖 A safe bunker in the crater rim.', 'muted') };
     }
     if (st.id === 'leak') {
       if (L.id !== '1.2') return null;
@@ -1503,7 +1557,7 @@
   }
   function doReadDish() {
     state.stormKnown = true;
-    addLog(`📡 Space weather: storm arrives on <b>Sol ${state.stormArrival}</b> and lasts ${state.stormDuration} sol${state.stormDuration > 1 ? 's' : ''}.`, 'good');
+    addLog(`📡 Space weather: storm arrives on <b>Day ${state.stormArrival}</b>. It lasts ${state.stormDuration} day(s).`, 'good');
     Sound.ok();
   }
   function doHaulIce() {
@@ -1738,6 +1792,189 @@
     }
   }
 
+  /* ============================================================== coach == */
+  let coachState = null;
+
+  function slotFilled(id) {
+    const slot = state.slots.find((s) => s.id === id);
+    return slot ? slot.filled : 0;
+  }
+  function coachSource(item) {
+    const list = state.sources.filter((s) => s.item === item);
+    if (!list.length) return null;
+    return list.reduce((best, s) =>
+      !best || dist(player.x, player.y, s.x, s.y) < dist(player.x, player.y, best.x, best.y) ? s : best, null);
+  }
+  function coachSlot(id) { return state.slots.find((s) => s.id === id) || null; }
+  function coachStation(id) { return STATIONS.find((s) => s.id === id) || null; }
+  function coachTargetFor(step) {
+    if (!step) return null;
+    if (step.item) {
+      const src = coachSource(step.item);
+      return src ? { x: src.x, y: src.y, id: src.id } : null;
+    }
+    if (step.station) {
+      const st = coachStation(step.station);
+      return st ? { x: st.x, y: st.y, id: st.id } : null;
+    }
+    return null;
+  }
+  function tutorialOn() {
+    const s = state;
+    return settings.hints && s.screen === 'game' && s.levelId === '1.1' && s.sol === 1
+      && s.phase === 'eva' && !s.tutorialSkipped && !s.tutorialDone
+      && starsFor('1.1') === 0;
+  }
+  function advanceTutorial() {
+    const s = state;
+    if (!settings.hints || s.levelId !== '1.1' || s.sol !== 1) return;
+    if (s.phase === 'resolve') { s.tutorialDone = true; return; }
+    if (s.tutorialStep === 0 && s.tutorialMoved) s.tutorialStep = 1;
+    if (s.tutorialStep === 1 && s.carry) s.tutorialStep = 2;
+    if (s.tutorialStep === 2 && s.tutorialDelivered) s.tutorialStep = 3;
+    if (s.tutorialStep === 3 && s.atSwitchboard) s.tutorialStep = 4;
+  }
+  function tutorialCoach() {
+    const s = state;
+    const src = coachSource('panel');
+    if (s.tutorialStep === 0) {
+      return { text: 'Move with WASD or the joystick.', target: src, targetId: src ? src.id : null,
+        mode: 'source', icon: COACH_ICON.source };
+    }
+    if (s.tutorialStep === 1) {
+      return { text: 'Hold E or ACT to pick up.', target: src, targetId: src ? src.id : null,
+        mode: 'source', icon: COACH_ICON.source };
+    }
+    if (s.tutorialStep === 2) {
+      const slot = s.carry ? s.slots.find((sl) => slotAccepts(sl, s.carry)) : null;
+      if (slot) {
+        return { text: 'Take it to the glowing slot.', target: slot, targetId: slot.id,
+          mode: 'slot', icon: COACH_ICON.slot };
+      }
+      return genericCoach();
+    }
+    if (s.tutorialStep === 3) {
+      return { text: 'Go to the switchboard.', target: SWITCHBOARD_TARGET, targetId: 'switchboard',
+        mode: 'switch', icon: COACH_ICON.switch };
+    }
+    return { text: 'Press End the day.', target: SWITCHBOARD_TARGET, targetId: 'switchboard',
+      mode: 'end', icon: COACH_ICON.end };
+  }
+  function genericCoach() {
+    const s = state;
+    if (s.phase === 'plan') {
+      return { text: 'Press Go outside when you are ready.', target: SWITCHBOARD_TARGET,
+        targetId: 'switchboard', mode: 'end', icon: COACH_ICON.end };
+    }
+    if (s.air < 25) {
+      return { text: 'Your suit air is low. Go back inside!', target: { x: 512, y: 430 },
+        targetId: 'dome', mode: 'air', icon: COACH_ICON.air };
+    }
+    const plan = COACH_PLANS[s.levelId] || [];
+    if (s.carry) {
+      const match = plan.find((st) => st.item === s.carry && !st.done(s));
+      if (match) {
+        const slot = coachSlot(match.slot);
+        if (slot) {
+          return { text: match.carry, target: slot, targetId: slot.id,
+            mode: 'slot', icon: COACH_ICON.slot };
+        }
+      }
+      const anySlot = s.slots.find((sl) => slotAccepts(sl, s.carry));
+      if (anySlot) {
+        return { text: `Put the ${ITEM_META[s.carry].name.toLowerCase()} in ${anySlot.label.toLowerCase()}.`,
+          target: anySlot, targetId: anySlot.id, mode: 'slot', icon: COACH_ICON.slot };
+      }
+      const next = plan.find((st) => !st.done(s));
+      const target = coachTargetFor(next) || SWITCHBOARD_TARGET;
+      return { text: `Drop the ${ITEM_META[s.carry].name.toLowerCase()} and follow the arrow.`,
+        target, targetId: target ? target.id : null, mode: 'wrong', icon: COACH_ICON.source };
+    }
+    const next = plan.find((st) => !st.done(s));
+    if (next) {
+      const target = coachTargetFor(next);
+      if (target) {
+        return { text: next.text, target, targetId: target.id,
+          mode: next.item ? 'source' : 'station', icon: next.item ? COACH_ICON.source : COACH_ICON.station };
+      }
+    }
+    if (!s.atSwitchboard) {
+      return { text: 'Go to the switchboard and set the power.', target: SWITCHBOARD_TARGET,
+        targetId: 'switchboard', mode: 'switch', icon: COACH_ICON.switch };
+    }
+    return { text: 'Press End the day.', target: SWITCHBOARD_TARGET, targetId: 'switchboard',
+      mode: 'end', icon: COACH_ICON.end };
+  }
+  function coachArrow(target) {
+    if (!target) return null;
+    const tx = target.x - camera.x, ty = target.y - camera.y;
+    const off = tx < 12 || tx > VW - 12 || ty < 12 || ty > VH - 12;
+    const x = clamp(tx, 18, VW - 18), y = clamp(ty, 18, VH - 18);
+    return { x, y, angle: off ? Math.atan2(ty - y, tx - x) : Math.PI / 2, off };
+  }
+  function updateCoach() {
+    if (!els.coach) return;
+    advanceTutorial();
+    const s = state;
+    if (!settings.hints || s.screen !== 'game' || !s.level || s.phase === 'resolve') {
+      els.coach.hidden = true;
+      coachState = null;
+      return;
+    }
+    const on = tutorialOn();
+    let info = on ? tutorialCoach() : genericCoach();
+    if (!info || !info.target) {
+      els.coach.hidden = true;
+      coachState = null;
+      return;
+    }
+    if (info.mode !== 'air' && dist(player.x, player.y, info.target.x, info.target.y) > camera.h * 1.35) {
+      info = { ...info, text: 'That is far. Use the rover!', mode: 'far' };
+    }
+    const arrow = coachArrow(info.target);
+    coachState = { ...info, arrow, offscreen: !!(arrow && arrow.off) };
+    els.coach.hidden = false;
+    els.coachText.textContent = info.text;
+    els.coachIcon.textContent = info.icon || '▲';
+    els.coachSkip.hidden = !on;
+  }
+  function drawCoachFx(time) {
+    if (!coachState || !coachState.target) return;
+    const target = coachState.target;
+    const arrow = coachState.arrow;
+    if (!arrow) return;
+    const pulse = 1 + 0.14 * Math.sin(time * 5);
+    ctx.save();
+    if (!arrow.off) {
+      const tx = target.x - camera.x, ty = target.y - camera.y;
+      ctx.strokeStyle = 'rgba(255,207,58,.85)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(tx, ty, 18 * pulse, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 0.35 + 0.25 * Math.sin(time * 5);
+      ctx.beginPath(); ctx.arc(tx, ty, 24 * pulse, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 1;
+      drawCoachArrow(tx, ty - 34 + Math.sin(time * 5) * 2, Math.PI / 2);
+    } else {
+      ctx.strokeStyle = 'rgba(255,207,58,.85)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(arrow.x, arrow.y, 10 * pulse, 0, Math.PI * 2); ctx.stroke();
+      drawCoachArrow(arrow.x, arrow.y, arrow.angle);
+    }
+    ctx.restore();
+  }
+  function drawCoachArrow(x, y, angle) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.fillStyle = '#ffcf3a';
+    ctx.strokeStyle = '#5a3c00';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(8, 0); ctx.lineTo(-9, -8); ctx.lineTo(-9, 8); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+
   function render() {
     const s = state;
     if (!s.level) return;
@@ -1746,16 +1983,16 @@
     const totalSols = L.id === '1.1' ? L.goalsSol : L.maxSols;
 
     els.hudLevel.textContent = `${L.id} · Moon`;
-    els.hudSol.textContent = `Sol ${sol} / ${totalSols}${s.slip ? ` · slip ${s.slip}` : ''}`;
+    els.hudSol.textContent = `Day ${sol} / ${totalSols}${s.slip ? ` · slip ${s.slip}` : ''}`;
     els.hudHearts.innerHTML = heartsHTML(s.hearts);
     els.hudHearts.setAttribute('aria-label', `Crew hearts: ${s.hearts} of 3`);
-    els.hudPhase.textContent = s.phase.toUpperCase();
+    els.hudPhase.textContent = PHASE_LABEL[s.phase] || s.phase;
     els.hudPhase.dataset.phase = s.phase;
-    els.hudEva.textContent = `AIR ${Math.round(s.air)}%`;
+    els.hudEva.textContent = `Air ${Math.round(s.air)}%`;
     els.hudEva.classList.toggle('is-low', s.air < 25);
-    els.phaseChip.textContent = s.phase.toUpperCase();
+    els.phaseChip.textContent = PHASE_LABEL[s.phase] || s.phase;
     els.phaseChip.dataset.phase = s.phase;
-    els.phaseHint.textContent = s.phase === 'plan' ? 'Spend power cells' : s.phase === 'eva' ? 'Walk + do tasks' : 'Resolving…';
+    els.phaseHint.textContent = s.phase === 'plan' ? 'Set power' : s.phase === 'eva' ? 'Do jobs outside' : 'Ending the day';
 
     const nearSwitch = dist(player.x, player.y, 376, 378) < 56;
     s.atSwitchboard = nearSwitch;
@@ -1854,24 +2091,24 @@
       airBar.style.backgroundColor = s.air < 25 ? '#ff4d6d' : s.air < 50 ? '#ffb02e' : '#7ce38b';
     }
     els.evaHint.innerHTML = s.air < 25
-      ? 'Low air — head inside. At 0 you drop your item and the sol ends.'
-      : 'Air drains as you walk; mining costs more. Refills each sol.';
+      ? 'Low air! Go back inside.'
+      : 'Air drains as you walk. It refills each day.';
 
     // shelter order (1.3)
     const showShelter = L.id === '1.3' && s.sol >= 2 && s.stormArrival > 0 && !s.sheltered;
     els.shelterBtn.hidden = !showShelter;
     if (showShelter) {
       els.shelterBtn.disabled = s.phase === 'resolve';
-      els.shelterBtn.textContent = s.stormKnown ? `Order shelter (storm Sol ${s.stormArrival})` : 'Order shelter';
+      els.shelterBtn.textContent = s.stormKnown ? `Shelter before Day ${s.stormArrival}` : 'Order shelter';
     }
 
     // run button
     const isPlan = s.phase === 'plan';
-    els.run.textContent = isPlan ? 'Start EVA ▶' : s.phase === 'eva' ? 'End EVA ▶' : 'Resolving…';
+    els.run.textContent = isPlan ? 'Go outside ▶' : s.phase === 'eva' ? 'End the day ▶' : 'Ending the day…';
     els.run.disabled = s.phase === 'resolve';
     els.hint.textContent = isPlan
-      ? (leftCells() > 0 ? `${leftCells()} cell${leftCells() === 1 ? '' : 's'} will charge the battery.` : 'Battery charged — start the EVA.')
-      : s.phase === 'eva' ? 'Walk the base, fix what the forecast warns about.' : '';
+      ? (leftCells() > 0 ? `${leftCells()} cell${leftCells() === 1 ? '' : 's'} will charge the battery.` : 'Battery charged. Go outside.')
+      : s.phase === 'eva' ? 'Do the jobs outside. Then end the day.' : '';
 
     // forecast
     const f = forecastFor(s);
@@ -1891,40 +2128,45 @@
     // console height for the prompt
     requestAnimationFrame(measureConsole);
     renderTracker();
+    updateCoach();
   }
 
   function forecastFor(s) {
     const L = s.level;
-    const ev = { calm: { label: 'Clear skies', icon: '🌤️', tone: 'neutral', text: 'No hazards expected — a good sol to refill reserves.' },
-      dust: { label: 'Dust on panels', icon: '🌪️', tone: 'warn', text: 'Dust coats the arrays: <strong>1 fewer cell</strong> next sol. Sweep them during EVA.' },
-      longshadow: { label: 'Long shadow', icon: '🌗', tone: 'warn', text: 'The Sun is low behind the rim: <strong>2 fewer cells</strong> next sol.' },
-      cme: { label: 'Space weather alert', icon: '☀️', tone: 'bad', text: 'A CME is on the way. Check the comms dish for the arrival sol.' },
-      cold: { label: 'Cold snap', icon: '🥶', tone: 'warn', text: 'Heaters need <strong>8 extra O₂</strong> this sol.' },
-      storm: { label: 'Solar storm', icon: '☀️', tone: 'bad', text: 'Solar particle event! Shelter the crew or take the dose.' },
-    }[s.eventKey] || { label: 'Clear skies', icon: '🌤️', tone: 'neutral', text: 'No hazards expected.' };
+    const ev = {
+      calm: { label: 'Clear skies', icon: '☀️', tone: 'neutral', text: 'No hazards today. A good day to refill.' },
+      dust: { label: 'Dust on panels', icon: '🌫️', tone: 'warn', text: 'Dust covers the panels. You lose <strong>1 solar cell</strong> tomorrow. Sweep them outside.' },
+      longshadow: { label: 'Long shadow', icon: '🌥', tone: 'warn', text: 'The Sun is low. You lose <strong>2 solar cells</strong> tomorrow.' },
+      cme: { label: 'Space weather alert', icon: '☀️', tone: 'bad', text: 'A solar storm is coming. Check the dish for the day.' },
+      cold: { label: 'Cold snap', icon: '🥶', tone: 'warn', text: 'Heaters need <strong>8 extra O2</strong> today.' },
+      storm: { label: 'Solar storm', icon: '☀️', tone: 'bad', text: 'Solar storm! Shelter the crew or take the dose.' },
+    }[s.eventKey] || { label: 'Clear skies', icon: '☀️', tone: 'neutral', text: 'No hazards today.' };
 
     if (L.id === '1.3') {
       if (s.stormStarted) {
-        return { label: `Storm · Sol ${s.sol}`, tone: 'bad', sprite: 'fx/sun', icon: '☀️',
-          text: s.sheltered ? 'Crew is in the bunker — dose cut by 90%.' : 'Crew is outside — full storm dose this sol!' };
+        return { label: `Solar storm - Day ${s.sol}`, tone: 'bad', sprite: 'fx/sun', icon: '☀️',
+          text: s.sheltered ? 'Crew is in the bunker. Dose cut by 90%.' : 'Crew is outside. Full storm dose today!' };
       }
       if (s.stormArrival) {
-        const when = s.stormKnown ? `Sol ${s.stormArrival}` : 'soon';
-        return { label: s.stormKnown ? 'Space weather · confirmed' : 'Space weather · vague', tone: 'bad', sprite: 'fx/sun', icon: '☀️',
+        const when = s.stormKnown ? `Day ${s.stormArrival}` : 'soon';
+        return { label: s.stormKnown ? 'Space weather - confirmed' : 'Space weather - vague',
+          tone: 'bad', sprite: 'fx/sun', icon: '☀️',
           text: s.stormKnown
-            ? `Storm arrives on <strong>Sol ${s.stormArrival}</strong> (lasts ${s.stormDuration}). Order shelter before then.`
-            : `A CME is on the way — arrival <strong>${when}</strong>. Visit the comms dish for the exact sol.` };
+            ? `Storm arrives on <strong>Day ${s.stormArrival}</strong>. Shelter before then.`
+            : `A storm is coming. Visit the dish for the exact day.` };
       }
     }
     if (L.id === '1.2') {
-      return { label: `Forecast · Sol ${s.sol}`, tone: 'warn', sprite: 'hazard/water_leak', icon: '💧',
-        text: s.reopened ? 'Leak sealed. Keep water above 40%.' : s.isolated ? 'Hatch closed. Tape and patch the leak, then reopen.' : 'Water is leaking. Close the hatch at the recycler.' };
+      return { label: `Forecast - Day ${s.sol}`, tone: 'warn', sprite: 'hazard/water_leak', icon: '💧',
+        text: s.reopened ? 'Leak sealed. Keep water above 40%.'
+          : s.isolated ? 'Hatch closed. Tape and patch the leak, then reopen.'
+          : 'Water is leaking. Close the hatch at the recycler.' };
     }
     if (L.id === '1.1' && s.sol === L.goalsSol) {
-      return { label: 'Crew landing · Sol 5', tone: 'good', sprite: 'fx/capsule', icon: '🚀',
-        text: `Targets: O₂ ≥ ${L.goals.o2}%, water ≥ ${L.goals.water}%, battery ≥ ${L.goals.battery}.` };
+      return { label: 'Crew landing - Day 5', tone: 'good', sprite: 'fx/capsule', icon: '🚀',
+        text: `Targets: O2 at least ${L.goals.o2}%, water at least ${L.goals.water}%, battery at least ${L.goals.battery}.` };
     }
-    return { label: ev.label + ` · Sol ${s.sol}`, tone: ev.tone, icon: ev.icon, text: ev.text };
+    return { label: ev.label + ` - Day ${s.sol}`, tone: ev.tone, icon: ev.icon, text: ev.text };
   }
 
   function addLog(text, tone = 'info') {
@@ -1961,7 +2203,7 @@
       <div class="station-row neg"><span>Crew use</span><b>−${Math.round(use)}</b></div>
       <div class="station-row neg"><span>Wear</span><b>−${wear}</b></div>`;
     els.stationNote.textContent = L.id === '1.2' && state.isolated && row === 'water'
-      ? 'Recycler is isolated: water cells make nothing until the hatch is reopened.'
+      ? 'Recycler is off. Water cells made nothing today.'
       : `Leftover power cells: ${leftCells()}.`;
     els.stationCells.textContent = String(cells);
     els.stationMinus.disabled = cells <= 0 || state.phase === 'resolve';
@@ -2018,6 +2260,7 @@
     player.x = 512; player.y = 430; player.path = []; player.facing = 1;
     player.animDist = 0; player.animFrame = 0; player.animMode = 'idle';
     s.action = null;
+    s.tutorialStep = 0; s.tutorialMoved = false; s.tutorialSkipped = false; s.tutorialDelivered = false; s.tutorialDone = false;
     for (const n of npcs) { n.x = n.id === 'npc1' ? 470 : 620; n.y = n.id === 'npc1' ? 400 : 420; n.tx = n.x; n.ty = n.y; n.atBunker = false; }
     snapCamera();
 
@@ -2027,7 +2270,7 @@
     els.panel.classList.remove('is-collapsed');
     resize();
     renderTracker();
-    addLog(`<b>Mission ${L.id} · ${L.title}</b> — ${L.location}`, 'head');
+    addLog(`<b>${COACH_GOALS[L.id]}</b>`, 'head');
     startSol(true);
     render();
   }
@@ -2069,8 +2312,8 @@
       s.rover.dead = getBattery() <= 0;
     } else s.rover.dead = getBattery() <= 0;
     s.rover.usedThisSol = false;
-    if (s.rover.dead) addLog('🔋 Rover battery empty — walk or charge a cell this sol.', 'warn');
-    if (!first) addLog(`<b>Sol ${s.sol}</b> · ${s.budget} cells${s.penalty ? ` (−${s.penalty} penalty)` : ''} · ${s.air} EVA minutes.`, 'muted');
+    if (s.rover.dead) addLog('🔋 Rover battery empty. Walk or charge a cell today.', 'warn');
+    if (!first) addLog(`<b>Day ${s.sol}</b> - ${s.budget} solar cells. Air ${s.air}%.`, 'muted');
     if (L.hints && L.hints[s.sol]) addLog(`💡 ${L.hints[s.sol]}`, 'muted');
     if (L.id === '1.2' && s.sol === s.leakStart) {
       s.leakActive = true;
@@ -2123,7 +2366,7 @@
     if (s.phase !== 'plan') return;
     s.phase = 'eva';
     const leftover = Math.max(0, leftCells());
-    addLog(`🚀 EVA started. Suit air 100%.${leftover ? ` ${leftover} leftover cell${leftover === 1 ? '' : 's'} will charge the battery.` : ''}`, 'good');
+    addLog(`You are outside. Suit air 100%.${leftover ? ` ${leftover} spare cell${leftover === 1 ? '' : 's'} charge the battery.` : ''}`, 'good');
     Sound.run();
     render();
   }
@@ -2157,7 +2400,7 @@
         s.res.shielding = clamp((s.res.shielding || 0) + cells * RULES.shieldPerCell.value);
       } else if (row === 'water') {
         if (!(L.id === '1.2' && s.isolated)) s.res.water = clamp((s.res.water || 0) + cells * RULES.waterPerCell.value);
-        else lines.push({ t: 'Recycler is isolated — water cells made nothing this sol.', tone: 'warn' });
+        else lines.push({ t: 'Recycler is off. Water cells made nothing today.', tone: 'warn' });
       } else if (row === 'o2') {
         if (!s.sheltered || cells >= 1) s.res.o2 = clamp((s.res.o2 || 0) + cells * RULES.o2PerCell.value);
         else {
@@ -2243,8 +2486,8 @@
     }
 
     // 5 — events
-    if (s.eventKey === 'dust') { s.nextPenalty = Math.max(s.nextPenalty, 1); lines.push({ t: 'Dust: <b>1 fewer cell</b> next sol — sweep the panels during EVA.', tone: 'warn' }); }
-    if (s.eventKey === 'longshadow') { s.nextPenalty = Math.max(s.nextPenalty, 2); lines.push({ t: 'Long shadow: <b>2 fewer cells</b> next sol.', tone: 'warn' }); }
+    if (s.eventKey === 'dust') { s.nextPenalty = Math.max(s.nextPenalty, 1); lines.push({ t: 'Dust: <b>1 fewer cell</b> tomorrow. Sweep the panels outside.', tone: 'warn' }); }
+    if (s.eventKey === 'longshadow') { s.nextPenalty = Math.max(s.nextPenalty, 2); lines.push({ t: 'Long shadow: <b>2 fewer cells</b> tomorrow.', tone: 'warn' }); }
     if (s.eventKey === 'cold') { s.res.o2 = clamp(s.res.o2 - 8); lines.push({ t: 'Cold snap: heaters burn <b>8 extra O₂</b>.', tone: 'warn' }); }
 
     // 6 — dose
@@ -2306,7 +2549,7 @@
       Sound.warn();
     }
 
-    addLog(`<b>Sol ${sol} · ${s.eventKey}</b> — cells ${L.rows.map((r) => alloc[r] || 0).join('/')}`, 'head');
+    addLog(`<b>Day ${sol} - ${s.eventKey}</b> - cells ${L.rows.map((r) => alloc[r] || 0).join('/')}`, 'head');
     for (const line of lines) addLog(line.t, line.tone);
 
     render();
@@ -2351,7 +2594,7 @@
         if (s.slip < L.maxSlip) {
           s.slip += 1;
           s.delayed = true;
-          addLog(`📡 Crew landing slips to <b>Sol ${sol + 1}</b> — the outpost is not ready.`, 'warn');
+          addLog(`Crew landing slips to <b>Day ${sol + 1}</b>. The base is not ready.`, 'warn');
           return null;
         }
         return 'fail';
@@ -2417,7 +2660,7 @@
       : 'Mission Failed';
     els.debriefSub.textContent = won
       ? (L.id === '1.1'
-        ? (s.delayed ? `The capsule landed on Sol ${s.sol} — after ${s.slip} slip${s.slip > 1 ? 's' : ''}.` : 'The capsule landed right on schedule, Sol 5.')
+        ? (s.delayed ? `The capsule landed on Day ${s.sol} — after ${s.slip} slip${s.slip > 1 ? 's' : ''}.` : 'The capsule landed on Day 5. Right on time!')
         : L.id === '1.2' ? `The patch cured and the hatch was reopened ${s.reopened ? 'in time' : ''}.`
         : 'The crew stayed inside safe radiation limits.')
       : (reason || 'Retry is free — try a different plan.');
@@ -2438,7 +2681,7 @@
     if (s.reopened) good.push('Recycler back online after the patch.');
     if (s.hearts < 3) bad.push(`Lost ${3 - s.hearts} crew heart${3 - s.hearts === 1 ? '' : 's'}.`);
     for (const [row, low] of Object.entries(s.stats.lowest)) if (low < 45) bad.push(`${ROWS[row].short} dipped to ${low}%.`);
-    if (s.delayed) bad.push('Crew landing slipped one or more sols.');
+    if (s.delayed) bad.push('Crew landing slipped by one or more days.');
     if (L.id === '1.2' && !s.reopened) bad.push('The recycler was never reopened.');
     if (L.id === '1.3' && s.dose > RULES.doseLimit.value) bad.push(`Dose peaked over ${RULES.doseLimit.value}.`);
     if (!bad.length) bad.push('Nothing serious — a clean mission.');
@@ -2628,6 +2871,7 @@
         updateAction(dt);
       }
       updateInteractPrompt();
+      updateCoach();
     }
     drawScene(t);
     drawMinimap();
@@ -2698,6 +2942,16 @@
       };
     },
     get actionDraw() { return window.__jamtActionDraw || null; },
+    get coach() {
+      if (!coachState) return null;
+      return { text: coachState.text, mode: coachState.mode, target: coachState.target,
+        targetId: coachState.targetId, offscreen: !!coachState.offscreen,
+        arrow: coachState.arrow, icon: coachState.icon };
+    },
+    setHints(on) { settings.hints = !!on; saveSettings(); applySettings(); updateCoach(); },
+    updateCoach,
+    get tutorial() { return { step: state.tutorialStep, skipped: state.tutorialSkipped,
+      delivered: state.tutorialDelivered, done: state.tutorialDone }; },
     img12Scale: IMG12_SCALE,
     startHold, cancelHold,
     stepHold(dt) { updateHold(dt); updateAction(dt); },
@@ -2766,7 +3020,7 @@
 
 
   /* ============ iteration 2: loading, menus, briefing, pause, touch ====== */
-  const BUILD_VERSION = '3.1.3';
+  const BUILD_VERSION = '3.1.4';
   const TIPS = [
     'Did you know? ISS life support recovers about 98% of the crew’s water (NASA ECLSS).',
     'Did you know? Water ice hides in permanently shadowed craters at the lunar south pole (LRO/LCROSS).',
@@ -2776,32 +3030,32 @@
   ];
   const BRIEFS = {
     '1.1': {
-      goal: 'Get the outpost ready before the crew lands: O₂ ≥ 70%, water ≥ 60% and battery ≥ 3 by Sol 5.',
-      why: 'ISS life support makes oxygen from water and electricity. South-pole crater rims stay sunlit, but terrain still shadows solar arrays.',
+      goal: 'Get the Moon base ready before the crew lands. Reach O2 70%, water 60%, battery 3 by Day 5.',
+      why: 'ISS power and water make oxygen. The Moon south pole gets sunlight almost all day.',
       rows: [
         ['icons/o2', 'O₂ cells', 'Switchboard (battery bank)', 'O₂ generator', 'Breathing air; uses water'],
         ['icons/water', 'Ice', 'Shaded crater (SW)', 'Water tank', 'Only source of new water'],
         ['icons/battery', 'Battery canisters', 'Cargo crates', 'Battery bank', 'Stored power for shadows'],
-        ['power/solar_a', 'Spare panel', 'Crates', 'Solar field', '+1 solar cell per sol'],
+        ['power/solar_a', 'Spare panel', 'Crates', 'Solar field', '+1 solar cell each day'],
       ],
     },
     '1.2': {
-      goal: 'Seal the burst recycler pipe and keep water ≥ 40% at the end of Sol 6.',
-      why: 'ISS crews close hatches, locate the leak, seal it with Kapton tape, then cure epoxy. The 2018 Soyuz leak was a drilled hole, not a meteoroid.',
+      goal: 'Fix the leaking pipe. Keep water at 40% or more by Day 6.',
+      why: 'Crews close hatches and tape leaks. The 2018 Soyuz leak was a drill hole.',
       rows: [
         ['icons/water', 'Water', 'Recycler + ice', 'Crew', 'Drinking and food; rationing cuts use'],
         ['repair/toolbox', 'Toolbox + tape', 'Crates', 'Leak site', 'Stage A: cut the leak to 15%'],
-        ['repair/gears', 'Repair cells', 'Switchboard', 'Patch', 'Stage B: 2 sols to cure'],
+        ['repair/gears', 'Repair cells', 'Switchboard', 'Patch', 'Stage B: 2 days to cure'],
       ],
     },
     '1.3': {
-      goal: 'Keep radiation dose ≤ 60 and O₂ ≥ 30% after Sol 6.',
+      goal: 'Keep dose at 60 or less and O2 at 30% or more by Day 6.',
       why: 'Crews shelter from solar particle events; ~4 g/cm² of regolith gets below 30-day limits, but extra thickness barely stops cosmic rays.',
       rows: [
         ['icons/shield', 'Regolith bags', 'Bunker wall (NW)', 'Bunker', '+shielding, lowers storm dose'],
         ['icons/o2', 'O₂ canisters', 'Cargo crates', 'O₂ rack', '+25 O₂ (game assumption)'],
         ['icons/battery', 'Battery canisters', 'Crates', 'Battery bank', 'Power through a long shadow'],
-        ['fx/sun', 'Space weather', 'Comms dish (N)', 'Forecast', 'Reveals the exact storm sol'],
+        ['fx/sun', 'Space weather', 'Comms dish (N)', 'Forecast', 'Shows the storm day'],
       ],
     },
   };
@@ -2830,7 +3084,9 @@
     set('set-sound', settings.sound ? 'ON' : 'OFF');
     set('set-touch', settings.touch.toUpperCase());
     set('set-motion', settings.motion ? 'ON' : 'OFF');
+    set('set-hints', settings.hints ? 'ON' : 'OFF');
     set('set-unlock', settings.unlock ? 'ON' : 'OFF');
+    document.body.classList.toggle('hints-off', !settings.hints);
   }
 
   function openPause() {
@@ -2871,7 +3127,7 @@
     const coarse = window.matchMedia('(pointer: coarse)').matches;
     flowEls.briefControls.innerHTML = coarse
       ? '<span>Joystick: walk</span><span>ACT: pick up / use</span><span>Tap a highlighted object</span><span>⏸ Pause</span>'
-      : '<span>WASD / arrows: walk</span><span>Click: move</span><span>Hold E: use</span><span>1–3 / Shift: cells</span><span>Space: EVA</span><span>Esc: pause</span>';
+      : '<span>WASD / arrows: walk</span><span>Click: move</span><span>Hold E: use</span><span>1–3 / Shift: cells</span><span>Space: Go outside</span><span>Esc: pause</span>';
   }
   function openBriefing(id) { renderBrief(id); showScreen('brief'); }
 
@@ -2886,7 +3142,7 @@
         { label: 'O₂ reserve', value: `${Math.round(s.res.o2 || 0)}/70`, done: (s.res.o2 || 0) >= 70 },
         { label: 'Water reserve', value: `${Math.round(s.res.water || 0)}/60`, done: (s.res.water || 0) >= 60 },
         { label: 'Battery charge', value: `${Math.round(getBattery())}/3`, done: getBattery() >= 3 },
-        { label: 'Crew landing', value: s.slip ? `slip ${s.slip}` : 'Sol 5', done: false },
+        { label: 'Crew landing', value: s.slip ? `slip ${s.slip}` : 'Day 5', done: false },
       ];
     } else if (L.id === '1.2') {
       items = [
@@ -2909,7 +3165,40 @@
     countEl.textContent = `${items.filter((i) => i.done).length}/${items.length}`;
   }
 
+  function wireHelpDots() {
+    const pop = document.createElement('div');
+    pop.className = 'help-pop';
+    pop.hidden = true;
+    document.body.appendChild(pop);
+    let pinned = null;
+    const place = (dot, pin = false) => {
+      const r = dot.getBoundingClientRect();
+      pop.textContent = dot.dataset.help || '';
+      pop.hidden = false;
+      pop.style.left = `${Math.max(8, Math.min(window.innerWidth - 268, r.left - 8))}px`;
+      pop.style.top = `${Math.max(8, r.top - pop.offsetHeight - 8)}px`;
+      if (pin) pinned = dot;
+    };
+    const hide = (dot) => {
+      if (pinned === dot) return;
+      pop.hidden = true;
+    };
+    for (const dot of document.querySelectorAll('.help-dot')) {
+      dot.title = dot.dataset.help || '';
+      dot.addEventListener('mouseenter', () => place(dot));
+      dot.addEventListener('focus', () => place(dot));
+      dot.addEventListener('mouseleave', () => hide(dot));
+      dot.addEventListener('blur', () => hide(dot));
+      dot.addEventListener('click', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        place(dot, true);
+      });
+    }
+    document.addEventListener('click', () => { pinned = null; pop.hidden = true; });
+  }
+
   function wireFlow() {
+    els.coachSkip.addEventListener('click', () => { state.tutorialSkipped = true; updateCoach(); });
     document.getElementById('menu-settings').addEventListener('click', () => { flowEls.settings.hidden = false; Sound.click(); });
     document.getElementById('menu-credits').addEventListener('click', () => { flowEls.credits.hidden = false; Sound.click(); });
     document.getElementById('menu-quit').addEventListener('click', () => askConfirm('Quit the game? Your saved stars will stay on this device.', () => { closeConfirm(); showScreen('goodbye'); }));
@@ -2926,7 +3215,7 @@
 
     document.getElementById('pause-btn').addEventListener('click', openPause);
     document.getElementById('pause-continue').addEventListener('click', () => { closePause(); Sound.click(); });
-    document.getElementById('pause-restart').addEventListener('click', () => askConfirm('Restart this mission? Progress in the current sol will be lost.', () => {
+    document.getElementById('pause-restart').addEventListener('click', () => askConfirm('Restart this mission? Progress in the current day will be lost.', () => {
       closeConfirm(); closePause(); startLevel(state.levelId);
     }));
     document.getElementById('pause-map').addEventListener('click', () => askConfirm('Leave to the level map? This mission will not be saved.', () => {
@@ -2943,7 +3232,8 @@
       settings.touch = settings.touch === 'auto' ? 'on' : settings.touch === 'on' ? 'off' : 'auto';
       saveSettings(); applySettings();
     });
-    document.getElementById('set-motion').addEventListener('click', () => { settings.motion = !settings.motion; saveSettings(); applySettings(); });
+    document.getElementById('set-motion').addEventListener('click', () => { settings.motion = !settings.motion; saveSettings(); applySettings(); updateCoach(); });
+    document.getElementById('set-hints').addEventListener('click', () => { settings.hints = !settings.hints; saveSettings(); applySettings(); updateCoach(); });
     document.getElementById('set-unlock').addEventListener('click', () => { settings.unlock = !settings.unlock; saveSettings(); applySettings(); if (state.screen === 'select') renderSelect(); });
 
     // Esc / browser back / pause
@@ -3182,6 +3472,7 @@
       `<div class="station-row"><span>${ITEM_META[d.item].name} → ${(SLOTS.find((s) => s.id === d.slot) || {}).label || d.slot}</span><b>${d.effect}</b></div>`).join('');
   })();
   applySettings();
+  wireHelpDots();
   wireFlow();
   initLoading();
   initAnimDebugPage();

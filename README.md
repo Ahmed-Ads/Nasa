@@ -8,7 +8,7 @@ Level 1 is complete: **1.1 Outpost Prep**, **1.2 Water Leak**, **1.3 Solar Storm
 
 - Vanilla JS, no build step, **runs by double-clicking `index.html`** (no `fetch`).
 - Fixed hand-authored lunar world + camera, A* click-to-move, colliders, y-sorted sprites.
-- **PLAN → EVA → RESOLVE** loop: allocate power, walk the base and do physical tasks, then run the sol.
+- **1. Plan power -> 2. Go outside -> 3. End the day** loop: set power, walk the base, do jobs, then end the day.
 - Offline: system fonts only, all sprites local (`assets/manifest.js`).
 
 ```text
@@ -23,6 +23,23 @@ tools/       slice_assets.py · sim.py · qa.py
 
 
 
+
+## v3.1.4 - FIX-2: kid-friendly Moon missions
+
+- Kid vocabulary: Moon missions use **Day**. Phase chips are **1. Plan power**,
+  **2. Go outside**, **3. End the day**. The old phase labels are gone from every screen. The briefing adds a **Real NASA** line: one game day is one work shift, while a
+  real Moon day lasts about 29.5 Earth days.
+- The log headline is now the mission goal ("Day 1: Get the Moon base ready...").
+- One coach bar at the top of the map gives one short sentence and an icon. A pulsing arrow
+  points at the next source, slot, station or the switchboard; off-screen targets clamp the
+  arrow to the edge. Low air says "Your suit air is low. Go back inside!"; far targets say
+  "That is far. Use the rover!".
+- First-time 1.1 tutorial: go outside, move, hold E/ACT to pick up, deliver, switchboard,
+  end the day. A Skip button jumps to the generic coach.
+- Settings: **Hints** on by default for a new save, off after the first star. Suit air,
+  solar cells and battery cells each have a tap/hover **?** explanation.
+- QA: **102/102** on `file://` and the live GitHub Pages URL; `tools/out/coach_check.png`
+  shows four coach states on desktop and phone. Sim remains stale (v2 warning).
 
 ## v3.1.3 - Session 3 part B: ice mining + regolith digging
 
@@ -66,8 +83,8 @@ tools/       slice_assets.py · sim.py · qa.py
 - Mounted: **speed ×2.5**, suit-air drain **0.18/s** (walking 0.55/s), a wider turning curve,
   and a **4-item cargo bed** on top of the 1-item hands. ACT at a matching slot unloads **one**
   item per press; picking up while mounted loads into the bed.
-- **Battery**: 1 stored cell is charged at sol start **only if the rover was used** last sol. If
-  the stored cells are 0, the rover is dead for that sol and cannot be mounted. If it hits 0 while
+- **Battery**: 1 stored cell is charged at day start **only if the rover was used** last day. If
+  the stored cells are 0, the rover is dead for that day and cannot be mounted. If it hits 0 while
   riding, it stops and the cargo stays on it.
 - **Cannot enter the dome or bunker while mounted** (park next to them and walk).
 - **Walk-back ring**: a dashed circle centred on the hatch with radius
@@ -81,11 +98,11 @@ tools/       slice_assets.py · sim.py · qa.py
 
 ## v3.0.2 — Session 2B part 1: suit air
 
-- **EVA minutes are gone.** `state.eva`, `RULES.evaMinutes`, the EVA chip/pips and every `spend()`
+- **The old spacewalk timer is gone.** `state.eva`, `RULES.evaMinutes`, the spacewalk chip/pips and every `spend()`
   call were removed. Suit air is now the only budget.
-- **Suit air** 0–100, refilled at every sol start: walking drains **0.55/s**, mining/digging costs
+- **Suit air** 0–100, refilled at every day start: walking drains **0.55/s**, mining/digging costs
   **8** per action; a 25% warning is logged (and the HUD chip turns red); at **0** the astronaut
-  drops the carried item and the sol ends. Hearts are lost only if a storm is active.
+  drops the carried item and the day ends. Hearts are lost only if a storm is active.
 - HUD: `AIR %` chip + a suit-air bar in the console (desktop and phone); the air bar turns
   orange below 50% and red below 25%.
 - QA: **53/53** on `file://`, including drain, refill, zero-air drop/end, and version checks.
@@ -114,11 +131,11 @@ tools/       slice_assets.py · sim.py · qa.py
 The switchboard no longer produces water. **Ice is the only new water**, and every big resource is
 now carried by hand to a physical slot.
 
-| Item | Source (restocks each sol) | Slot | Effect |
+| Item | Source (restocks each day) | Slot | Effect |
 | --- | --- | --- | --- |
-| Ice chunk | SW shaded crater (mine, 1 EVA min, cap 4) | Water tank intake | +12 water |
+| Ice chunk | SW shaded crater (mine, 1 spacewalk min, cap 4) | Water tank intake | +12 water |
 | Battery canister | Cargo crates (cap 4) | Battery bank (4 slots) | +1 stored cell |
-| Solar panel | Crate (1.1/1.3, cap 3) | Solar field (3 slots) | +1 solar cell per sol, permanent |
+| Solar panel | Crate (1.1/1.3, cap 3) | Solar field (3 slots) | +1 solar cell per day, permanent |
 | O₂ canister | Crate (1.1, cap 2, game assumption) | O₂ rack (2 slots) | +25 O₂ |
 | Regolith bag | Soil near the bunker (dig, 1 min, cap 5) | Bunker wall (5 slots) | +8 shielding; bunker protection 50% + 8%/bag |
 | Toolbox / tape / repair parts | Crates (1.2) | Leak site | isolate hatch → tape → patch cure |
@@ -128,8 +145,8 @@ now carried by hand to a physical slot.
   match; wrong slots give a friendly hint and keep the item.
 - The **switchboard** (battery bank station) is the only place the `+/−` cells work; a compact
   read-only **Water** strip is always visible. Unspent cells still charge the battery.
-- Crew use is now 11 water + 10 O₂ per sol; O₂ cells cost 1 water each. Doing nothing runs the
-  crew out of water around Sol 4 (ice deliveries are required).
+- Crew use is now 11 water + 10 O₂ per day; O₂ cells cost 1 water each. Doing nothing runs the
+  crew out of water around Day 4 (ice deliveries are required).
 - QA: **45/45** checks (economy deliveries, wrong slot, drop persistence, flow, touch), plus the
   v2 regression suite.
 - **Note:** the balance sim has **not** been retuned for this economy (that is Session 2). The
@@ -192,7 +209,7 @@ Double-click `index.html`. Optional server: `python -m http.server 8000`.
 | `1` `2` `3` | Add a power cell to row 1/2/3 |
 | `Shift` + number | Remove a cell from that row |
 | `B` | Draw a cell from the battery |
-| `Space` | Start EVA / End EVA |
+| `Space` | Go outside / End the day |
 | `Esc` | Close a modal |
 | `⌄` button, bottom right | Collapse / show the console |
 
@@ -204,11 +221,11 @@ The interaction prompt appears whenever you stand in a station radius.
 
 1. **PLAN** — spend the solar budget across the level's rows. Leftover cells are stored in the
    battery (cap 6). If a dust storm or long shadow cuts the budget, draw from the battery
-   (max 2 per sol).
-2. **EVA** — you have **3 EVA minutes** per sol. Walk to a station and hold `E` (or hold the
+   (max 2 per day).
+2. **spacewalk** — you have **3 spacewalk minutes** per day. Walk to a station and hold `E` (or hold the
    on-screen prompt). Tasks cost 1–2 minutes. There are no fail screens — you can always end
-   the EVA early.
-3. **RESOLVE** — production, crew use, wear, the leak, the event, dose, then hearts and the
+   the spacewalk early.
+3. **End the day** — production, crew use, wear, the leak, the event, dose, then hearts and the
    win/fail check. The mission log explains every change.
 
 ### Stations
@@ -218,7 +235,7 @@ The interaction prompt appears whenever you stand in a station radius.
 | Solar field (W) | Sweep dust (restores the lost cells), install the spare panel from the crates (+1 cell for the mission, 1.1) |
 | Battery bank | Shows stored cells; draw cells in the console |
 | O₂ generator / CO₂ scrubber / water recycler | Opens that system's mini-panel: production vs crew use vs wear, with `+/−` cells |
-| Comms dish (N) | Space-weather uplink: reveals the CME arrival sol (1.3) |
+| Comms dish (N) | Space-weather uplink: reveals the CME arrival day (1.3) |
 | Rover + ice patch (SW) | Haul ice: +14 water (1.2) or +8 O₂ (1.3), 2 minutes, +dose in a storm |
 | Recycler (1.2) | Close hatch → fetch tape from crates → tape → cure patch → reopen |
 | Regolith bunker (NW) | Shelter order (also available as a console button once the CME alert arrives) |
@@ -239,17 +256,17 @@ string used by the debrief.
 
 | Rule | Value | Kind |
 | --- | --- | --- |
-| Power budget / battery cap / draws per sol | 6 / 6 / 2 | game |
-| Crew use | 10 O₂ + 6 water per sol | game (scaled from NASA life-support baselines) |
+| Power budget / battery cap / draws per day | 6 / 6 / 2 | game |
+| Crew use | 10 O₂ + 6 water per day | game (scaled from NASA life-support baselines) |
 | O₂ cell | +10 O₂, uses 2 water | game (ISS O₂ is made by electrolysis — real) |
 | Water cell | +9 water | game (ISS recovers ~98% water — real) |
 | Shielding cell | +4 shielding | game (regolith shielding — real) |
-| Wear per sol | O₂ 5+0.5·sol · water 3+0.4·sol · shielding 4 | game |
-| Leak (1.2) | 30 water/sol → isolate 40% → tape 15%; patch = 2 repair-cell sols | game |
-| Rationing | −40% crew water; −1 heart after 3 sols **while water < 50**; auto-off when sealed | game |
+| Wear per day | O₂ 5+0.5·day · water 3+0.4·day · shielding 4 | game |
+| Leak (1.2) | 30 water/day → isolate 40% → tape 15%; patch = 2 repair-cell days | game |
+| Rationing | −40% crew water; −1 heart after 3 days **while water < 50**; auto-off when sealed | game |
 | Storm dose (1.3) | `70 × (1 − 0.65 × shield/100)` + 2.5 background | shield cut is real (regolith); numbers are game |
-| Early vs late shelter | 90% cut if ordered before arrival, 15% if ordered on the arrival sol | game (SPE sheltering is real) |
-| CME arrival | Sol 3–5, 1–2 sols long (2 sols 80% of the time) | game (CMEs take ~1–4 days — real) |
+| Early vs late shelter | 90% cut if ordered before arrival, 15% if ordered on the arrival day | game (SPE sheltering is real) |
+| CME arrival | Day 3–5, 1–2 days long (2 days 80% of the time) | game (CMEs take ~1–4 days — real) |
 | Research | 3 points per surface cell, paused while sheltered | game (≤10% of score) |
 
 **Levels**
@@ -258,7 +275,7 @@ string used by the debrief.
 | --- | --- | --- | --- |
 | Rows | O₂ / water / battery | O₂ / water / repair | O₂ / shielding / surface |
 | Start | 38 / 48 / 0 | 65 / 68 | 75 / 30 |
-| Win | O₂ ≥ 70, water ≥ 60, battery ≥ 3 on Sol 5 (up to 2 one-sol slips) | hatch reopened **and** water ≥ 40 at end of Sol 6 | dose ≤ 60 **and** O₂ ≥ 30 after Sol 6 |
+| Win | O₂ ≥ 70, water ≥ 60, battery ≥ 3 on Day 5 (up to 2 one-day slips) | hatch reopened **and** water ≥ 40 at end of Day 6 | dose ≤ 60 **and** O₂ ≥ 30 after Day 6 |
 | Fail | any critical meter 0, 0 hearts, or not ready after 2 slips | | |
 | Lesson | battery vs solar, deploy a panel, sweep dust | isolate first, tape, patch, reopen | check the dish, shelter early, dose vs research |
 
@@ -268,7 +285,7 @@ and score ≥ par (1.1: 340, 1.2: 205, 1.3: 250). Otherwise 2 or 1. Stars persis
 
 **Revive** (once per mission) restores every meter to ≥45%, gives 1 heart back and removes the
 cause of death — in 1.3 it also drops the dose to 70% of the limit and pushes the storm window
-forward, so a revived crew never dies instantly on the next sol.
+forward, so a revived crew never dies instantly on the next day.
 
 ---
 
@@ -282,13 +299,13 @@ forward, so a revived crew never dies instantly on the next sol.
 | B4 no depth sorting | every prop/NPC/player is y-sorted by foot position each frame |
 | B5 only the dome collided | 21 colliders (dome, solar, rover, tanks, dish, antenna, crates, bunker, boulders) + A* |
 | B6 astronaut was half the dome | astronaut is 66 px vs the 172 px dome (≈38%) |
-| B7 1.1 only re-checked at Sol 7 | ready is checked every sol; each slip is one sol |
-| B8 “Sol 6 / 5” | HUD shows `Sol n / 5 · slip k` |
+| B7 1.1 only re-checked at Day 7 | ready is checked every day; each slip is one day |
+| B8 “Day 6 / 5” | HUD shows `Day n / 5 · slip k` |
 | B9 revive kept a lethal dose | revive caps dose at 70% of the limit and moves the storm window |
-| B10 ration only cut the leak | ration now cuts crew water use, only costs a heart after 3 sols while water < 50, and auto-stops when sealed |
+| B10 ration only cut the leak | ration now cuts crew water use, only costs a heart after 3 days while water < 50, and auto-stops when sealed |
 | B11 hidden patch prerequisite | the repair meter is replaced by a patch bar + a visible 5-step checklist |
 | B12 dose ignored the shielding meter | dose is driven by the meter; shelter pauses surface work and O₂ (unless 1 cell goes to O₂); research is ≤10% of score |
-| B13 “unspent cells” was impossible | Start EVA is always available; leftover cells charge the battery, and the battery can be drawn on |
+| B13 “unspent cells” was impossible | Go outside is always available; leftover cells charge the battery, and the battery can be drawn on |
 | B14 Shift+number broke on real keyboards | `e.code` (`Digit1/2/3`) is used |
 | B15 sprites had navy boxes | `slice_assets.py` keys every sprite background (corner-median + flood fill + 1 px erode); terrain tiles stay opaque |
 | B16 blurry sprites | integer render scale (2×) and nearest-neighbour `drawImage` |
@@ -306,7 +323,7 @@ six policies. Final results:
 | --- | --- | --- | --- | --- |
 | 1.1 | random | 20.5 | 0.3 | 300 |
 | 1.1 | even split | 0.0 | 0.0 | — |
-| 1.1 | always shelter / work / never EVA | 0.0 | 0.0 | — |
+| 1.1 | always shelter / work / never go outside | 0.0 | 0.0 | — |
 | 1.1 | good | **100.0** | **100.0** | 341 |
 | 1.2 | random | 12.2 | 4.0 | 201 |
 | 1.2 | even split | 0.0 | 0.0 | — |
@@ -315,11 +332,11 @@ six policies. Final results:
 | 1.3 | even split | 0.0 | 0.0 | — |
 | 1.3 | always shelter | 100.0 | 100.0 | 253 |
 | 1.3 | always work | 0.0 | 0.0 | — |
-| 1.3 | never EVA | 100.0 | 100.0 | 253 |
+| 1.3 | never go outside | 100.0 | 100.0 | 253 |
 | 1.3 | good (mixed) | **100.0** | **100.0** | 285 |
 
 Targets: random ≤30% win and ≤5% three-star; even split fails at least one sublevel; always
-shelter / always work / never EVA are each out-scored by the mixed strategy; good ≥85% with
+shelter / always work / never go outside are each out-scored by the mixed strategy; good ≥85% with
 ≥40% three-star; every sublevel has ≥3 distinct winning strategies.
 
 Three winning strategies per level (sim): 1.1 balanced / O₂-first / water-first; 1.2 fast
@@ -401,11 +418,11 @@ Decisions I had to guess:
    still readable on a 360 px phone.
 2. **Map labels** — “solar field west / utility yard east / comms north / rover south / bunker
    NW / ice SW” were turned into concrete world coordinates; the dome is centre.
-3. **EVA minutes are a budget, not a real-time clock** — tasks consume minutes; there is no
+3. **spacewalk minutes are a budget, not a real-time clock** — tasks consume minutes; there is no
    fail screen and no timer pressure.
 4. **“Hold-to-do” = 2.2 s**, inside the requested 2–4 s band.
 5. **Shelter timing** — “anyone outside at particle arrival takes the full dose” is modelled as
-   90% protection if the order is given before the arrival sol, 15% if given on the arrival sol.
+   90% protection if the order is given before the arrival day, 15% if given on the arrival day.
 6. **The bunker is a station + a console button** (the brief only said the order makes the crew
    walk); both set the same flag.
 7. **1.1 panel** gives a permanent +1 cell; the crate fetch and the install each cost 1 minute.
