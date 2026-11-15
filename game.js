@@ -3027,7 +3027,7 @@
 
 
   /* ============ iteration 2: loading, menus, briefing, pause, touch ====== */
-  const BUILD_VERSION = '3.1.5';
+  const BUILD_VERSION = '3.1.6';
   const TIPS = [
     'Did you know? ISS life support recovers about 98% of the crew’s water (NASA ECLSS).',
     'Did you know? Water ice hides in permanently shadowed craters at the lunar south pole (LRO/LCROSS).',
@@ -3073,7 +3073,7 @@
     brief: $('#screen-brief'), briefTitle: $('#brief-title'), briefKicker: $('#brief-kicker'),
     briefGoal: $('#brief-goal'), briefWhy: $('#brief-why'), briefTable: $('#brief-table'),
     briefControls: $('#brief-controls'),
-    pause: $('#modal-pause'), confirm: $('#modal-confirm'), confirmText: $('#confirm-text'),
+    pause: $('#modal-pause'), confirm: $('#modal-confirm'), confirmText: $('#confirm-text'), confirmArt: $('#confirm-art'),
     settings: $('#modal-settings'), credits: $('#modal-credits'),
     tracker: $('#tracker'), trackerList: $('#tracker-list'), trackerCount: $('#tracker-count'),
     touch: $('#touch-controls'), stick: $('#stick'), knob: $('#stick-knob'), act: $('#act-btn'),
@@ -3105,8 +3105,14 @@
   }
   function closePause() { flowEls.pause.hidden = true; state.paused = false; }
 
-  function askConfirm(text, onYes) {
+  const UI_SAD = 'assets/ui/sad_astronaut.png';
+  function askConfirm(text, onYes, art = null) {
     flowEls.confirmText.textContent = text;
+    if (flowEls.confirmArt) {
+      flowEls.confirmArt.hidden = !art;
+      if (art) flowEls.confirmArt.src = art;
+      else flowEls.confirmArt.removeAttribute('src');
+    }
     confirmYes = onYes;
     flowEls.confirm.hidden = false;
   }
@@ -3208,7 +3214,7 @@
     els.coachSkip.addEventListener('click', () => { state.tutorialSkipped = true; updateCoach(); });
     document.getElementById('menu-settings').addEventListener('click', () => { flowEls.settings.hidden = false; Sound.click(); });
     document.getElementById('menu-credits').addEventListener('click', () => { flowEls.credits.hidden = false; Sound.click(); });
-    document.getElementById('menu-quit').addEventListener('click', () => askConfirm('Quit the game? Your saved stars will stay on this device.', () => { closeConfirm(); showScreen('goodbye'); }));
+    document.getElementById('menu-quit').addEventListener('click', () => askConfirm('Quit the game? Your saved stars will stay on this device.', () => { closeConfirm(); showScreen('goodbye'); }, UI_SAD));
     document.getElementById('goodbye-back').addEventListener('click', () => { Sound.click(); showScreen('title'); });
     document.getElementById('credits-version').textContent = `Version ${BUILD_VERSION}`;
     const tv = document.getElementById('title-version');
@@ -3230,7 +3236,7 @@
     }));
     document.getElementById('pause-menu').addEventListener('click', () => askConfirm('Return to the main menu? This mission will not be saved.', () => {
       closeConfirm(); closePause(); goTitle();
-    }));
+    }, UI_SAD));
     document.getElementById('confirm-yes').addEventListener('click', () => { const fn = confirmYes; closeConfirm(); if (fn) fn(); });
     document.getElementById('confirm-no').addEventListener('click', () => { closeConfirm(); Sound.click(); });
 

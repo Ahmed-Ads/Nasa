@@ -24,6 +24,16 @@ tools/       slice_assets.py · sim.py · qa.py
 
 
 
+## v3.1.6 - Landing and quit art from img8/img9
+
+- Landing page now uses the **Survival Outpost** crest, cheerful astronaut, READY TO LAND?
+  sign, and the Start Game / Quit Mission art buttons. Happy emotions are used for starting.
+- Quit page uses the **sad astronaut** and the img8 **EXIT** door and **MISSION ABORTED**
+  banner. The quit confirmation also shows the sad astronaut. Leaving reads as a sad moment;
+  starting reads as a happy one.
+- New sliced UI art lives in `assets/ui/`; no source JPGs are loaded at runtime.
+- QA: **106/106** on `file://` and the live GitHub Pages URL. Sim remains stale (v2 warning).
+
 ## v3.1.5 - A5 completion: action animations on the FIX-2 build
 
 - Re-verified the hold-to-act **ice mining** (`ice_mine_01..08`) and **regolith digging**
@@ -194,12 +204,13 @@ now carried by hand to a physical slot.
 - Phase D suit air and rover riding / walk-back ring.
 - Phase F new animation strips: the img6 walk/action frames are composited on opaque terrain
   patches and cannot be keyed cleanly (halos/background remain), so the brief says to keep the
-  current sprites rather than ship artifacts. The img9 logo (“SURVIVAL OUTPOST”) and buttons are
-  not used; UI is CSS.
+  current sprites rather than ship artifacts. The img9 logo/buttons and img8 UI prompts now
+  power the landing and quit pages (v3.1.6); the in-game UI remains CSS.
 - Phase G rebalance for the physical economy; the rules and 600-run balance table below still apply.
 
 **Deploy files (commit and push):** `index.html`, `style.css`, `game.js`, `README.md`,
-`assets/manifest.js`, `assets/sprites/**`, `tools/qa.py`, `tools/sim.py`,
+`assets/manifest.js`, `assets/sprites/**`, `assets/anim/**`, `assets/anim_manifest.js`,
+`assets/ui/**`, `tools/qa.py`, `tools/sim.py`,
 `tools/sim_results.json`, `tools/slice_assets.py`, `tools/check_assets.py`, `.nojekyll`,
 `.gitignore`. Never commit `assets/img*.jpg` (13 MB sources, already ignored).
 
