@@ -57,8 +57,11 @@
         <span class="phase-chip" id="hud-phase">1. Plan power</span>
         <span class="chip chip-eva" id="hud-eva" title="Suit air">Air 100%</span>
         <span class="chip chip-dose" id="hud-dose" hidden>☢ 0</span>
+        <span class="chip hud-goal" id="hud-goal">Goal: Get ready</span>
+        <span class="chip chip-alert" id="hud-alert" hidden></span>
       </div>
       <div class="hud-right">
+        <span class="panels-key" id="panels-key" title="Toggle Full / Focus panels">P panels</span>
         <button class="icon-btn" id="pause-btn" type="button" aria-label="Pause" title="Pause">⏸</button>
         <button class="icon-btn" id="map-btn-hud" type="button" aria-label="Mini-map" title="Mini-map">🗺</button>
         <button class="icon-btn" id="science-btn-hud" type="button" aria-label="Mission Science"
@@ -390,6 +393,8 @@
       </div>
     </section>
 
+    <button class="panel-toggle" id="panel-toggle" type="button" aria-label="Show or hide panels">▤<small>Panels</small></button>
+
     <div class="touch" id="touch-controls" hidden>
       <div class="stick" id="stick">
         <div class="stick-knob" id="stick-knob"></div>
@@ -502,6 +507,7 @@
         <li><strong>3. End the day.</strong> The base makes power. The crew uses supplies. Hazards happen.</li>
         <li><strong>Keep everyone safe.</strong> Keep meters above 20%. Zero hearts ends the mission. Retry is free. You
           get one Revive.</li>
+        <li><strong>Panels:</strong> press <kbd>P</kbd> to switch between Full and Focus. On phones use the Panels button.</li>
       </ol>
       <p class="modal-note">Stations: solar field (sweep dust, deploy a panel), battery bank, O₂/CO₂/water units (adjust
         cells on the spot),
@@ -619,6 +625,7 @@
       <div class="setting-row"><span>Hints</span><button class="mini-btn" id="set-hints" type="button">ON</button></div>
       <div class="setting-row"><span>Unlock all missions (judge mode)</span><button class="mini-btn" id="set-unlock"
           type="button">OFF</button></div>
+      <div class="setting-row"><span>Panels</span><button class="mini-btn" id="set-panels" type="button">AUTO</button></div>
       <div class="setting-row"><span id="label-buddy-name">Buddy name</span><input class="setting-input"
           id="set-buddy-name" type="text" maxlength="18" value="Buddy" aria-label="Buddy name"></div>
       <div class="setting-row"><span id="label-buddy-proactive">Buddy proactive hints</span><button class="mini-btn"

@@ -289,6 +289,7 @@
     panelBonus: 0, bags: 0, carry: null, groundItems: [], sources: [], slots: [], snap: null, atSwitchboard: false,
     action: null,
     tutorialStep: 0, tutorialMoved: false, tutorialSkipped: false, tutorialDelivered: false, tutorialDone: false,
+    coachActed: false,
     carryingPanel: false,
     carryingTape: false,
     isolated: false,
@@ -369,7 +370,8 @@
       sound: true, touch: 'auto', motion: false, unlock: false,
       hints: !Object.values(progress).some((n) => n > 0),
       buddyName: 'Buddy', buddyLang: 'en', buddyCloud: false,
-      buddyProactive: true, buddySpeak: false, buddyMuted: false
+      buddyProactive: true, buddySpeak: false, buddyMuted: false,
+      panels: 'auto'
     };
     const raw = safeGet('jamt.settings', {});
     if (!raw || typeof raw !== 'object') return d;
@@ -383,6 +385,7 @@
     for (const k of ['buddyCloud', 'buddyProactive', 'buddySpeak', 'buddyMuted']) {
       if (typeof raw[k] === 'boolean') d[k] = raw[k];
     }
+    if (['auto', 'full', 'focus'].includes(raw.panels)) d.panels = raw.panels;
     return d;
   })();
   function saveSettings() { safeSet('jamt.settings', settings); }
@@ -459,6 +462,7 @@
     app: $('#app'), scene: $('#scene'), minimap: $('#minimap'),
     hud: $('#hud'), hudHearts: $('#hud-hearts'), hudSol: $('#hud-sol'), hudLevel: $('#hud-level'),
     hudDose: $('#hud-dose'), hudPhase: $('#hud-phase'), hudEva: $('#hud-eva'),
+    hudGoal: $('#hud-goal'), hudAlert: $('#hud-alert'), panelToggle: $('#panel-toggle'), panelsKey: $('#panels-key'),
     coach: $('#coach'), coachText: $('#coach-text'), coachIcon: $('#coach-icon'), coachSkip: $('#coach-skip'),
     sound: $('#sound-btn'),
     title: $('#screen-title'), select: $('#screen-select'), debrief: $('#screen-debrief'),
@@ -901,6 +905,7 @@
     ctx.imageSmoothingEnabled = false;
     camera.w = VW; camera.h = VH;
     measureConsole();
+    applyPanelsMode(false);
     positionTracker();
     buddy?.position();
     snapCamera();
@@ -2155,6 +2160,76 @@
     tracker.style.width = '126px';
   }
 
+  function isCompactUi() {
+    return window.matchMedia('(max-width: 820px), (max-height: 520px)').matches
+      || document.body.classList.contains('touch-on');
+  }
+
+  function panelsMode() {
+    if (settings.panels === 'full' || settings.panels === 'focus') return settings.panels;
+    if (isCompactUi()) return 'focus';
+    return state.levelId === '1.1' && state.sol === 1 ? 'full' : 'focus';
+  }
+
+  function applyPanelsMode(remeasure = true) {
+    const compact = isCompactUi();
+    const mode = panelsMode();
+    document.body.classList.toggle('panels-compact', compact);
+    document.body.classList.toggle('panels-focus', mode === 'focus');
+    document.body.classList.toggle('panels-full', mode === 'full');
+    if (remeasure && typeof measureConsole === 'function') measureConsole();
+    positionPanelToggle();
+    buddy?.position();
+    if (typeof positionTracker === 'function') positionTracker();
+    if (state.screen === 'game' && typeof snapCamera === 'function') snapCamera();
+  }
+
+  function positionPanelToggle() {
+    const btn = els.panelToggle;
+    if (!btn) return;
+    if (!isCompactUi() || state.screen !== 'game') {
+      btn.style.top = '';
+      btn.style.left = '';
+      return;
+    }
+    const coach = els.coach;
+    const cr = coach && !coach.hidden ? coach.getBoundingClientRect() : null;
+    const hr = els.hud ? els.hud.getBoundingClientRect() : null;
+    const top = cr && cr.height > 0 ? Math.round(cr.bottom + 6)
+      : Math.max(52, Math.round((hr ? hr.bottom : 0) + 6));
+    btn.style.top = `${top}px`;
+    btn.style.left = 'max(12px, env(safe-area-inset-left))';
+  }
+
+  function togglePanels() {
+    const mode = panelsMode();
+    settings.panels = mode === 'full' ? 'focus' : 'full';
+    saveSettings();
+    applyPanelsMode();
+    applySettings();
+    addLog(`Panels: <b>${settings.panels === 'full' ? 'Full' : 'Focus'}</b> (P)`, 'muted');
+  }
+
+  function updateHudExtras() {
+    const s = state;
+    if (!els.hudGoal || !s.level) return;
+    const plan = COACH_PLANS[s.levelId] || [];
+    const next = plan.find((p) => !p.done(s));
+    let goal = next ? next.text : (s.phase === 'plan' ? 'Set power, then go outside.' : s.phase === 'eva' ? 'Finish jobs, then end the day.' : 'End the day.');
+    if (goal.length > 54) goal = `${goal.slice(0, 51)}…`;
+    els.hudGoal.textContent = `Goal: ${goal}`;
+    const alerts = [];
+    if (s.air < 25) alerts.push('Low air');
+    if (s.leakActive) alerts.push('Leak');
+    if (s.stormStarted) alerts.push('Storm');
+    else if (s.levelId === '1.3' && s.stormKnown && s.sol === s.stormArrival) alerts.push('Storm today');
+    if (s.hearts < MAX_HEARTS) alerts.push(`Heart lost ${MAX_HEARTS - s.hearts}`);
+    if (els.hudAlert) {
+      els.hudAlert.hidden = !alerts.length;
+      els.hudAlert.textContent = alerts.join(' · ');
+    }
+  }
+
   function drawCoachFx(time) {
     if (!coachState || !coachState.target) return;
     const target = coachState.target;
@@ -2293,6 +2368,7 @@
     }
 
     // battery / draw
+    updateHudExtras();
     els.batteryVal.textContent = `${Math.round(s.battery)}/${RULES.batteryCap.value}`;
     els.drawBtn.disabled = !((s.phase === 'plan' || s.phase === 'eva') && s.battery > 0 && s.draws < RULES.maxDrawPerSol.value);
     els.drawBtn.textContent = `Draw +1${s.draws ? ` (${s.draws}/2)` : ''}`;
@@ -2524,7 +2600,7 @@
     player.x = 512; player.y = 430; player.path = []; player.facing = 1;
     player.animDist = 0; player.animFrame = 0; player.animMode = 'idle'; player.stuckT = 0;
     s.action = null;
-    s.tutorialStep = 0; s.tutorialMoved = false; s.tutorialSkipped = false; s.tutorialDelivered = false; s.tutorialDone = false;
+    s.tutorialStep = 0; s.tutorialMoved = false; s.tutorialSkipped = false; s.tutorialDelivered = false; s.tutorialDone = false; s.coachActed = false;
     for (const n of npcs) { n.x = n.id === 'npc1' ? 470 : 620; n.y = n.id === 'npc1' ? 400 : 420; n.tx = n.x; n.ty = n.y; n.atBunker = false; }
     snapCamera();
 
@@ -2533,6 +2609,7 @@
     showScreen('game');
     els.panel.classList.remove('is-collapsed');
     resize();
+    applyPanelsMode();
     renderTracker();
     addLog(`<b>${COACH_GOALS[L.id]}</b>`, 'head');
     startSol(true);
@@ -2584,6 +2661,7 @@
       addLog('🚨 <b>Water leak!</b> A recycler pipe burst. Get to the recycler deck.', 'bad');
       Sound.warn();
     }
+    applyPanelsMode();
     render();
     startEVAPhaseIfDebug();
   }
@@ -3074,6 +3152,7 @@
     if (state.screen === 'debrief') { if (e.key === 'Enter') { e.preventDefault(); if (!els.next.hidden) els.next.click(); else els.retry.click(); } return; }
     if (state.screen !== 'game') return;
     if (e.code === 'KeyH' && !e.repeat) { e.preventDefault(); buddy?.toggle(); return; }
+    if (e.code === 'KeyP' && !e.repeat) { e.preventDefault(); togglePanels(); return; }
 
     const k = e.key.toLowerCase();
     if (e.code === 'KeyW' || e.key === 'ArrowUp') { e.preventDefault(); keys.up = true; return; }
@@ -3176,6 +3255,7 @@
     const t = now / 1000;
     const dt = lastT ? Math.min(0.05, t - lastT) : 0.016;
     lastT = t;
+    document.body.classList.toggle('panels-temp-hidden', !!(hold.active || state.action || buddy?.isOpen));
     if (state.screen === 'game') {
       updatePlayer(dt);
       updateSwitchboardStatus();
@@ -3408,12 +3488,14 @@
     set('set-motion', settings.motion ? 'ON' : 'OFF');
     set('set-hints', settings.hints ? 'ON' : 'OFF');
     set('set-unlock', settings.unlock ? 'ON' : 'OFF');
+    set('set-panels', settings.panels === 'auto' ? 'AUTO' : settings.panels.toUpperCase());
     set('set-buddy-proactive', settings.buddyProactive ? 'ON' : 'OFF');
     set('set-buddy-cloud', settings.buddyCloud ? 'ON' : 'OFF');
     set('set-buddy-speak', settings.buddySpeak ? 'ON' : 'OFF');
     const bn = document.getElementById('set-buddy-name');
     if (bn && document.activeElement !== bn) bn.value = settings.buddyName;
     document.body.classList.toggle('hints-off', !settings.hints);
+    applyPanelsMode(false);
     if (buddy) buddy.applySettings();
   }
 
@@ -3599,6 +3681,12 @@
     document.getElementById('set-motion').addEventListener('click', () => { settings.motion = !settings.motion; saveSettings(); applySettings(); updateCoach(); });
     document.getElementById('set-hints').addEventListener('click', () => { settings.hints = !settings.hints; saveSettings(); applySettings(); updateCoach(); });
     document.getElementById('set-unlock').addEventListener('click', () => { settings.unlock = !settings.unlock; saveSettings(); applySettings(); if (state.screen === 'select') renderSelect(); });
+    document.getElementById('set-panels').addEventListener('click', () => {
+      const next = panelsMode() === 'full' ? 'focus' : 'full';
+      settings.panels = next; saveSettings(); applySettings();
+    });
+    els.panelToggle?.addEventListener('click', togglePanels);
+    els.panelsKey?.addEventListener('click', togglePanels);
     const buddyName = document.getElementById('set-buddy-name');
     if (buddyName) {
       buddyName.addEventListener('input', () => {
@@ -4154,8 +4242,13 @@
       const tr = tracker && !tracker.hidden ? tracker.getBoundingClientRect() : null;
       const short = window.innerHeight <= 520;
       const size = short ? 34 : 58;
+      const fullDrawer = document.body.classList.contains('panels-full');
       let top;
-      if (short) {
+      if (fullDrawer) {
+        // The phone drawer hides the touch controls. Keep Buddy just above it.
+        const pr = document.getElementById('panel')?.getBoundingClientRect();
+        top = Math.max(2, (pr ? pr.top : window.innerHeight * 0.55) - size - 10);
+      } else if (short) {
         // Landscape phone: the only clear band is between the tracker and the
         // bottom console. Keep the button in that band.
         top = Math.max(2, tr ? tr.bottom + 1 : 40);

@@ -1,6 +1,6 @@
-/* ==========================================================================
-   Space Buddy — Level 1
-   Pixel mission control UI · fonts bundled locally (works offline)
+﻿/* ==========================================================================
+   Space Buddy â€” Level 1
+   Pixel mission control UI آ· fonts bundled locally (works offline)
    ========================================================================== */
 
 /* Bundled so the pixel type matches the design without a Google Fonts request.
@@ -889,7 +889,7 @@ body.no-minimap #minimap {
 }
 
 .debrief-lists li::before {
-  content: "▸ ";
+  content: "â–¸ ";
   color: #7fbdff;
 }
 
@@ -1382,7 +1382,7 @@ body.no-minimap #minimap {
 }
 
 .patch-steps li::before {
-  content: "○ ";
+  content: "â—‹ ";
 }
 
 .patch-steps li.done {
@@ -1390,7 +1390,7 @@ body.no-minimap #minimap {
 }
 
 .patch-steps li.done::before {
-  content: "✔ ";
+  content: "âœ” ";
 }
 
 .dose {
@@ -1604,7 +1604,7 @@ body.no-minimap #minimap {
 }
 
 .log:empty::before {
-  content: "Mission log…";
+  content: "Mission logâ€¦";
   color: var(--muted);
 }
 
@@ -2601,7 +2601,7 @@ button.brief-back:hover,
 }
 
 .tracker-list li.done::after {
-  content: "✔";
+  content: "âœ”";
 }
 
 .tracker-list b {
@@ -5128,4 +5128,104 @@ body.reduce-motion .buddy-mic { transition: none; animation: none; }
   .shooting-star {
     animation: none !important;
   }
+}
+
+/* ===================== Simpler panels: Full / Focus ===================== */
+.hud-goal {
+  max-width: min(34vw, 260px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #dff7ff;
+  background: #122536;
+  border-color: #2b6d8c;
+}
+.chip-alert {
+  color: #fff;
+  background: #7a2033;
+  border-color: #ff4d6d;
+  box-shadow: inset 2px 2px 0 #d56b80, inset -2px -2px 0 #3b0d18, 0 3px 0 rgba(0,0,0,.45);
+}
+.panels-key {
+  font-family: var(--pixel);
+  font-size: 8px;
+  letter-spacing: .5px;
+  color: #b8c8e8;
+  padding: 4px 5px;
+  border: 1px solid #46506e;
+  background: #1a2032;
+  white-space: nowrap;
+}
+.panel-toggle {
+  display: none;
+  position: fixed;
+  z-index: 10;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 0;
+  color: #0b1020;
+  background: #ffcf3a;
+  border: 3px solid #090b12;
+  box-shadow: inset 2px 2px 0 #fff2a8, inset -2px -2px 0 #a8731a, 0 4px 0 rgba(0,0,0,.45);
+  font-family: var(--pixel);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.panel-toggle small { font-size: 7px; letter-spacing: .2px; }
+body.panels-compact .panel-toggle { display: flex; }
+body.panels-focus #panel,
+body.panels-focus #coach,
+body.panels-focus #minimap { display: none !important; }
+body.panels-focus .hud-left #hud-level,
+body.panels-focus .hud-center .phase-chip,
+body.panels-focus .hud-center .chip-dose,
+body.panels-focus .hud-right .icon-btn:not(#pause-btn) { display: none !important; }
+body.panels-focus .hud-goal { display: inline-block; }
+body.panels-temp-hidden #panel,
+body.panels-temp-hidden #coach,
+body.panels-temp-hidden #minimap { display: none !important; }
+.coach p {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.coach.is-faded { opacity: .45; transition: opacity .3s ease; }
+@media (max-width: 600px) {
+  body.panels-focus .hud-left .chip-sol,
+  body.panels-focus .hud-left #hud-level { display: inline-block !important; }
+  body.panels-focus .hud-left #hud-level { display: none !important; }
+  .hud-goal { max-width: 34vw; font-size: 8px; padding: 5px 5px; }
+  .panels-key { display: none; }
+}
+@media (max-height: 520px) {
+  .hud-goal { max-width: 28vw; }
+}
+body.reduce-motion .panel-toggle, body.reduce-motion .coach { transition: none; }
+
+@media (max-width: 600px) {
+  body.panels-focus .hud-center {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 3px;
+  }
+  body.panels-focus .hud-goal {
+    max-width: 52vw;
+    font-size: 8px;
+    padding: 4px 5px;
+  }
+  body.panels-focus .hud { align-items: flex-start; }
+}
+
+/* Full mode on a phone is a drawer; hide the controls it would cover. */
+body.panels-compact.panels-full #touch-controls,
+body.panels-compact.panels-full #interact { display: none !important; }
+@media (max-height: 520px) {
+  /* Leave the player visible above the landscape drawer. */
+  body.panels-compact.panels-full .console { max-height: 22vh; }
 }
