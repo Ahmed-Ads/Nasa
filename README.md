@@ -25,6 +25,46 @@ tools/       slice_assets.py · sim.py · qa.py
 
 
 
+## v3.3.0 - Space Buddy polish
+
+- **Panels**: a persistent HUD goal/air/hearts/day strip, critical alerts, and one free **P**
+  toggle between **Full** and **Focus**. Desktop `1.1` Day 1 starts Full; every other
+  desktop/phone start is Focus. An explicit choice is stored in the existing
+  `jamt.settings` record. The phone toggle is a 46 px safe-area thumb button that opens a
+  bottom drawer with Plan power one tap away. Left/right dock headers collapse their own
+  panel, panels auto-hide during a hold or Buddy chat, the coach is one faded line after the
+  first action, and hotkeys (including **P**) are ignored while typing in chat.
+- **Ice**: `assets/img13` is chroma-keyed and defringed into `assets/ice/deposit.png`
+  (128x58) and `assets/ice/chunk.png` (40x33), registered in `assets/manifest.js` and
+  `tools/check_assets.py`. The old blob/station overlap is gone; the source is now
+  `148,552` and draws the deposit. Base -> ice -> tank -> base is **1824 -> 1312 px**, and
+  the four-chunk air trip is **48.9% -> 35.2%** of a full suit. Ice remains the farthest
+  source and the coach still says to use the rover for it.
+- **Rover**: the clean right-facing mounted rider from `assets/img6` is sliced into
+  `assets/rover/ride.png` (128x122), mirrors when driving left, and uses a roll bob plus
+  optional dust while moving. The sheet has no separate wheel-spin frame, so wheels are
+  static and the old rover + walker remain the fallback if the rider is missing. Hitbox,
+  speed, capacity and battery rules are unchanged.
+- **Loading**: the `img14` planets, satellites and asteroids are cut into nine transparent
+  PNGs (`assets/loading`, **52,230 bytes**) with a procedural starfield and slow parallax.
+  The astronaut follows the real `Loading... N/M` count, stops at 100%, celebrates when the
+  gate enables, and respects reduced motion. Art paths are manifest-only so they can be
+  swapped without touching logic.
+- **Favicon**: a transparent 16x16 pixel moon in the game palette ships as
+  `assets/icons/favicon.svg`, `.ico`, and 16/32/48/180/192/512 PNGs. The icons have no
+  black or magenta fringe, are linked with `?v=3.3.0`, and are checked for dimensions,
+  corner alpha and 404s.
+- **QA**: **166/166** in `tools/qa.py`, including six sizes in both modes, panel
+  persistence and typing safety, loading runner tracking, favicon/asset alpha and sliced-art
+  registration. `tools/check_assets.py` passes **221** references; every JS file passes
+  `node --check`. The same suite runs through `file://` and an HTTP server. Screenshots are
+  in `tools/out/` (Full/Focus EN at 1280x720 and 390x844, Buddy AR, loading 0/50/100,
+  ice and rover). The full QA/screenshot/caveat report is
+  `tools/out/SPACE_BUDDY_POLISH_REPORT.md`.
+- No localStorage keys, repository name, URL, filenames, gameplay balance, levels or
+  digging animation were renamed or changed. Real-device Safari/iOS safe-area behavior was
+  not tested; desktop Chromium and emulated touch viewports are verified.
+
 ## v3.2.6 - Rename to Space Buddy
 
 - The game is now **Space Buddy**. The loading screen, title screen, Credits, page title,
