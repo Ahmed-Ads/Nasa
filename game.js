@@ -647,7 +647,6 @@
     { id: 'water', x: 730, y: 452, r: 44, label: 'Water recycler' },
     { id: 'leak', x: 808, y: 452, r: 38, label: 'Leak' },
     { id: 'comms', x: 664, y: 240, r: 44, label: 'Comms dish' },
-    { id: 'ice', x: 150, y: 556, r: 52, label: 'Ice patch' },
     { id: 'bunker', x: 262, y: 286, r: 52, label: 'Bunker' },
     { id: 'rover', x: 566, y: 536, r: 56, label: 'Rover' },
     { id: 'crates', x: 650, y: 564, r: 42, label: 'Crates' },
@@ -1806,6 +1805,7 @@
     const st = nearestInteractable();
     const action = actionFor(st);
     if (!action || action.disabled) { Sound.warn(); return; }
+    state.coachActed = true;
 
     if (action.minutes === 0) { action.run(); render(); return; }
     hold.active = true; hold.t = 0; hold.action = action; hold.station = st;
@@ -2147,7 +2147,7 @@
       positionTracker();
       return;
     }
-    if (info.mode !== 'air' && dist(player.x, player.y, info.target.x, info.target.y) > camera.h * 1.35) {
+    if (info.mode !== 'air' && dist(player.x, player.y, info.target.x, info.target.y) > camera.h * 1.0) {
       info = { ...info, text: 'That is far. Use the rover!', mode: 'far' };
     }
     const arrow = coachArrow(info.target);
@@ -2155,6 +2155,7 @@
     els.coach.hidden = false;
     els.coachText.textContent = info.text;
     els.coachIcon.textContent = info.icon || '▲';
+    els.coach.classList.toggle('is-faded', !!s.coachActed);
     els.coachSkip.hidden = !on;
     positionTracker();
   }
@@ -2204,17 +2205,22 @@
     const btn = els.panelToggle;
     if (!btn) return;
     if (!isCompactUi() || state.screen !== 'game') {
-      btn.style.top = '';
-      btn.style.left = '';
+      btn.style.top = ''; btn.style.left = ''; btn.style.right = ''; btn.style.bottom = '';
       return;
     }
-    const coach = els.coach;
-    const cr = coach && !coach.hidden ? coach.getBoundingClientRect() : null;
-    const hr = els.hud ? els.hud.getBoundingClientRect() : null;
-    const top = cr && cr.height > 0 ? Math.round(cr.bottom + 6)
-      : Math.max(52, Math.round((hr ? hr.bottom : 0) + 6));
-    btn.style.top = `${top}px`;
+    btn.style.top = '';
+    btn.style.right = '';
     btn.style.left = 'max(12px, env(safe-area-inset-left))';
+    const full = document.body.classList.contains('panels-full');
+    if (full) {
+      // Sit just above the open drawer, clear of Buddy on the other side.
+      const pr = els.panel?.getBoundingClientRect();
+      const bottom = pr ? Math.max(8, Math.round(window.innerHeight - pr.top + 8)) : 116;
+      btn.style.bottom = `${bottom}px`;
+    } else {
+      // Above the thumbstick, in the safe-area thumb zone.
+      btn.style.bottom = 'calc(140px + env(safe-area-inset-bottom))';
+    }
   }
 
   function togglePanels() {
@@ -2232,7 +2238,8 @@
     const plan = COACH_PLANS[s.levelId] || [];
     const next = plan.find((p) => !p.done(s));
     let goal = next ? next.text : (s.phase === 'plan' ? 'Set power, then go outside.' : s.phase === 'eva' ? 'Finish jobs, then end the day.' : 'End the day.');
-    if (goal.length > 54) goal = `${goal.slice(0, 51)}…`;
+    goal = goal.split(' from ')[0].split(' (')[0].trim();
+    if (goal.length > 42) goal = `${goal.slice(0, 39)}...`;
     els.hudGoal.textContent = `Goal: ${goal}`;
     const alerts = [];
     if (s.air < 25) alerts.push('Low air');
@@ -2624,6 +2631,7 @@
     els.log.innerHTML = '';
     showScreen('game');
     els.panel.classList.remove('is-collapsed');
+    document.querySelectorAll('.dock-left, .dock-right').forEach((d) => d.classList.remove('is-collapsed'));
     resize();
     applyPanelsMode();
     renderTracker();
@@ -3149,6 +3157,19 @@
     measureConsole();
     setTimeout(snapCamera, 60);
   });
+  for (const [id, cls] of [['dock-left-collapse', 'dock-left'], ['dock-right-collapse', 'dock-right']]) {
+    const btn = document.getElementById(id);
+    const dock = document.querySelector('.' + cls);
+    if (!btn || !dock) continue;
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const collapsed = dock.classList.toggle('is-collapsed');
+      btn.setAttribute('aria-expanded', String(!collapsed));
+      btn.textContent = collapsed ? '+' : '-';
+      measureConsole();
+      setTimeout(snapCamera, 60);
+    });
+  }
 
   els.interact.addEventListener('pointerdown', (e) => { e.preventDefault(); startHold(); });
   els.interact.addEventListener('pointerup', cancelHold);
@@ -3438,7 +3459,7 @@
 
 
   /* ============ iteration 2: loading, menus, briefing, pause, touch ====== */
-  const BUILD_VERSION = '3.2.6';
+  const BUILD_VERSION = '3.3.0';
   const TIPS = [
     'Did you know? ISS life support recovers about 98% of the crew’s water (NASA ECLSS).',
     'Did you know? Water ice hides in permanently shadowed craters at the lunar south pole (LRO/LCROSS).',
@@ -3527,7 +3548,7 @@
   }
   function closePause() { flowEls.pause.hidden = true; state.paused = false; buddy?.onPause(false); }
 
-  const UI_SAD = 'assets/ui/sad_astronaut.png?v=3.2.6';
+  const UI_SAD = 'assets/ui/sad_astronaut.png?v=3.3.0';
   function askConfirm(text, onYes, art = null) {
     flowEls.confirmText.textContent = text;
     if (flowEls.confirmArt) {
@@ -4266,12 +4287,14 @@
         const pr = document.getElementById('panel')?.getBoundingClientRect();
         top = Math.max(2, (pr ? pr.top : window.innerHeight * 0.55) - size - 10);
       } else if (short) {
-        // Landscape phone: the only clear band is between the tracker and the
-        // bottom console. Keep the button in that band.
-        top = Math.max(2, tr ? tr.bottom + 1 : 40);
-        if (top + size > ar.top - 6) top = Math.max(2, ar.top - size - 6);
+        // Landscape phone: the only clear band is between the HUD/tracker and
+        // the bottom console. Keep the button in that band.
+        const hr = document.getElementById('hud')?.getBoundingClientRect();
+        top = Math.max(2, hr ? hr.bottom + 4 : 40, tr ? tr.bottom + 1 : 0);
+        if (ar.width && top + size > ar.top - 6) top = Math.max(2, ar.top - size - 6);
       } else {
-        top = Math.max(2, ar.top - size - 10);
+        const hr = document.getElementById('hud')?.getBoundingClientRect();
+        top = ar.width ? Math.max(2, ar.top - size - 10) : Math.max(2, hr ? hr.bottom + 6 : 44);
       }
       el.fab.style.width = `${size}px`;
       el.fab.style.height = `${size}px`;

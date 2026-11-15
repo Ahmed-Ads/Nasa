@@ -1039,6 +1039,32 @@ body.no-minimap #minimap {
   width: 288px;
 }
 
+.dock-left { padding-right: 28px; }
+.dock-right { padding-right: 28px; }
+
+.dock-collapse {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  z-index: 3;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  color: #c2c6d4;
+  background: #181b28;
+  border: 1px solid #626c8f;
+  font: 12px/1 var(--pixel), monospace;
+  cursor: pointer;
+}
+.dock-collapse:hover, .dock-collapse:focus-visible { color: #fff2a8; border-color: #ffcf3a; }
+.dock-left.is-collapsed, .dock-right.is-collapsed {
+  min-height: 0;
+  padding: 4px 26px 4px 4px;
+  overflow: hidden;
+}
+.dock-left.is-collapsed > :not(.dock-collapse),
+.dock-right.is-collapsed > :not(.dock-collapse) { display: none !important; }
+
 .phase-row {
   display: flex;
   align-items: center;
@@ -3142,7 +3168,7 @@ body.touch-on .tracker {
 
 @media (max-width: 700px) {
   .coach {
-    top: 44px;
+    top: 92px;
     width: calc(100vw - 16px);
     padding: 6px 8px;
     gap: 7px;
@@ -4456,6 +4482,10 @@ body.touch-on .tracker {
     z-index: 8;
   }
 
+  @media (max-width: 600px) {
+    body.panels-compact.panels-full .dock-right .tracker { top: 134px; }
+  }
+
   .dock-right .tracker .tracker-head {
     padding: 7px 9px;
     font-size: 9px;
@@ -5186,6 +5216,27 @@ body.panels-focus .hud-center .phase-chip,
 body.panels-focus .hud-center .chip-dose,
 body.panels-focus .hud-right .icon-btn:not(#pause-btn) { display: none !important; }
 body.panels-focus .hud-goal { display: inline-block; }
+
+/* Full mode on a phone still keeps the four persistent HUD facts:
+   hearts, day, air and the one-line goal. The drawer only covers the scene. */
+body.panels-compact.panels-full .hud-left #hud-sol,
+body.panels-compact.panels-full .hud-goal { display: inline-block !important; }
+body.panels-compact.panels-full .hud-left #hud-level { display: none !important; }
+body.panels-compact.panels-full .hud-goal { flex: 0 0 auto; }
+@media (max-width: 600px) {
+  body.panels-compact.panels-full .hud-center {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 3px;
+  }
+  body.panels-compact.panels-full .hud-goal {
+    max-width: 52vw;
+    font-size: 8px;
+    padding: 4px 5px;
+  }
+  body.panels-compact.panels-full .hud { min-height: 62px; align-items: flex-start; }
+}
 body.panels-temp-hidden #panel,
 body.panels-temp-hidden #coach,
 body.panels-temp-hidden #minimap { display: none !important; }
