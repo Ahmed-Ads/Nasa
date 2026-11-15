@@ -631,6 +631,35 @@ def main():
               and early["stock"] == early["stock0"] and early["hidden"] is False
               and early["restarted"] is True, str(early))
 
+        rctx2, rpage2 = new_page(browser, 1280, 720, "?debug&level=1.1")
+        rpage2.wait_for_function("() => window.__jamtLoad && window.__jamtLoad.done >= window.__jamtLoad.total",
+                                 timeout=7000)
+        restart = js(rpage2, """() => {
+          const J = window.__JAMT__, T = window.__T;
+          window.__JAMT_FREEZE = true;
+          J.startEVA(); T.teleport(95, 700); J.snapCamera();
+          J.startHold(); for (let i = 0; i < 15; i++) J.stepHold(0.04);
+          const during = !!J.action;
+          J.resetLevelState();
+          const direct = { action: J.action, hold: J.holdActive(), carry: T.carry(),
+                           stock: T.sources().find(s => s.id === 'ice-src').stock };
+          J.startHold(); for (let i = 0; i < 15; i++) J.stepHold(0.04);
+          J.startLevel('1.1');
+          const after = { action: J.action, hold: J.holdActive(), carry: T.carry(),
+                          stock: T.sources().find(s => s.id === 'ice-src').stock,
+                          phase: J.state.phase };
+          for (let i = 0; i < 70; i++) J.stepHold(0.04);
+          return { during, direct, after, endCarry: T.carry(), endStock:
+                   T.sources().find(s => s.id === 'ice-src').stock };
+        }""")
+        check("A5 resetLevelState/restart cancels the action and gives no item",
+              restart["during"] and restart["direct"]["action"] is None
+              and restart["direct"]["hold"] is False and restart["direct"]["carry"] is None
+              and restart["after"]["action"] is None and restart["after"]["hold"] is False
+              and restart["after"]["carry"] is None and restart["after"]["stock"] == 4
+              and restart["endCarry"] is None and restart["endStock"] == 4, str(restart))
+        rctx2.close()
+
         dctx2, dpage = new_page(browser, 1280, 720, "?debug&level=1.3", action_errors)
         dpage.wait_for_function("() => window.__jamtLoad && window.__jamtLoad.done >= window.__jamtLoad.total",
                                 timeout=7000)

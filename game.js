@@ -1606,6 +1606,11 @@
   /* --------------------------------------------------------- hold-to-do UI -- */
   const hold = { active: false, t: 0, action: null, station: null };
 
+  function resetLevelState() {
+    cancelHold();
+    state.action = null;
+  }
+
   function startHold() {
     if (state.screen !== 'game' || state.phase !== 'eva') return;
     if (state.action) return; // finish the current action first
@@ -2219,6 +2224,7 @@
     const loadEl = document.getElementById('screen-loading');
     if (loadEl) loadEl.hidden = true;
     const s = state;
+    resetLevelState();
     s.runId += 1;
     s.levelId = id; s.level = L;
     s.phase = 'plan';
@@ -2932,6 +2938,7 @@
       };
     },
     resetAnim() { player.animDist = 0; player.animFrame = 0; player.animMode = 'idle'; },
+    resetLevelState,
     get action() {
       const a = state.action;
       if (!a) return null;
@@ -3020,7 +3027,7 @@
 
 
   /* ============ iteration 2: loading, menus, briefing, pause, touch ====== */
-  const BUILD_VERSION = '3.1.4';
+  const BUILD_VERSION = '3.1.5';
   const TIPS = [
     'Did you know? ISS life support recovers about 98% of the crew’s water (NASA ECLSS).',
     'Did you know? Water ice hides in permanently shadowed craters at the lunar south pole (LRO/LCROSS).',

@@ -24,6 +24,16 @@ tools/       slice_assets.py · sim.py · qa.py
 
 
 
+## v3.1.5 - A5 completion: action animations on the FIX-2 build
+
+- Re-verified the hold-to-act **ice mining** (`ice_mine_01..08`) and **regolith digging**
+  (`dig_01..03` then `bag_01..05`) players after FIX-2. Early release still cancels with no
+  item, and completion still fires the existing pickup effect.
+- Added `resetLevelState()` cleanup so restarting or retrying during a hold cancels the
+  action, clears the hold ring and leaves the source stock untouched.
+- QA: **103/103** on `file://` and the live GitHub Pages URL; `tools/out/action_check.png`
+  regenerated for 0/50/100% of both actions. Sim remains stale (v2 warning).
+
 ## v3.1.4 - FIX-2: kid-friendly Moon missions
 
 - Kid vocabulary: Moon missions use **Day**. Phase chips are **1. Plan power**,
