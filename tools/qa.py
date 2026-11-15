@@ -824,6 +824,31 @@ def main():
               dbg.get("actionPanels") == 4 and abs(dbg.get("img12Scale", 0) - 0.2082945881) < 1e-6,
               str(dbg))
 
+        # ------------------------------------------------- landing / quit art
+        print("\nLanding and quit art")
+        art_errors = []
+        actx, apage = new_page(browser, 1280, 720, "", art_errors)
+        apage.wait_for_timeout(1500)
+        apage.click("#start-gate"); apage.wait_for_timeout(250)
+        title_art = js(apage, """() => [...document.querySelectorAll('#screen-title img')]
+          .map((i) => ({ ok: i.complete && i.naturalWidth > 0, src: i.getAttribute('src') }))""")
+        check("Landing uses img8/img9 art (logo, start, quit, cheer, ready)",
+              len(title_art) >= 5 and all(a["ok"] for a in title_art), str(title_art))
+        apage.click("#menu-quit"); apage.wait_for_timeout(300)
+        apage.wait_for_function("() => { const i = document.getElementById('confirm-art'); return !i.hidden && i.complete && i.naturalWidth > 0; }", timeout=5000)
+        confirm_art = js(apage, """() => { const i = document.getElementById('confirm-art');
+          return { hidden: i.hidden, ok: i.complete && i.naturalWidth > 0, src: i.getAttribute('src') }; }""")
+        apage.click("#confirm-yes"); apage.wait_for_timeout(250)
+        quit_art = js(apage, """() => [...document.querySelectorAll('#screen-goodbye img')]
+          .map((i) => ({ ok: i.complete && i.naturalWidth > 0, src: i.getAttribute('src') }))""")
+        check("Quit page uses the sad astronaut, exit door and aborted banner",
+              not confirm_art["hidden"] and confirm_art["ok"] and len(quit_art) >= 3
+              and all(a["ok"] for a in quit_art), f"{confirm_art} {quit_art}")
+        check("Landing/quit art has no console errors",
+              len([e for e in art_errors if not any(s in e.lower() for s in IGNORE)]) == 0,
+              str(art_errors[:2]))
+        actx.close()
+
         # ---------------------------------------------------------- FIX-2
         print("\nFIX-2: kid vocabulary + coach")
         bad_words = re.compile(r"\b(Sol|EVA|RESOLVE)\b")
