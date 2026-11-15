@@ -8,7 +8,7 @@
   <meta name="description"
     content="A pixel-art mission trainer for ages 7–12. Plan power, walk the lunar outpost, and keep the crew alive across three missions. Built for the 2026 NASA Space Apps Challenge.">
   <meta name="theme-color" content="#06070f">
-  <link rel="stylesheet" href="style.css?v=3.1.9">
+  <link rel="stylesheet" href="style.css?v=3.2.0">
   <link rel="icon"
     href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%2306070f'/%3E%3Ccircle cx='8' cy='8' r='5' fill='%23c2c6d4'/%3E%3Ccircle cx='6' cy='6.5' r='1.5' fill='%239a9fb2'/%3E%3Ccircle cx='10' cy='10' r='1' fill='%239a9fb2'/%3E%3C/svg%3E">
 </head>
@@ -29,7 +29,7 @@
         <p class="load-count" id="load-count">Loading outpost…</p>
         <p class="load-tip" id="load-tip"></p>
         <button class="btn btn-primary btn-lg gate" id="start-gate" type="button" disabled>PRESS TO START</button>
-        <p class="loading-version" id="load-version">v3.1.9 · no data leaves your device</p>
+        <p class="loading-version" id="load-version">v3.2.0 · offline by default · Buddy cloud is opt-in</p>
       </div>
     </div>
     <div class="viewport" id="viewport">
@@ -104,7 +104,7 @@
       <div class="figma-footer">
         <p class="figma-credit">Powered by NASA open data</p>
         <div class="figma-meta-links">
-          <span class="figma-meta-ver" id="title-version">v3.1.9</span>
+          <span class="figma-meta-ver" id="title-version">v3.2.0</span>
         </div>
       </div>
     </div>
@@ -262,11 +262,11 @@
     <div class="overlay overlay--goodbye" id="screen-goodbye" hidden>
       <div class="goodbye-card">
         <div class="goodbye-art" aria-hidden="true">
-          <img class="goodbye-sad" src="assets/ui/sad_astronaut.png?v=3.1.9" alt="">
-          <img class="goodbye-door" src="assets/ui/exit_door.png?v=3.1.9" alt="">
+          <img class="goodbye-sad" src="assets/ui/sad_astronaut.png?v=3.2.0" alt="">
+          <img class="goodbye-door" src="assets/ui/exit_door.png?v=3.2.0" alt="">
         </div>
         <div class="goodbye-copy">
-          <img class="goodbye-banner" src="assets/ui/mission_aborted.png?v=3.1.9" alt="Mission aborted">
+          <img class="goodbye-banner" src="assets/ui/mission_aborted.png?v=3.2.0" alt="Mission aborted">
           <p class="kicker">Mission control signing off</p>
           <h1 class="title">See you<br><span>next day</span></h1>
           <p class="lede">Your progress is saved on this device. Close the tab whenever you are ready.</p>
@@ -368,6 +368,42 @@
         <span id="act-icon">E</span><span id="act-label">ACT</span>
       </button>
     </div>
+
+      <!-- =========================================================== buddy == -->
+      <button class="buddy-fab" id="buddy-fab" type="button" aria-label="Open Buddy" title="Buddy (H)" hidden>
+        <img id="buddy-fab-icon" src="assets/ui/buddy/idle.png" alt="">
+        <img id="buddy-fab-icon-next" class="buddy-fab-next" src="assets/ui/buddy/idle.png" alt="">
+        <span class="buddy-fab-badge" id="buddy-fab-badge" hidden></span>
+      </button>
+
+      <section class="buddy-panel" id="buddy-panel" hidden aria-label="Mission Buddy" role="dialog"
+        aria-modal="false" aria-labelledby="buddy-title">
+        <header class="buddy-head">
+          <img class="buddy-head-icon" id="buddy-head-icon" src="assets/ui/buddy/idle.png" alt="">
+          <div class="buddy-head-copy">
+            <h2 id="buddy-title">Buddy</h2>
+            <p id="buddy-state-label">Ready to help</p>
+          </div>
+          <button class="buddy-icon-btn" id="buddy-lang" type="button" aria-label="Switch language">EN</button>
+          <button class="buddy-icon-btn" id="buddy-mute" type="button" aria-label="Mute Buddy">🔊</button>
+          <button class="buddy-icon-btn" id="buddy-close" type="button" aria-label="Close Buddy">✕</button>
+        </header>
+        <div class="buddy-messages" id="buddy-messages" aria-live="polite"></div>
+        <p class="buddy-recording" id="buddy-recording" hidden><span></span> Listening… tap the mic to stop.</p>
+        <div class="buddy-chips" id="buddy-chips"></div>
+        <p class="buddy-note" id="buddy-note" hidden></p>
+        <form class="buddy-form" id="buddy-form">
+          <input id="buddy-input" type="text" autocomplete="off" maxlength="300" placeholder="Ask Buddy…"
+            aria-label="Ask Buddy">
+          <button class="buddy-icon-btn buddy-mic" id="buddy-mic" type="button" aria-label="Talk to Buddy"
+            title="Use your voice">🎙</button>
+          <button class="buddy-send" id="buddy-send" type="submit">Send</button>
+        </form>
+        <div class="buddy-foot">
+          <button class="buddy-stop" id="buddy-stop" type="button" hidden>Stop talking</button>
+          <span id="buddy-privacy-mini">On-device by default.</span>
+        </div>
+      </section>
 
     <!-- ========================================================== debrief === -->
     <div class="overlay overlay--debrief" id="screen-debrief" hidden>
@@ -553,7 +589,18 @@
       <div class="setting-row"><span>Hints</span><button class="mini-btn" id="set-hints" type="button">ON</button></div>
       <div class="setting-row"><span>Unlock all missions (judge mode)</span><button class="mini-btn" id="set-unlock"
           type="button">OFF</button></div>
-      <p class="modal-note">No data leaves your device. Progress and settings are saved only in this browser.</p>
+        <div class="setting-row"><span id="label-buddy-name">Buddy name</span><input class="setting-input" id="set-buddy-name" type="text"
+            maxlength="18" value="Buddy" aria-label="Buddy name"></div>
+        <div class="setting-row"><span id="label-buddy-proactive">Buddy proactive hints</span><button class="mini-btn" id="set-buddy-proactive"
+            type="button">ON</button></div>
+        <div class="setting-row"><span id="label-buddy-cloud">Let Buddy ask the cloud helper</span><button class="mini-btn"
+            id="set-buddy-cloud" type="button">OFF</button></div>
+        <div class="setting-row"><span id="label-buddy-speak">Buddy speaks replies</span><button class="mini-btn" id="set-buddy-speak"
+            type="button">OFF</button></div>
+      <p class="modal-note" id="privacy-note"><strong>Privacy:</strong> offline by default. With “Let Buddy ask the
+        cloud helper” ON, only your question, language, and a short state summary (level, day, phase, open
+        objectives) plus the last 4 turns are sent to the configured helper. No name, account, device ID or
+        analytics are sent. Progress and settings stay in this browser.</p>
     </div>
   </div>
 
@@ -564,11 +611,13 @@
       <p><strong>Junior Astronaut Mission Trainer</strong> — NASA Space Apps Challenge 2026, Level 1.</p>
       <p>Science sources: NASA ECLSS / ISS, NASA Space Weather &amp; DONKI, NASA Moon (LRO, Diviner, LCROSS), NASA
         space-radiation research, NASA lunar-dust research.</p>
-      <p>Art is AI-generated catalog art, sliced locally with <code>tools/slice_assets.py</code>. Fonts are system
-        fonts.</p>
-      <p><strong>Privacy:</strong> no third-party scripts, no analytics, no cookies. No data leaves your device;
-        progress is saved on this device only.</p>
-      <p class="credits-version" id="credits-version">Version 3.1.9</p>
+      <p>Art is AI-generated catalog art, sliced locally with <code>tools/slice_assets.py</code>. Fonts are bundled
+        locally in <code>assets/fonts</code> (Jersey 20, Jersey 25, Lexend — SIL Open Font License).</p>
+      <p><strong>Privacy:</strong> no analytics, no cookies, no third-party scripts. Buddy is offline by default.
+        If you turn on “Let Buddy ask the cloud helper”, it sends only your question, language, a short state
+        summary (level, day, phase, open objectives) and the last 4 turns to the configured helper. No name,
+        account or device ID is sent. Progress is saved on this device only.</p>
+      <p class="credits-version" id="credits-version">Version 3.2.0</p>
     </div>
   </div>
 
@@ -588,9 +637,9 @@
       to step both action strips.</p>
   </div>
 
-  <script src="assets/manifest.js?v=3.1.9"></script>
-  <script src="assets/anim_manifest.js?v=3.1.9"></script>
-  <script src="game.js?v=3.1.9" defer></script>
+  <script src="assets/manifest.js?v=3.2.0"></script>
+  <script src="assets/anim_manifest.js?v=3.2.0"></script>
+  <script src="game.js?v=3.2.0" defer></script>
 </body>
 
 </html>

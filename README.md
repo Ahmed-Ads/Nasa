@@ -6,10 +6,12 @@ challenge *“Build a Junior Astronaut Mission Trainer.”*
 Level 1 is complete: **1.1 Outpost Prep**, **1.2 Water Leak**, **1.3 Solar Storm**. Level 2
 (Mars) and beyond appear only as locked nodes on the level map.
 
-- Vanilla JS, no build step, **runs by double-clicking `index.html`** (no `fetch`).
+- Vanilla JS, no build step, **runs by double-clicking `index.html`**. The game itself makes no
+  network requests; only the optional Buddy cloud helper can, after an explicit opt-in.
 - Fixed hand-authored lunar world + camera, A* click-to-move, colliders, y-sorted sprites.
 - **1. Plan power -> 2. Go outside -> 3. End the day** loop: set power, walk the base, do jobs, then end the day.
-- Offline: system fonts only, all sprites local (`assets/manifest.js`).
+- Offline by default: bundled fonts (SIL OFL), all sprites local (`assets/manifest.js`), and a
+  scripted Buddy brain that needs no key or network.
 
 ```text
 index.html   screens + HUD + console + modals
@@ -23,6 +25,56 @@ tools/       slice_assets.py · sim.py · qa.py
 
 
 
+
+## v3.2.0 - Buddy: the in-game mission helper
+
+### What Buddy is
+
+Buddy is a small astronaut helper in the HUD. The round button follows the current state
+(idle, listen, think, talk, happy, alert, confused, sleep). Tap it, or press **H**, to open the
+chat; **Esc** closes it. On phones it opens from the right touch-control area; in short
+landscape it sits in the clear band between the objectives strip and the console. While the
+chat is open the HUD, objectives, coach, console, ACT and joystick step aside, so the panel
+never adds a new overlap.
+
+The **scripted layer always works offline**. It reads the live game state (`state`, `LEVELS`,
+`COACH_PLANS`, `RESOURCE_DOCS`, `RULES`) and gives a three-step hint ladder for “What do I do
+next?” / “I’m stuck”, explains why the current job matters, and answers “what is X” questions
+with a **REAL NASA** or **GAME ASSUMPTION** label. Proactive hints (low air, first visit to a
+station, storm arrival after reading the dish, leak, completed objective, win) are rate-limited
+to one per 30 s, never fire during a hold/action, and can be switched off in Settings.
+
+Voice is optional: the mic uses `SpeechRecognition` / `webkitSpeechRecognition`, fills an
+editable transcript, and never starts without a tap. Spoken replies use `speechSynthesis`;
+auto-speak is OFF by default. Unsupported browsers keep text chat and show a one-line reason.
+
+### Optional cloud helper (free text only)
+
+The scripted intents are tried first. Only an unmatched typed or spoken question is sent to
+the cloud helper, and only when **Settings → Let Buddy ask the cloud helper** is ON. The helper
+URL is the single constant `BUDDY_PROXY_URL` near the top of `game.js`; it is empty by default.
+With an empty or unreachable URL, Buddy shows the confused state and offers the chips. There is
+an 8 s timeout with one retry. See [`server/README.md`](server/README.md) for the Cloudflare
+Worker, CORS allowlist, per-IP rate limit, 300-character question cap, 150-token answer cap,
+fixed system prompt, and deployment steps. The API key is a Worker secret and is never in this
+repository.
+
+**Data sent when ON:** the question, selected language, a short state summary (level, day,
+phase, open objective labels), and the last 4 turns. No name, account, device ID, analytics, or
+question logging. When OFF (the default) nothing leaves the device.
+
+### QA and screenshots
+
+- `python tools/slice_buddy.py` slices the eight 512 px transparent icons from the ignored
+  `assets/ui/assistant_sheet.jpg` source (circle-masked, magenta removed).
+- QA: **138/138** on `file://` and local HTTP. The live Pages URL serves the previous build until
+  this branch is merged. New checks cover all six
+  viewports, all eight states, the hint ladder on 1.1/1.2/1.3, hotkey isolation, offline/empty
+  proxy, mocked cloud success/timeout/error/rate-limit, EN/AR direction + mixed-term rendering,
+  voice stubs + unsupported degradation, and the opt-in privacy text.
+- State screenshots: `tools/out/buddy/` (32 files: EN and AR × 8 states × 1280x720 and
+  390x844). Icon proof: `tools/out/buddy_states.png`. Every Arabic line is listed for
+  proofreading in `BUDDY_ARABIC_REVIEW.md`. Sim balance remains stale (v2 warning).
 
 ## v3.1.9 - Figma design screens (title, level map, moon-mission list)
 
