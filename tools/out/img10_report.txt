@@ -1,0 +1,50 @@
+sheet: img10.jpg 2752x1536
+vertical grid lines (10): [2, 304, 600, 900, 1203, 1508, 1822, 2134, 2446, 2748]
+horizontal grid lines (5): [310, 618, 926, 1218, 1515]
+WARNING: expected 10 vertical and 6 horizontal lines; using detected bounds
+walk_01        159x279 helmet=139 pink=0   edge=no
+walk_02        154x283 helmet=139 pink=0   edge=no
+walk_03        153x274 helmet=140 pink=0   edge=no
+walk_04        169x284 helmet=142 pink=0   edge=no
+walk_05        176x279 helmet=141 pink=0   edge=no
+walk_06        160x281 helmet=140 pink=0   edge=no
+kneel_reach    220x224 helmet=171 pink=0   edge=no
+hold_rock      162x266 helmet=141 pink=0   edge=no
+idle           155x283 helmet=140 pink=0   edge=no
+idle2          156x280 helmet=140 pink=0   edge=no
+pick_01        215x225 helmet=170 pink=0   edge=no
+pick_02        206x225 helmet=174 pink=0   edge=no
+pick_03        193x234 helmet=159 pink=0   edge=no
+pick_04        165x281 helmet=142 pink=0   edge=no
+pick_05        212x230 helmet=166 pink=1   edge=no
+pick_06        185x265 helmet=163 pink=0   edge=no
+pick_07        167x274 helmet=139 pink=0   edge=no
+pick_08        158x276 helmet=141 pink=0   edge=no
+dig_01         232x264 helmet=174 pink=0   edge=no
+dig_02         224x257 helmet=183 pink=0   edge=no
+dig_03         202x270 helmet=177 pink=1   edge=no
+bag_01         163x276 helmet=139 pink=0   edge=no
+bag_02         165x277 helmet=139 pink=0   edge=no
+bag_03         200x271 helmet=138 pink=0   edge=no
+bag_04         173x276 helmet=149 pink=0   edge=no
+bag_05         167x273 helmet=140 pink=0   edge=no
+idle3          158x277 helmet=138 pink=0   edge=no
+drill_01       225x259 helmet=159 pink=0   edge=no
+drill_02       240x258 helmet=162 pink=0   edge=no
+drill_03       241x259 helmet=157 pink=0   edge=no
+drill_04       239x260 helmet=159 pink=1   edge=no
+drill_05       240x264 helmet=153 pink=0   edge=no
+idle4          169x281 helmet=139 pink=0   edge=no
+idle5          177x278 helmet=142 pink=0   edge=no
+idle6          165x279 helmet=137 pink=0   edge=no
+idle7          159x279 helmet=140 pink=0   edge=no
+carry_01       184x284 helmet=140 pink=0   edge=no
+carry_02       184x283 helmet=140 pink=0   edge=no
+carry_03       186x284 helmet=140 pink=0   edge=no
+carry_04       183x284 helmet=140 pink=0   edge=no
+carry_05       184x283 helmet=141 pink=0   edge=no
+idle8          148x283 helmet=139 pink=0   edge=no
+
+contact sheet: tools/out/img10_contact.png (42 frames)
+
+frames: 42   rejected: 0
