@@ -24,6 +24,21 @@ tools/       slice_assets.py · sim.py · qa.py
 
 
 
+## v3.1.7 - ROVER-FIX: dismount, remount and unstick
+
+- The rover now follows the rider exactly while mounted. Dismount parks it at that exact
+  point (`rover.parked = true`) and never snaps it back to its start.
+- Dismount places the player at the nearest free point with a 8 px spiral search up to 96 px,
+  outside the parked rover, dome, bunker, slots and sources. The player is never left inside
+  a collider.
+- ACT within 56 px of the parked rover re-mounts any number of times. The battery is still
+  handled once per day through `usedThisSol`; empty power shows "The rover has no power
+  today" and leaves the rover parked.
+- Added overlap recovery and a 1.5 s no-movement unstick with a small dust puff.
+- Restart/retry resets the rover to its home position, not its last parked spot.
+- QA: **112/112** on `file://` and the live GitHub Pages URL, including five desktop cycles,
+  phone ACT cycling, empty-battery remount and restart reset. Sim remains stale (v2 warning).
+
 ## v3.1.6 - Landing and quit art from img8/img9
 
 - Landing page now uses the **Survival Outpost** crest, cheerful astronaut, READY TO LAND?

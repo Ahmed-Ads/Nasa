@@ -365,7 +365,139 @@ def main():
         check("walk-back ring radius is positive", rv["ring"] > 0, str(rv))
         check("battery charged only when used", rv["usedBatt"] == 2 and rv["idleBatt"] == 3, str(rv))
         check("rover cannot enter the dome when mounted", rv["free"] and rv["blocked"], str(rv))
+
+        # ROVER-FIX: repeated mount/dismount, free-point dismount, exact parking
+        cycles = js(rpage, """() => {
+          const J = window.__JAMT__, T = window.__T, s = J.state;
+          J.startLevel('1.1'); J.startEVA();
+          s.battery = 6; s.res.battery = 6; s.rover.dead = false;
+          let lane = null;
+          for (let y = 560; y <= 700 && !lane; y += 8) {
+            for (let x = 100; x <= 460 && !lane; x += 8) {
+              let ok = true;
+              for (let d = 0; d <= 360; d += 8) {
+                const xx = x + d;
+                if (J.blockedAt(xx, y)) { ok = false; break; }
+                for (const st of J.STATIONS) {
+                  if (Math.hypot(xx - st.x, y - st.y) < st.r + 16) { ok = false; break; }
+                }
+                if (!ok) break;
+              }
+              if (ok) lane = { x, y };
+            }
+          }
+          lane = lane || { x: 120, y: 650 };
+          const out = { lane, cycles: [], battery: s.battery };
+          for (let c = 0; c < 5; c++) {
+            T.teleport(lane.x, lane.y); J.snapCamera(); T.mountRover();
+            const mounted = s.rover.mounted;
+            const dir = 'right';
+            const x0 = J.player.x;
+            T.setKey(dir, true);
+            for (let i = 0; i < 22; i++) T.step(0.07);
+            T.setKey(dir, false);
+            const drive = Math.abs(J.player.x - x0);
+            const equal = Math.abs(s.rover.x - J.player.x) < 0.001 && Math.abs(s.rover.y - J.player.y) < 0.001;
+            const before = { x: J.player.x, y: J.player.y };
+            J.startHold();
+            const parked = { x: s.rover.x, y: s.rover.y };
+            const afterMounted = s.rover.mounted;
+            const free = !J.blockedAt(J.player.x, J.player.y) && !J.insideCollider();
+            for (const key of ['right', 'left', 'up', 'down']) {
+              T.setKey(key, true);
+              for (let i = 0; i < 25; i++) T.step(0.05);
+              T.setKey(key, false);
+            }
+            const walkFree = !J.blockedAt(J.player.x, J.player.y) && !J.insideCollider();
+            T.teleport(parked.x, parked.y); J.snapCamera(); J.startHold();
+            const remounted = s.rover.mounted;
+            J.startHold();
+            out.cycles.push({ mounted, drive, equal, before, parked, afterMounted, free, walkFree,
+              remounted, settled: !s.rover.mounted, battery: s.battery });
+          }
+          out.finalBattery = s.battery;
+          out.finalUsed = s.rover.usedThisSol;
+          return out;
+        }""")
+        ok_cycles = all(c["mounted"] and c["drive"] > 250 and c["equal"]
+                        and abs(c["parked"]["x"] - c["before"]["x"]) < 0.001
+                        and abs(c["parked"]["y"] - c["before"]["y"]) < 0.001
+                        and not c["afterMounted"] and c["free"] and c["walkFree"]
+                        and c["remounted"] and c["settled"] for c in cycles["cycles"])
+        check("ROVER-FIX 5 mount/drive/dismount/walk/remount cycles stay free and exact",
+              ok_cycles and cycles["finalBattery"] == 6 and cycles["finalUsed"] is True,
+              str(cycles)[:800])
+
+        restart_rover = js(rpage, """() => {
+          const J = window.__JAMT__;
+          J.startLevel('1.1');
+          const prop = J.PROPS.find(p => p.id === 'rover');
+          const col = J.colliders.find(c => c.id === 'rover');
+          const st = J.STATIONS.find(s => s.id === 'rover');
+          return { rx: J.state.rover.x, ry: J.state.rover.y, mounted: J.state.rover.mounted,
+                   parked: J.state.rover.parked, px: prop.x, py: prop.y,
+                   cx: col.x, cy: col.y, sx: st.x, sy: st.y };
+        }""")
+        check("ROVER-FIX restart puts the rover back at its start",
+              restart_rover["rx"] == 566 and restart_rover["ry"] == 536
+              and restart_rover["mounted"] is False and restart_rover["parked"] is True
+              and restart_rover["px"] == 566 and restart_rover["py"] == 536
+              and restart_rover["sx"] == 566 and restart_rover["sy"] == 536, str(restart_rover))
+
+        no_power = js(rpage, """() => {
+          const J = window.__JAMT__, T = window.__T, s = J.state;
+          J.startEVA(); s.battery = 0; s.res.battery = 0;
+          T.teleport(566, 536); J.snapCamera(); J.startHold();
+          return { mounted: s.rover.mounted, rx: s.rover.x, ry: s.rover.y,
+                   parked: s.rover.parked, log: document.getElementById('log').innerText };
+        }""")
+        check("ROVER-FIX empty battery refuses remount and keeps the rover parked",
+              no_power["mounted"] is False and no_power["rx"] == 566 and no_power["ry"] == 536
+              and no_power["parked"] is True and "no power today" in no_power["log"].lower(),
+              str(no_power)[:500])
+
+        unstick = js(rpage, """() => {
+          const J = window.__JAMT__, T = window.__T;
+          const d = J.PROPS.find(p => p.id === 'dome');
+          T.teleport(d.cx + d.cw / 2, d.cy + d.ch / 2);
+          T.step(0.05);
+          return { x: J.player.x, y: J.player.y, free: !J.blockedAt(J.player.x, J.player.y) };
+        }""")
+        check("ROVER-FIX overlapping collider is pushed to a free point", unstick["free"] is True, str(unstick))
         rctx.close()
+
+        # phone ACT cycle
+        pctx2 = browser.new_context(viewport={"width": 390, "height": 844},
+                                    has_touch=True, is_mobile=True)
+        ppage = pctx2.new_page()
+        perr = []
+        ppage.on("pageerror", lambda e: perr.append(str(e)))
+        ppage.goto((LIVE_URL or URL) + "?debug&level=1.1")
+        ppage.wait_for_timeout(1100)
+        phone_rover = js(ppage, """() => {
+          const J = window.__JAMT__, T = window.__T, s = J.state;
+          J.startEVA(); s.battery = 6; s.res.battery = 6; s.rover.dead = false;
+          T.teleport(566, 536); J.snapCamera();
+          const btn = document.getElementById('act-btn');
+          const tap = () => {
+            btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 21, pointerType: 'touch' }));
+            btn.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 21, pointerType: 'touch' }));
+          };
+          tap();
+          const mounted = s.rover.mounted;
+          T.setKey('right', true); for (let i = 0; i < 10; i++) T.step(0.05); T.setKey('right', false);
+          const equal = Math.abs(s.rover.x - J.player.x) < 0.001 && Math.abs(s.rover.y - J.player.y) < 0.001;
+          T.teleport(300, 700); J.snapCamera();
+          tap();
+          return { mounted, equal, dismounted: !s.rover.mounted, parked: s.rover.parked,
+                   free: !J.blockedAt(J.player.x, J.player.y), inside: J.insideCollider() };
+        }""")
+        check("ROVER-FIX phone ACT mounts/dismounts and leaves a free player",
+              phone_rover["mounted"] and phone_rover["equal"] and phone_rover["dismounted"]
+              and phone_rover["parked"] and phone_rover["free"] and not phone_rover["inside"],
+              str(phone_rover))
+        check("ROVER-FIX phone has no console errors", not perr, str(perr[:2]))
+        pctx2.close()
 
         # ------------------------------------------------------- suit air
         print("\nSuit air")
