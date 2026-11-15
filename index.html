@@ -4,11 +4,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Junior Astronaut Mission Trainer — Level 1: The Moon</title>
+  <title>Space Buddy — Level 1: The Moon</title>
   <meta name="description"
-    content="A pixel-art mission trainer for ages 7–12. Plan power, walk the lunar outpost, and keep the crew alive across three missions. Built for the 2026 NASA Space Apps Challenge.">
+    content="Space Buddy is a pixel-art mission trainer for ages 7–12. Plan power, walk the lunar outpost, and keep the crew alive across three missions. Built for the 2026 NASA Space Apps Challenge.">
+  <meta property="og:title" content="Space Buddy — Level 1: The Moon">
+  <meta property="og:description" content="Plan power, make air, haul water and keep the crew safe before Day 5. A NASA Space Apps 2026 mission trainer.">
+  <meta property="og:type" content="website">
   <meta name="theme-color" content="#06070f">
-  <link rel="stylesheet" href="style.css?v=3.2.5">
+  <link rel="stylesheet" href="style.css?v=3.2.6">
   <link rel="icon"
     href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%2306070f'/%3E%3Ccircle cx='8' cy='8' r='5' fill='%23c2c6d4'/%3E%3Ccircle cx='6' cy='6.5' r='1.5' fill='%239a9fb2'/%3E%3Ccircle cx='10' cy='10' r='1' fill='%239a9fb2'/%3E%3C/svg%3E">
 </head>
@@ -22,14 +25,14 @@
     <div class="loading" id="screen-loading">
       <div class="loading-card">
         <p class="kicker">NASA Space Apps 2026</p>
-        <h1 class="loading-title">JUNIOR ASTRONAUT</h1>
+        <h1 class="loading-title">SPACE BUDDY</h1>
         <div class="load-track">
           <div class="load-bar" id="load-bar"></div>
         </div>
         <p class="load-count" id="load-count">Loading outpost…</p>
         <p class="load-tip" id="load-tip"></p>
         <button class="btn btn-primary btn-lg gate" id="start-gate" type="button" disabled>PRESS TO START</button>
-        <p class="loading-version" id="load-version">v3.2.0 · offline by default · Buddy cloud is opt-in</p>
+        <p class="loading-version" id="load-version">v3.2.6 · offline by default · Buddy cloud is opt-in</p>
       </div>
     </div>
     <div class="viewport" id="viewport">
@@ -110,7 +113,8 @@
 
       <!-- Main Title Block -->
       <div class="figma-title-group">
-        <h1 class="figma-main-title">Newspdet</h1>
+        <p class="figma-kicker">NASA SPACE APPS 2026 - LEVEL 1</p>
+        <h1 class="figma-main-title">Space Buddy</h1>
         <p class="figma-sub-title">YOUR MISSION STARTS HERE</p>
       </div>
 
@@ -128,7 +132,7 @@
       <div class="figma-footer">
         <p class="figma-credit">Powered by NASA open data</p>
         <div class="figma-meta-links">
-          <span class="figma-meta-ver" id="title-version">v3.2.0</span>
+          <span class="figma-meta-ver" id="title-version">v3.2.6</span>
         </div>
       </div>
     </div>
@@ -286,11 +290,11 @@
     <div class="overlay overlay--goodbye" id="screen-goodbye" hidden>
       <div class="goodbye-card">
         <div class="goodbye-art" aria-hidden="true">
-          <img class="goodbye-sad" src="assets/ui/sad_astronaut.png?v=3.2.0" alt="">
-          <img class="goodbye-door" src="assets/ui/exit_door.png?v=3.2.0" alt="">
+          <img class="goodbye-sad" src="assets/ui/sad_astronaut.png?v=3.2.6" alt="">
+          <img class="goodbye-door" src="assets/ui/exit_door.png?v=3.2.6" alt="">
         </div>
         <div class="goodbye-copy">
-          <img class="goodbye-banner" src="assets/ui/mission_aborted.png?v=3.2.0" alt="Mission aborted">
+          <img class="goodbye-banner" src="assets/ui/mission_aborted.png?v=3.2.6" alt="Mission aborted">
           <p class="kicker">Mission control signing off</p>
           <h1 class="title">See you<br><span>next day</span></h1>
           <p class="lede">Your progress is saved on this device. Close the tab whenever you are ready.</p>
@@ -634,7 +638,7 @@
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="credits-title">
       <button class="modal-close" data-close type="button" aria-label="Close">✕</button>
       <h2 id="credits-title">CREDITS</h2>
-      <p><strong>Junior Astronaut Mission Trainer</strong> — NASA Space Apps Challenge 2026, Level 1.</p>
+      <p><strong>Space Buddy</strong> — NASA Space Apps Challenge 2026, Level 1.</p>
       <p>Science sources: NASA ECLSS / ISS, NASA Space Weather &amp; DONKI, NASA Moon (LRO, Diviner, LCROSS), NASA
         space-radiation research, NASA lunar-dust research.</p>
       <p>Art is AI-generated catalog art, sliced locally with <code>tools/slice_assets.py</code>. Fonts are bundled
@@ -643,7 +647,7 @@
         If you turn on “Let Buddy ask the cloud helper”, it sends only your question, language, a short state
         summary (level, day, phase, open objectives) and the last 4 turns to the configured helper. No name,
         account or device ID is sent. Progress is saved on this device only.</p>
-      <p class="credits-version" id="credits-version">Version 3.2.0</p>
+      <p class="credits-version" id="credits-version">Version 3.2.6</p>
     </div>
   </div>
 
@@ -663,9 +667,9 @@
       to step both action strips.</p>
   </div>
 
-  <script src="assets/manifest.js?v=3.2.0"></script>
-  <script src="assets/anim_manifest.js?v=3.2.0"></script>
-  <script src="game.js?v=3.2.0" defer></script>
+  <script src="assets/manifest.js?v=3.2.6"></script>
+  <script src="assets/anim_manifest.js?v=3.2.6"></script>
+  <script src="game.js?v=3.2.6" defer></script>
 </body>
 
 </html>

@@ -3,6 +3,8 @@
 Default name: **Buddy** (configurable in Settings).
 
 - `ui.title` — بادي
+- `ui.brand` — Space Buddy
+- `ui.pageTitle` — Space Buddy — المستوى 1
 - `ui.ready` — جاهز للمساعدة
 - `ui.idle` — جاهز
 - `ui.listen` — أستمع
@@ -39,7 +41,7 @@ Default name: **Buddy** (configurable in Settings).
 - `ui.timeout` — استغرق المساعد السحابي وقتًا طويلًا. حاول مرة أخرى أو استخدم زرًا.
 - `ui.rate` — المساعد السحابي مشغول الآن. حاول بعد قليل.
 - `ui.offline` — لا يوجد اتصال. بادي يعمل دون اتصال.
-- `ui.greeting` — مرحبًا! أنا {name}. اسألني ماذا تفعل الآن، أو لماذا هذا مهم، أو ماذا يعني شيء ما.
+- `ui.greeting` — مرحبًا! أنا {name}، مساعدك في {brand}. اسألني ماذا تفعل الآن، أو لماذا هذا مهم، أو ماذا يعني شيء ما.
 - `ui.real` — حقيقة ناسا
 - `ui.game` — افتراض اللعبة
 - `ui.sourceNote` — هذه المعلومة من ملاحظات المهمة نفسها عن ناسا.

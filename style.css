@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Junior Astronaut Mission Trainer — Level 1
+   Space Buddy — Level 1
    Pixel mission control UI · fonts bundled locally (works offline)
    ========================================================================== */
 
@@ -3608,6 +3608,16 @@ body.touch-on .tracker {
   text-align: center;
   z-index: 4;
   pointer-events: none;
+}
+
+.figma-kicker {
+  margin: 0;
+  font-family: var(--font-jersey-20, 'Jersey 20', 'Courier New', monospace);
+  font-size: clamp(8px, 1vw, 12px);
+  letter-spacing: 2px;
+  color: #a9c8ff;
+  text-transform: uppercase;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
 }
 
 .figma-main-title {

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Slice the Junior Astronaut Mission Trainer sprite sheets into game-ready PNGs.
+Slice the Space Buddy sprite sheets into game-ready PNGs.
 
 The five source sheets are AI-generated "catalog" art (JPG, no alpha):
 
