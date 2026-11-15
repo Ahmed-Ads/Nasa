@@ -6,7 +6,7 @@
 <title>Junior Astronaut Mission Trainer — Level 1: The Moon</title>
 <meta name="description" content="A pixel-art mission trainer for ages 7–12. Plan power, walk the lunar outpost, and keep the crew alive across three missions. Built for the 2026 NASA Space Apps Challenge.">
 <meta name="theme-color" content="#06070f">
-<link rel="stylesheet" href="style.css?v=3.0.1">
+<link rel="stylesheet" href="style.css?v=3.0.2">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%2306070f'/%3E%3Ccircle cx='8' cy='8' r='5' fill='%23c2c6d4'/%3E%3Ccircle cx='6' cy='6.5' r='1.5' fill='%239a9fb2'/%3E%3Ccircle cx='10' cy='10' r='1' fill='%239a9fb2'/%3E%3C/svg%3E">
 </head>
 <body>
@@ -21,7 +21,7 @@
       <p class="load-count" id="load-count">Loading outpost…</p>
       <p class="load-tip" id="load-tip"></p>
       <button class="btn btn-primary btn-lg gate" id="start-gate" type="button" disabled>PRESS TO START</button>
-      <p class="loading-version">v3.0.1 · no data leaves your device</p>
+      <p class="loading-version">v3.0.2 · no data leaves your device</p>
     </div>
   </div>
   <div class="viewport" id="viewport">
@@ -38,7 +38,7 @@
     </div>
     <div class="hud-center">
       <span class="phase-chip" id="hud-phase">PLAN</span>
-      <span class="chip chip-eva" id="hud-eva" title="EVA minutes left this sol">EVA 3</span>
+      <span class="chip chip-eva" id="hud-eva" title="Suit air">AIR 100%</span>
       <span class="chip chip-dose" id="hud-dose" hidden>☢ 0</span>
     </div>
     <div class="hud-right">
@@ -76,7 +76,7 @@
           <button class="btn btn-sm" id="menu-quit" type="button">QUIT</button>
         </div>
       </div>
-      <p class="title-version" id="title-version">v3.0.1</p>
+      <p class="title-version" id="title-version">v3.0.2</p>
       <div class="level-chips" aria-hidden="true">
         <span class="level is-current">1.1 Prep</span>
         <span class="level">1.2 Leak</span>
@@ -168,8 +168,8 @@
       </div>
 
       <div class="eva-box" id="eva-box">
-        <div class="eva-head"><span>EVA minutes</span><b id="eva-val">3</b></div>
-        <div class="eva-pips" id="eva-pips"></div>
+        <div class="eva-head"><span>Suit air</span><b id="eva-val">100%</b></div>
+        <div class="air-track"><div class="air-bar" id="air-bar"></div></div>
         <p class="eva-hint" id="eva-hint">Walk to a station and hold <kbd>E</kbd> (or hold the prompt).</p>
         <button class="mini-btn" id="shelter-btn" type="button" hidden>Order shelter</button>
       </div>
@@ -270,7 +270,7 @@
     <h2 id="how-title">How to Play</h2>
     <ol class="steps">
       <li><strong>PLAN.</strong> Spend power cells on the systems you need. Leftover cells charge the battery.</li>
-      <li><strong>EVA.</strong> You have 3 EVA minutes. Walk with <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or tap the ground. Stand at a station and hold <kbd>E</kbd> (or hold the on-screen prompt).</li>
+      <li><strong>EVA.</strong> Your suit air drains as you walk and mine. Walk with <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or tap the ground. Stand at a station and hold <kbd>E</kbd> (or hold the on-screen prompt). Air refills each sol; at 0 you drop your item and go inside.</li>
       <li><strong>RESOLVE.</strong> End the EVA. The sol runs: production, crew use, hazards, then the story.</li>
       <li><strong>Survive.</strong> Keep meters above 20% or lose a heart. Zero hearts or a zero meter ends the mission — retry is free, and you get one Revive.</li>
     </ol>
@@ -354,7 +354,7 @@
   </div>
 </div>
 
-<script src="assets/manifest.js?v=3.0.1"></script>
-<script src="game.js?v=3.0.1" defer></script>
+<script src="assets/manifest.js?v=3.0.2"></script>
+<script src="game.js?v=3.0.2" defer></script>
 </body>
 </html>

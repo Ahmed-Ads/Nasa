@@ -338,12 +338,32 @@ def main():
         check("dropped item persists on the map", econ["dropped"] >= 1, str(econ))
         ectx.close()
 
+        # ------------------------------------------------------- suit air
+        print("\nSuit air")
+        actx, apage = new_page(browser, 1280, 720, "?debug&level=1.1")
+        air = js(apage, """() => {
+          const J = window.__JAMT__, T = window.__T, s = J.state, out = {};
+          J.startEVA();
+          T.setKey('right', true);
+          for (let i = 0; i < 20; i++) T.step(0.05);
+          T.setKey('right', false);
+          out.drained = 100 - s.air;
+          s.air = 20; T.startSol(true); out.refilled = s.air;
+          J.startEVA(); s.carry = 'ice'; s.air = 0; T.step(0.05);
+          out.phase = s.phase; out.carry = s.carry; out.dropped = s.groundItems.length;
+          return out;
+        }""")
+        check("air drains while walking", air["drained"] > 0.2, str(air))
+        check("air refills at the next sol", air["refilled"] == 100, str(air))
+        check("zero air drops the item and ends the EVA", air["carry"] is None and air["dropped"] >= 1 and air["phase"] in ("resolve", "plan"), str(air))
+        actx.close()
+
         # -------------------------------------------------------- version
         html = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
-        check("E version 3.0.1 in index.html", "v3.0.1" in html)
-        check("E version 3.0.1 in game.js", BUILD_VERSION == "3.0.1", BUILD_VERSION)
+        check(f"E version {BUILD_VERSION} in index.html", f"v{BUILD_VERSION}" in html)
+        check("E game.js BUILD_VERSION is current", BUILD_VERSION in GAME_SRC)
         tags = re.findall(r"\?v=([0-9.]+)", html)
-        check("E every ?v= tag is 3.0.1", bool(tags) and all(t == "3.0.1" for t in tags), str(tags))
+        check(f"E every ?v= tag is {BUILD_VERSION}", bool(tags) and all(t == BUILD_VERSION for t in tags), str(tags))
 
         # ----------------------------------------------------- session 2A
         print("\nSession 2A gaps")

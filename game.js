@@ -54,7 +54,6 @@
     iceWater:          { value: 12, kind: 'game', source: 'Lunar ice (LRO/LCROSS); amount is a game value' },
     iceO2:             { value: 8,  kind: 'game', source: 'balance' },
     iceDose:           { value: 6,  kind: 'game', source: 'balance' },
-    evaMinutes:        { value: 3,  kind: 'game', source: 'inspired by EVA planning near shelter' },
     holdSeconds:       { value: 2.2, kind: 'game', source: 'input feel' },
   };
 
@@ -147,8 +146,8 @@
     eventKey: 'calm',
     nextPenalty: 0,
     penalty: 0,
-    eva: RULES.evaMinutes.value,
-    evaUsed: 0,
+    air: 100,
+    airWarned: false,
     sweepSol: 0,
     panelDeployed: false,
     panelBonus: 0, bags: 0, carry: null, groundItems: [], sources: [], slots: [], snap: null, atSwitchboard: false,
@@ -519,8 +518,10 @@
   function pickupSource(src) {
     if (state.carry) { addLog('Hands are full — drop it first (Q).', 'warn'); return; }
     if (src.stock <= 0) { addLog('Nothing left here until the next sol — it restocks each sol.', 'warn'); return; }
-    if (src.minutes && state.eva < src.minutes) { addLog('Not enough EVA minutes.', 'warn'); return; }
-    if (src.minutes) spend(src.minutes);
+    if (src.hold) {
+      if (state.air < 8) { addLog('Not enough suit air to mine/dig.', 'warn'); return; }
+      state.air = Math.max(0, state.air - 8);
+    }
     src.stock -= 1;
     state.carry = src.item;
     addLog(`Carrying <b>${ITEM_META[src.item].name}</b>. Deliver it to the highlighted slot (Q to drop).`, 'good');
@@ -784,6 +785,20 @@
   const keys = { up: false, down: false, left: false, right: false };
   let dustPuffs = [];
 
+  function collapseFromAir() {
+    const s = state;
+    if (s.air > 0) return;
+    if (s.carry) { dropItem(); addLog('You dropped what you were carrying.', 'muted'); }
+    const storm = s.levelId === '1.3' && s.sol >= s.stormArrival && s.sol < s.stormArrival + s.stormDuration;
+    if (storm) { s.hearts -= 1; s.heartsLost = (s.heartsLost || 0) + 1; addLog('⚠️ Out of air in a storm — <b>−1 heart</b>.', 'bad'); }
+    if (s.phase === 'eva') {
+      addLog('🫁 Suit air empty — the sol ends. Going inside refills at the next sol.', 'warn');
+      endEVA();
+    } else {
+      addLog('🫁 Suit air empty — start the EVA to go inside and end the sol.', 'warn');
+    }
+  }
+
   function updatePlayer(dt) {
     let dx = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
     let dy = (keys.down ? 1 : 0) - (keys.up ? 1 : 0);
@@ -803,6 +818,7 @@
       const speed = 82;
       movePlayer(dx * speed * dt, dy * speed * dt);
       if (Math.abs(dx) > 0.1) player.facing = dx > 0 ? 1 : -1;
+      state.air = Math.max(0, state.air - dt * 0.55);
       const prev = Math.floor(player.walk / 0.16);
       player.walk += dt;
       if (Math.floor(player.walk / 0.16) !== prev) {
@@ -810,6 +826,12 @@
         if (dustPuffs.length > 16) dustPuffs.shift();
       }
     }
+    if (state.air <= 25 && !state.airWarned) {
+      state.airWarned = true;
+      addLog('🫁 Suit air at 25% — head back or use the rover.', 'warn');
+      Sound.warn();
+    }
+    if (state.air <= 0) collapseFromAir();
     for (let i = dustPuffs.length - 1; i >= 0; i--) {
       dustPuffs[i].life -= dt;
       if (dustPuffs[i].life <= 0) dustPuffs.splice(i, 1);
@@ -1167,7 +1189,7 @@
       const src = st;
       return {
         id: 'pickup', label: src.label, minutes: src.minutes || 0,
-        disabled: (src.minutes || 0) > s.eva || src.stock <= 0,
+        disabled: (src.hold ? s.air < 8 : false) || src.stock <= 0,
         run: () => pickupSource(src),
       };
     }
@@ -1179,7 +1201,7 @@
     if (st.type) {
       return { id: 'pickup-ground', label: `Pick up ${ITEM_META[st.type].name}`, minutes: 0, run: () => pickupGround(st) };
     }
-    const noMinutes = s.eva <= 0;
+    const noMinutes = s.air <= 0;
 
     if (st.id === 'o2' || st.id === 'co2' || st.id === 'water') {
       const row = st.id === 'water' || st.id === 'co2' ? 'water' : 'o2';
@@ -1212,7 +1234,8 @@
       }
       return { id: 'commsinfo', label: 'Comms dish online', minutes: 0, run: () => addLog('📡 Comms dish is tracking the Sun.', 'muted') };
     }
-    if (st.id === 'ice') {
+    if (st.id === 'ice') { return null; }
+    if (false) {
       const used = s.iceUsedSol === s.sol;
       const what = L.id === '1.3' ? `+${RULES.iceO2.value} O₂` : `+${RULES.iceWater.value} water`;
       return {
@@ -1239,13 +1262,11 @@
 
   /* ------------------------------------------------------------- EVA tasks -- */
   function doReopen() {
-    spend(1);
     state.reopened = true;
     addLog('✅ Hatch reopened: the recycler is back online and the leak is sealed.', 'good');
     Sound.ok();
   }
   function doReadDish() {
-    spend(1);
     state.stormKnown = true;
     addLog(`📡 Space weather: storm arrives on <b>Sol ${state.stormArrival}</b> and lasts ${state.stormDuration} sol${state.stormDuration > 1 ? 's' : ''}.`, 'good');
     Sound.ok();
@@ -1253,7 +1274,6 @@
   function doHaulIce() {
     const s = state;
     s.iceUsedSol = s.sol;
-    spend(2);
     if (s.levelId === '1.3') {
       s.res.o2 = clamp(s.res.o2 + RULES.iceO2.value);
       addLog(`🧊 Hauled ice: <b>+${RULES.iceO2.value} O2</b> from electrolysis.`, 'good');
@@ -1275,14 +1295,7 @@
     render();
   }
 
-  function spend(minutes) {
-    state.eva = Math.max(0, state.eva - minutes);
-    state.evaUsed += minutes;
-    render();
-  }
-
   function doSweep() {
-    spend(1);
     const restored = state.penalty;
     state.penalty = 0;
     state.budget += restored;
@@ -1290,13 +1303,11 @@
     Sound.ok();
   }
   function doFetchPanel() {
-    spend(1);
     state.carryingPanel = true;
     addLog('🔧 Took a spare solar panel from the crates. Install it at the solar field.', 'good');
     Sound.ok();
   }
   function doInstallPanel() {
-    spend(1);
     state.carryingPanel = false;
     state.panelDeployed = true;
     state.budget += 1;
@@ -1311,7 +1322,7 @@
     const st = nearestInteractable();
     const action = actionFor(st);
     if (!action || action.disabled) { Sound.warn(); return; }
-    if (action.minutes > 0 && state.eva < action.minutes) { Sound.warn(); addLog('No EVA minutes left for that task.', 'warn'); return; }
+
     if (action.minutes === 0) { action.run(); render(); return; }
     hold.active = true; hold.t = 0; hold.action = action; hold.station = st;
     els.interact.classList.add('is-holding');
@@ -1397,7 +1408,8 @@
     els.hudHearts.setAttribute('aria-label', `Crew hearts: ${s.hearts} of 3`);
     els.hudPhase.textContent = s.phase.toUpperCase();
     els.hudPhase.dataset.phase = s.phase;
-    els.hudEva.textContent = `EVA ${s.eva}`;
+    els.hudEva.textContent = `AIR ${Math.round(s.air)}%`;
+    els.hudEva.classList.toggle('is-low', s.air < 25);
     els.phaseChip.textContent = s.phase.toUpperCase();
     els.phaseChip.dataset.phase = s.phase;
     els.phaseHint.textContent = s.phase === 'plan' ? 'Spend power cells' : s.phase === 'eva' ? 'Walk + do tasks' : 'Resolving…';
@@ -1491,13 +1503,16 @@
       els.hudDose.hidden = true;
     }
 
-    // EVA
-    els.evaVal.textContent = String(s.eva);
-    els.evaPips.innerHTML = Array.from({ length: RULES.evaMinutes.value }, (_, i) =>
-      `<span class="eva-pip${i < s.eva ? ' is-on' : ''}"></span>`).join('');
-    els.evaHint.innerHTML = s.phase === 'eva'
-      ? 'Hold <kbd>E</kbd> at a station (or hold the prompt). Use all minutes or end early.'
-      : s.phase === 'plan' ? 'Start the EVA to walk the base and fix things.' : 'Resolving the sol…';
+    // suit air
+    els.evaVal.textContent = `${Math.round(s.air)}%`;
+    const airBar = document.getElementById('air-bar');
+    if (airBar) {
+      airBar.style.width = `${Math.max(0, Math.min(100, s.air))}%`;
+      airBar.style.backgroundColor = s.air < 25 ? '#ff4d6d' : s.air < 50 ? '#ffb02e' : '#7ce38b';
+    }
+    els.evaHint.innerHTML = s.air < 25
+      ? 'Low air — head inside. At 0 you drop your item and the sol ends.'
+      : 'Air drains as you walk; mining costs more. Refills each sol.';
 
     // shelter order (1.3)
     const showShelter = L.id === '1.3' && s.sol >= 2 && s.stormArrival > 0 && !s.sheltered;
@@ -1633,7 +1648,7 @@
     if (L.rows.includes('battery')) s.res.battery = s.battery;
     s.dose = 0; s.dosePeak = 0; s.heartsLost = 0; s.research = 0;
     s.penalty = 0; s.nextPenalty = 0;
-    s.eva = RULES.evaMinutes.value; s.evaUsed = 0;
+    s.air = 100; s.airWarned = false;
     s.sweepSol = 0;
     s.panelDeployed = false; s.panelBonus = 0; s.bags = 0; s.carry = null; s.groundItems = [];
     s.snap = null; s.atSwitchboard = false; s.carryingPanel = false; s.carryingTape = false;
@@ -1647,7 +1662,7 @@
     s.slip = 0; s.delayed = false; s.revived = false;
     s.schedule = L.schedule.slice();
     s.fx = null; s.winAt = 0;
-    s.stats = { lowest: {}, startRes: { ...s.res }, evaTasks: 0 };
+    s.stats = { lowest: {}, startRes: { ...s.res } };
     s.lastDoseCause = '';
 
     if (L.id === '1.2') s.leakStart = Math.random() < 0.5 ? 1 : 2;
@@ -1687,8 +1702,7 @@
     s.penalty = s.nextPenalty;
     s.nextPenalty = 0;
     s.draws = 0;
-    s.eva = RULES.evaMinutes.value;
-    s.evaUsed = 0;
+    s.air = 100; s.airWarned = false;
     s.eventKey = s.schedule[s.sol - 1] || 'calm';
     s.fx = null;
 
@@ -1704,7 +1718,7 @@
     s.budget = Math.max(2, RULES.budget.value - s.penalty + (s.panelBonus || 0));
     fitAlloc();
     restock();
-    if (!first) addLog(`<b>Sol ${s.sol}</b> · ${s.budget} cells${s.penalty ? ` (−${s.penalty} penalty)` : ''} · ${s.eva} EVA minutes.`, 'muted');
+    if (!first) addLog(`<b>Sol ${s.sol}</b> · ${s.budget} cells${s.penalty ? ` (−${s.penalty} penalty)` : ''} · ${s.air} EVA minutes.`, 'muted');
     if (L.hints && L.hints[s.sol]) addLog(`💡 ${L.hints[s.sol]}`, 'muted');
     if (L.id === '1.2' && s.sol === s.leakStart) {
       s.leakActive = true;
@@ -1757,7 +1771,7 @@
     if (s.phase !== 'plan') return;
     s.phase = 'eva';
     const leftover = Math.max(0, leftCells());
-    addLog(`🚀 EVA started with ${s.eva} minutes.${leftover ? ` ${leftover} leftover cell${leftover === 1 ? '' : 's'} will charge the battery.` : ''}`, 'good');
+    addLog(`🚀 EVA started. Suit air 100%.${leftover ? ` ${leftover} leftover cell${leftover === 1 ? '' : 's'} will charge the battery.` : ''}`, 'good');
     Sound.run();
     render();
   }
@@ -2067,7 +2081,6 @@
     const good = []; const bad = [];
     if (won) good.push(L.id === '1.1' ? 'Outpost ready for the crew.' : L.id === '1.2' ? 'Leak isolated, taped and patched.' : 'Crew sheltered from the particle event.');
     if (s.hearts === 3) good.push('All 3 hearts kept.');
-    if (s.evaUsed) good.push(`Used ${s.evaUsed} EVA minutes for physical fixes.`);
     if (s.research > 0) good.push(`Earned ${s.research} research points.`);
     if (s.reopened) good.push('Recycler back online after the patch.');
     if (s.hearts < 3) bad.push(`Lost ${3 - s.hearts} crew heart${3 - s.hearts === 1 ? '' : 's'}.`);
@@ -2120,7 +2133,7 @@
     if (L.id === '1.2' && !s.reopened) { s.isolated = false; s.taped = false; }
     s.phase = 'plan';
     showScreen('game');
-    s.eva = RULES.evaMinutes.value;
+    s.air = 100; s.airWarned = false;
     addLog('🚑 <b>Revive!</b> A supply lander restores every meter to at least 45%. The emergency cause is cleared.', 'good');
     Sound.revive();
     startSol(true);
@@ -2289,7 +2302,9 @@
     slots() { return state.slots.map((s) => ({ id: s.id, filled: s.filled, cap: s.cap })); },
     sources() { return state.sources.map((s) => ({ id: s.id, item: s.item, stock: s.stock, cap: s.cap })); },
     nearest() { return nearestInteractable(); },
-    state, RESOURCE_DOCS, ITEM_META, SLOTS, actionFor, blockedAt,
+    state, RESOURCE_DOCS, ITEM_META, SLOTS, actionFor, blockedAt, startSol, collapseFromAir,
+    setKey(k, v) { keys[k] = v; },
+    step(dt) { updatePlayer(dt); },
   };
   window.__JAMT__ = {
     get state() { return state; },
@@ -2357,7 +2372,7 @@
 
 
   /* ============ iteration 2: loading, menus, briefing, pause, touch ====== */
-  const BUILD_VERSION = '3.0.1';
+  const BUILD_VERSION = '3.0.2';
   const TIPS = [
     'Did you know? ISS life support recovers about 98% of the crew’s water (NASA ECLSS).',
     'Did you know? Water ice hides in permanently shadowed craters at the lunar south pole (LRO/LCROSS).',

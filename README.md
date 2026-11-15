@@ -22,6 +22,21 @@ tools/       slice_assets.py · sim.py · qa.py
 
 
 
+
+## v3.0.2 — Session 2B part 1: suit air
+
+- **EVA minutes are gone.** `state.eva`, `RULES.evaMinutes`, the EVA chip/pips and every `spend()`
+  call were removed. Suit air is now the only budget.
+- **Suit air** 0–100, refilled at every sol start: walking drains **0.55/s**, mining/digging costs
+  **8** per action; a 25% warning is logged (and the HUD chip turns red); at **0** the astronaut
+  drops the carried item and the sol ends. Hearts are lost only if a storm is active.
+- HUD: `AIR %` chip + a suit-air bar in the console (desktop and phone); the air bar turns
+  orange below 50% and red below 25%.
+- QA: **53/53** on `file://`, including drain, refill, zero-air drop/end, and version checks.
+  Sim is still stale (v2 rules) and correctly reported as a warning, not a pass.
+- **Rover is not in this build** (Session 2B part 2). Version 3.0.2 is the suit-air release, per
+  the agreed fallback.
+
 ## v3.0.1 — Session 2A: gap closure
 
 - **Leak flow unified**: the old isolate/fetch/tape station shortcuts are gone. The only path is
