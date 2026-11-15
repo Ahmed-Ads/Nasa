@@ -804,6 +804,7 @@
     ctx.imageSmoothingEnabled = false;
     camera.w = VW; camera.h = VH;
     measureConsole();
+    positionTracker();
     snapCamera();
   }
 
@@ -818,16 +819,19 @@
     camera.x = clamp(camera.x, 0, Math.max(0, WORLD.w - camera.w));
     camera.y = clamp(camera.y, 0, Math.max(0, WORLD.h - camera.h));
   }
+  function cameraFocus() {
+    return window.matchMedia('(max-width: 820px), (max-height: 520px)').matches ? 0.74 : 0.58;
+  }
   function snapCamera() {
     const visibleH = Math.max(80, camera.h - consolePx / PIXEL);
     camera.x = clamp(player.x - camera.w / 2, 0, Math.max(0, WORLD.w - camera.w));
-    camera.y = clamp(player.y - visibleH * 0.58, 0, Math.max(0, WORLD.h - camera.h));
+    camera.y = clamp(player.y - visibleH * cameraFocus(), 0, Math.max(0, WORLD.h - camera.h));
     clampCamera();
   }
   function updateCamera(dt) {
     const visibleH = Math.max(80, camera.h - consolePx / PIXEL);
     const tx = player.x - camera.w / 2;
-    const ty = player.y - visibleH * 0.58;
+    const ty = player.y - visibleH * cameraFocus();
     camera.x += (tx - camera.x) * Math.min(1, dt * 7);
     camera.y += (ty - camera.y) * Math.min(1, dt * 7);
     clampCamera();
@@ -1984,6 +1988,7 @@
     if (!settings.hints || s.screen !== 'game' || !s.level || s.phase === 'resolve') {
       els.coach.hidden = true;
       coachState = null;
+      positionTracker();
       return;
     }
     const on = tutorialOn();
@@ -1991,6 +1996,7 @@
     if (!info || !info.target) {
       els.coach.hidden = true;
       coachState = null;
+      positionTracker();
       return;
     }
     if (info.mode !== 'air' && dist(player.x, player.y, info.target.x, info.target.y) > camera.h * 1.35) {
@@ -2002,7 +2008,26 @@
     els.coachText.textContent = info.text;
     els.coachIcon.textContent = info.icon || '▲';
     els.coachSkip.hidden = !on;
+    positionTracker();
   }
+  function positionTracker() {
+    const tracker = document.getElementById('tracker');
+    if (!tracker) return;
+    const compact = window.matchMedia('(max-width: 820px), (max-height: 520px)').matches;
+    if (!compact) {
+      tracker.style.top = ''; tracker.style.left = ''; tracker.style.right = ''; tracker.style.width = '';
+      tracker.classList.remove('is-open');
+      return;
+    }
+    tracker.classList.remove('is-collapsed');
+    let top = 52;
+    if (els.coach && !els.coach.hidden) top = Math.round(els.coach.getBoundingClientRect().bottom + 6);
+    tracker.style.top = `${top}px`;
+    tracker.style.left = 'auto';
+    tracker.style.right = '8px';
+    tracker.style.width = '126px';
+  }
+
   function drawCoachFx(time) {
     if (!coachState || !coachState.target) return;
     const target = coachState.target;
@@ -3090,7 +3115,7 @@
 
 
   /* ============ iteration 2: loading, menus, briefing, pause, touch ====== */
-  const BUILD_VERSION = '3.1.7';
+  const BUILD_VERSION = '3.1.8';
   const TIPS = [
     'Did you know? ISS life support recovers about 98% of the crew’s water (NASA ECLSS).',
     'Did you know? Water ice hides in permanently shadowed craters at the lunar south pole (LRO/LCROSS).',
@@ -3168,7 +3193,7 @@
   }
   function closePause() { flowEls.pause.hidden = true; state.paused = false; }
 
-  const UI_SAD = 'assets/ui/sad_astronaut.png?v=3.1.7';
+  const UI_SAD = 'assets/ui/sad_astronaut.png?v=3.1.8';
   function askConfirm(text, onYes, art = null) {
     flowEls.confirmText.textContent = text;
     if (flowEls.confirmArt) {
@@ -3282,12 +3307,20 @@
     document.getElementById('credits-version').textContent = `Version ${BUILD_VERSION}`;
     const tv = document.getElementById('title-version');
     if (tv) tv.textContent = `v${BUILD_VERSION}`;
+    const lv = document.getElementById('load-version');
+    if (lv) lv.textContent = `v${BUILD_VERSION} - no data leaves your device`;
 
     document.getElementById('brief-start').addEventListener('click', () => { Sound.init(); Sound.click(); startLevel(state.briefId || '1.1'); });
     document.getElementById('brief-back').addEventListener('click', () => { Sound.click(); goSelect(); });
     document.getElementById('brief-back2').addEventListener('click', () => { Sound.click(); goSelect(); });
     document.getElementById('tracker-info').addEventListener('click', () => renderBrief(state.levelId) || showScreen('brief'));
-    document.getElementById('tracker-toggle').addEventListener('click', () => flowEls.tracker.classList.toggle('is-collapsed'));
+    document.getElementById('tracker-toggle').addEventListener('click', () => {
+      const compact = window.matchMedia('(max-width: 820px), (max-height: 520px)').matches;
+      const tracker = document.getElementById('tracker');
+      if (compact) tracker.classList.toggle('is-open');
+      else tracker.classList.toggle('is-collapsed');
+      positionTracker();
+    });
 
     document.getElementById('pause-btn').addEventListener('click', openPause);
     document.getElementById('pause-continue').addEventListener('click', () => { closePause(); Sound.click(); });

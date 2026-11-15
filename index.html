@@ -6,7 +6,7 @@
 <title>Junior Astronaut Mission Trainer — Level 1: The Moon</title>
 <meta name="description" content="A pixel-art mission trainer for ages 7–12. Plan power, walk the lunar outpost, and keep the crew alive across three missions. Built for the 2026 NASA Space Apps Challenge.">
 <meta name="theme-color" content="#06070f">
-<link rel="stylesheet" href="style.css?v=3.1.7">
+<link rel="stylesheet" href="style.css?v=3.1.8">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%2306070f'/%3E%3Ccircle cx='8' cy='8' r='5' fill='%23c2c6d4'/%3E%3Ccircle cx='6' cy='6.5' r='1.5' fill='%239a9fb2'/%3E%3Ccircle cx='10' cy='10' r='1' fill='%239a9fb2'/%3E%3C/svg%3E">
 </head>
 <body>
@@ -21,7 +21,7 @@
       <p class="load-count" id="load-count">Loading outpost…</p>
       <p class="load-tip" id="load-tip"></p>
       <button class="btn btn-primary btn-lg gate" id="start-gate" type="button" disabled>PRESS TO START</button>
-      <p class="loading-version">v3.1.5 · no data leaves your device</p>
+      <p class="loading-version" id="load-version">v3.1.8 · no data leaves your device</p>
     </div>
   </div>
   <div class="viewport" id="viewport">
@@ -75,10 +75,10 @@
         <div class="menu">
           <div class="menu-art-row">
             <button class="ui-art-btn ui-art-btn--start" id="play-btn" type="button" aria-label="Start game">
-              <img src="assets/ui/start_game.png?v=3.1.7" alt="">
+              <img src="assets/ui/start_game.png?v=3.1.8" alt="">
             </button>
             <button class="ui-art-btn ui-art-btn--quit" id="menu-quit" type="button" aria-label="Quit mission">
-              <img src="assets/ui/quit_mission.png?v=3.1.7" alt="">
+              <img src="assets/ui/quit_mission.png?v=3.1.8" alt="">
             </button>
           </div>
           <div class="menu-row">
@@ -89,7 +89,7 @@
             <button class="btn btn-sm" id="how-btn" type="button">HOW TO PLAY</button>
           </div>
         </div>
-        <p class="title-version" id="title-version">v3.1.7</p>
+        <p class="title-version" id="title-version">v3.1.8</p>
         <div class="level-chips" aria-hidden="true">
           <span class="level is-current">1.1 Prep</span>
           <span class="level">1.2 Leak</span>
@@ -98,9 +98,9 @@
         </div>
       </div>
       <div class="landing-side" aria-hidden="true">
-        <img class="landing-crest" src="assets/ui/logo_outpost.png?v=3.1.7" alt="">
-        <img class="landing-ready" src="assets/ui/ready_to_land.png?v=3.1.7" alt="">
-        <img class="landing-cheer" src="assets/ui/cheer_astronaut.png?v=3.1.7" alt="">
+        <img class="landing-crest" src="assets/ui/logo_outpost.png?v=3.1.8" alt="">
+        <img class="landing-ready" src="assets/ui/ready_to_land.png?v=3.1.8" alt="">
+        <img class="landing-cheer" src="assets/ui/cheer_astronaut.png?v=3.1.8" alt="">
       </div>
     </div>
     <p class="credit">Built for the 2026 NASA Space Apps Challenge - Data: NASA - Ages 7-12</p>
@@ -151,11 +151,11 @@
   <div class="overlay overlay--goodbye" id="screen-goodbye" hidden>
     <div class="goodbye-card">
       <div class="goodbye-art" aria-hidden="true">
-        <img class="goodbye-sad" src="assets/ui/sad_astronaut.png?v=3.1.7" alt="">
-        <img class="goodbye-door" src="assets/ui/exit_door.png?v=3.1.7" alt="">
+        <img class="goodbye-sad" src="assets/ui/sad_astronaut.png?v=3.1.8" alt="">
+        <img class="goodbye-door" src="assets/ui/exit_door.png?v=3.1.8" alt="">
       </div>
       <div class="goodbye-copy">
-        <img class="goodbye-banner" src="assets/ui/mission_aborted.png?v=3.1.7" alt="Mission aborted">
+        <img class="goodbye-banner" src="assets/ui/mission_aborted.png?v=3.1.8" alt="Mission aborted">
         <p class="kicker">Mission control signing off</p>
         <h1 class="title">See you<br><span>next day</span></h1>
         <p class="lede">Your progress is saved on this device. Close the tab whenever you are ready.</p>
@@ -223,17 +223,16 @@
           <p class="forecast-text" id="forecast-text">Clear skies — no hazards expected.</p>
         </div>
       </div>
-      <ul class="log" id="log" aria-live="polite" aria-label="Mission log"></ul>
-    </div>
-  </section>
-
-  <aside class="tracker" id="tracker" hidden>
+      <aside class="tracker" id="tracker" hidden>
     <button class="tracker-head" id="tracker-toggle" type="button">
       <span>OBJECTIVES</span><span id="tracker-count">0/0</span><span class="tracker-chev">▾</span>
     </button>
     <ul class="tracker-list" id="tracker-list"></ul>
     <button class="tracker-info" id="tracker-info" type="button">ⓘ Mission briefing</button>
   </aside>
+      <ul class="log" id="log" aria-live="polite" aria-label="Mission log"></ul>
+    </div>
+  </section>
 
   <div class="touch" id="touch-controls" hidden>
     <div class="stick" id="stick"><div class="stick-knob" id="stick-knob"></div></div>
@@ -386,7 +385,7 @@
     <p>Science sources: NASA ECLSS / ISS, NASA Space Weather &amp; DONKI, NASA Moon (LRO, Diviner, LCROSS), NASA space-radiation research, NASA lunar-dust research.</p>
     <p>Art is AI-generated catalog art, sliced locally with <code>tools/slice_assets.py</code>. Fonts are system fonts.</p>
     <p><strong>Privacy:</strong> no third-party scripts, no analytics, no cookies. No data leaves your device; progress is saved on this device only.</p>
-    <p class="credits-version" id="credits-version">Version 3.1.5</p>
+    <p class="credits-version" id="credits-version">Version 3.1.8</p>
   </div>
 </div>
 
@@ -405,8 +404,8 @@
   <p class="anim-debug-note">Ice mining (img12, helmet-matched scale) and regolith digging (img10). Scrub the slider to step both action strips.</p>
 </div>
 
-<script src="assets/manifest.js?v=3.1.7"></script>
-<script src="assets/anim_manifest.js?v=3.1.7"></script>
-<script src="game.js?v=3.1.7" defer></script>
+<script src="assets/manifest.js?v=3.1.8"></script>
+<script src="assets/anim_manifest.js?v=3.1.8"></script>
+<script src="game.js?v=3.1.8" defer></script>
 </body>
 </html>

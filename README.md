@@ -24,6 +24,19 @@ tools/       slice_assets.py · sim.py · qa.py
 
 
 
+## v3.1.8 - Objectives layout and version hygiene
+
+- Desktop: Objectives moved into the right column under the hazard/forecast card, clear of the
+  left control panel header. Mobile/landscape: collapsed to a one-line "Objectives n/x" strip
+  that expands on tap. The strip sits below the coach, away from the HUD, player and ACT.
+- Compact layouts use a lower camera focus so the coach and objectives never cover the player.
+- Loading-screen and Credits versions are written by `game.js` from `BUILD_VERSION` at startup,
+  so static HTML can no longer go stale.
+- `.gitignore` re-saved as UTF-8 without a BOM, so `assets/img*.jpg` is ignored again.
+- QA: **119/119** on `file://`, local HTTP and the live GitHub Pages URL. New layout checks cover
+  1920x860, 1280x720, 768x1024, 390x844, 360x640 and 844x390 for all three levels. Screenshots:
+  `tools/out/layout_desktop.png` and `tools/out/layout_phone.png`.
+
 ## v3.1.7 - ROVER-FIX: dismount, remount and unstick
 
 - The rover now follows the rider exactly while mounted. Dismount parks it at that exact
