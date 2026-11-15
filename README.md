@@ -24,7 +24,29 @@ tools/       slice_assets.py · sim.py · qa.py
 
 
 
-## v3.1.8 - Objectives layout and version hygiene
+## v3.1.8 - Design landing screen + objectives layout
+
+### Start / Continue landing screen
+
+- The landing screen now follows the `edit_design` mockup: the full-bleed space background,
+  the pixel-font title and "YOUR MISSION STARTS HERE" sub-line centred at the top, the large
+  illustrated astronaut anchored bottom-left, the five gold buttons in a column on the right
+  (Start Mission, Continue Mission, Training, Settings, Exit) and a small
+  "Powered by NASA open data · Credits" footer.
+- **Continue Mission** is a real resume: disabled with no save, shows the saved star count
+  (`Continue Mission · ★ 4`) and opens the briefing of the furthest unlocked mission. Start
+  Mission still opens the level map, Training opens the how-to modal.
+- Jersey 20 / Jersey 25 / Lexend are now **bundled in `assets/fonts/`** (SIL OFL, licence
+  files next to them), so the pixel type of the design renders with no Google Fonts request
+  and no network at all.
+- Nothing on this screen is load-bearing for `game.js` beyond the button ids (`#play-btn`,
+  `#continue-btn`, `#how-btn`, `#menu-credits`, `#menu-settings`, `#menu-quit`,
+  `#title-version`), so changing the layout cannot repeat the v3.1.6 breakage. `Credits` sits
+  in the footer to keep the five-button column of the mockup.
+- Phone layout stacks the title, the buttons and the footer with no horizontal overflow at
+  390 x 844.
+
+### Objectives layout and version hygiene
 
 - Desktop: Objectives moved into the right column under the hazard/forecast card, clear of the
   left control panel header. Mobile/landscape: collapsed to a one-line "Objectives n/x" strip
@@ -33,11 +55,14 @@ tools/       slice_assets.py · sim.py · qa.py
 - Loading-screen and Credits versions are written by `game.js` from `BUILD_VERSION` at startup,
   so static HTML can no longer go stale.
 - `.gitignore` re-saved as UTF-8 without a BOM, so `assets/img*.jpg` is ignored again.
-- QA: **119/119** on `file://`, local HTTP and the live GitHub Pages URL. New layout checks cover
-  1920x860, 1280x720, 768x1024, 390x844, 360x640 and 844x390 for all three levels. Screenshots:
-  `tools/out/layout_desktop.png` and `tools/out/layout_phone.png`.
 
-## v3.1.7 - ROVER-FIX: dismount, remount and unstick
+QA: **122/122** on `file://` — the v3.1.8 layout suite (1920x860, 1280x720, 768x1024,
+390x844, 360x640, 844x390 for all three levels) plus the design-landing checks. The old
+"5 landing art images" assertion was replaced by design-specific ones (astronaut art loads,
+five buttons at clickable size, pixel font loaded, footer present), since this landing
+intentionally drops the crest/sign art. Sim remains stale (v2 warning).
+
+## v3.1.7 - ROVER-FIX + the edit_design UI, merged for real
 
 - The rover now follows the rider exactly while mounted. Dismount parks it at that exact
   point (`rover.parked = true`) and never snaps it back to its start.
@@ -49,6 +74,13 @@ tools/       slice_assets.py · sim.py · qa.py
   today" and leaves the rover parked.
 - Added overlap recovery and a 1.5 s no-movement unstick with a small dust puff.
 - Restart/retry resets the rover to its home position, not its last parked spot.
+- The `edit_design` screens are back: the console/HUD markup the old merge dropped (forecast,
+  suit air, radiation dose, battery line, systems, leak patch, run block, debrief and learn
+  cards) is restored, so `game.js` finds every element it wires up on boot and the loading
+  gate reaches "Ready, Commander." again.
+- Landing keeps the v3.1.6 crest/start/quit art with no Google Fonts request, so the build
+  stays fully offline, and the level map scales to the viewport (`--map-scale`) instead of
+  clipping its labels and outer nodes.
 - QA: **112/112** on `file://` and the live GitHub Pages URL, including five desktop cycles,
   phone ACT cycling, empty-battery remount and restart reset. Sim remains stale (v2 warning).
 
