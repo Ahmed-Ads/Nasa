@@ -242,8 +242,10 @@ Double-click `index.html`. Optional server: `python -m http.server 8000`.
 | `W A S D` / arrows | Walk |
 | Click / tap the ground | A* pathfind and walk there |
 | `E` (hold 2.2 s) / hold the prompt | Do the station task |
-| `1` `2` `3` | Add a power cell to row 1/2/3 |
-| `Shift` + number | Remove a cell from that row |
+| Click a resource bar | Add a power cell to that row (at the switchboard) |
+| `Shift` + click a resource bar | Remove a cell; touch: press and hold the bar |
+| `1` `2` `3` / `Shift` + number | Add / remove a cell from row 1/2/3 |
+| `O` | Show / hide detailed mission objectives |
 | `B` | Draw a cell from the battery |
 | `Space` | Go outside / End the day |
 | `Esc` | Close a modal |

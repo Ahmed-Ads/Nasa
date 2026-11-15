@@ -170,7 +170,6 @@
 
     <div class="dock-left">
       <div class="phase-row">
-        <span class="phase-chip" id="panel-phase">1. Plan power</span>
         <span class="phase-hint" id="phase-hint">Spend power cells</span>
         <span class="budget-inline">Solar cells left <button class="help-dot" type="button" aria-label="What are solar cells?" data-help="Solar cells are power you can spend today.">?</button> <b id="cells-left">0</b></span>
       </div>
@@ -227,9 +226,9 @@
     </div>
   </section>
 
-  <aside class="tracker" id="tracker" hidden>
-    <button class="tracker-head" id="tracker-toggle" type="button">
-      <span>OBJECTIVES</span><span id="tracker-count">0/0</span><span class="tracker-chev">▾</span>
+  <aside class="tracker is-collapsed" id="tracker" hidden>
+    <button class="tracker-head" id="tracker-toggle" type="button" aria-expanded="false" aria-controls="tracker-list">
+      <span>OBJECTIVES</span><span id="tracker-count">0/0</span><span class="tracker-key">O</span><span class="tracker-chev">▾</span>
     </button>
     <ul class="tracker-list" id="tracker-list"></ul>
     <button class="tracker-info" id="tracker-info" type="button">ⓘ Mission briefing</button>
@@ -303,7 +302,7 @@
     <button class="modal-close" data-close type="button" aria-label="Close">✕</button>
     <h2 id="how-title">How to Play</h2>
     <ol class="steps">
-      <li><strong>1. Plan power.</strong> Spend power cells. Leftover cells charge the battery.</li>
+      <li><strong>1. Plan power.</strong> At the switchboard, click a resource bar to add a cell; Shift-click or touch and hold to remove one. The bars show their targets; press O for all objectives. Leftover cells charge the battery.</li>
       <li><strong>2. Go outside.</strong> Walk with WASD or the joystick. Hold E or ACT to do a job. Suit air drains outside. It refills each day.</li>
       <li><strong>3. End the day.</strong> The base makes power. The crew uses supplies. Hazards happen.</li>
       <li><strong>Keep everyone safe.</strong> Keep meters above 20%. Zero hearts ends the mission. Retry is free. You get one Revive.</li>
