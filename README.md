@@ -24,6 +24,24 @@ tools/       slice_assets.py · sim.py · qa.py
 
 
 
+## v3.1.3 - Session 3 part B: ice mining + regolith digging
+
+- Generic hold action state: `state.action = { anim, startedAt, progress, site, ... }`.
+  Ice mining plays `ice_mine_01..06` on a loop; on hold completion frames 7-8 play once
+  before the ice item is picked. Digging plays `dig_01..03` until 70% progress, then
+  `bag_01..05` once before the regolith bag is picked.
+- Early release cancels the action, keeps the source stock and gives no item. The existing
+  hold ring, suit-air cost and pickup effect are unchanged.
+- The ice source icon is hidden only while `ice_mine` plays; the baked block is mirrored when
+  the source is on the player's left. The img12 scale is helmet-matched to the walk idle:
+  **0.20829459** (152 px source helmet -> 140 px idle helmet at scale 0.22615).
+- img10 action frames use the same **0.22614841** scale as walking. All action frames are
+  foot-anchored and use the soft ground shadow.
+- `?debug#anim` adds ice/dig loops on dark and light backgrounds with a 0-100% progress
+  scrub slider.
+- QA: **88/88** on `file://` and the live GitHub Pages URL; `tools/out/action_check.png`
+  covers 0/50/100% for both actions. Sim remains stale (v2 warning).
+
 ## v3.1.2 - Session 3 part A: distance-driven walk
 
 - `assets/anim_manifest.js` (`window.ANIMS`): **20 animations / 69 sliced PNG frames**. `walk`

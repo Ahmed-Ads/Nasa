@@ -549,6 +549,7 @@ def main():
 
         # ---------------------------------------------------- ?debug#anim page
         dctx, dpage = new_page(browser, 1280, 720, "?debug#anim")
+        dbg = {}
         try:
             dpage.wait_for_function("() => window.__animDebug && window.__animDebug.panels === 6", timeout=5000)
             dbg = js(dpage, "() => window.__animDebug")
@@ -558,6 +559,241 @@ def main():
             check("A4 ?debug#anim shows 3 speeds on dark + light", False, str(exc))
         dctx.close()
         wctx.close()
+
+        # ---------------------------------------------------- action animations
+        print("\nAction animations (ice mining / regolith digging)")
+        action_errors = []
+        actx, apage = new_page(browser, 1280, 720, "?debug&level=1.1", action_errors)
+        apage.wait_for_function("() => window.__jamtLoad && window.__jamtLoad.done >= window.__jamtLoad.total",
+                                timeout=7000)
+        ice = js(apage, """() => {
+          const J = window.__JAMT__, T = window.__T;
+          window.__JAMT_FREEZE = true; J.startEVA(); T.teleport(95, 700); J.snapCamera();
+          const before = J.action;
+          J.startHold();
+          const start = J.action, samples = [];
+          for (let i = 0; i < 30; i++) {
+            J.stepHold(0.04);
+            if (J.action) samples.push({ anim: J.action.anim, frame: J.action.frame,
+              p: J.action.progress, phase: J.action.phase, hidden: J.sourceHidden('ice-src') });
+          }
+          const mid = { carry: T.carry(), stock: T.sources().find(s => s.id === 'ice-src').stock,
+                        hidden: J.sourceHidden('ice-src') };
+          for (let i = 0; i < 40; i++) {
+            J.stepHold(0.04);
+            if (J.action) samples.push({ anim: J.action.anim, frame: J.action.frame,
+              p: J.action.progress, phase: J.action.phase, hidden: J.sourceHidden('ice-src') });
+          }
+          return { before, start, samples, mid, end: J.action, carry: T.carry(),
+                   stock: T.sources().find(s => s.id === 'ice-src').stock,
+                   hidden: J.sourceHidden('ice-src') };
+        }""")
+        loop_frames = [s["frame"] for s in ice["samples"] if s["phase"] != "finish"]
+        finish_frames = [s["frame"] for s in ice["samples"] if s["phase"] == "finish"]
+        loop_order = all(b == a or b == (a + 1) % 6 for a, b in zip(loop_frames, loop_frames[1:]))
+        check("A5 ice: hold starts ice_mine, hides the patch and mirrors",
+              ice["before"] is None and ice["start"]["anim"] == "ice_mine"
+              and ice["start"]["hiddenSourceId"] == "ice-src" and ice["start"]["mirror"] is True,
+              str(ice["start"]))
+        check("A5 ice: loops frames 1-6 in order then finishes 7-8",
+              set(loop_frames) == {0, 1, 2, 3, 4, 5} and loop_order
+              and 6 in finish_frames and 7 in finish_frames
+              and finish_frames.index(6) <= finish_frames.index(7),
+              f"loop={sorted(set(loop_frames))} finish={finish_frames[:6]}")
+        check("A5 ice: no item mid-hold; item and stock change only at completion",
+              ice["mid"]["carry"] is None and ice["mid"]["stock"] == 4
+              and ice["carry"] == "ice" and ice["stock"] == 3, str(ice["mid"]))
+        check("A5 ice: world ice icon is hidden only during the action",
+              ice["mid"]["hidden"] is True and ice["hidden"] is False and ice["end"] is None,
+              f"mid={ice['mid']['hidden']} end={ice['hidden']}")
+
+        early = js(apage, """() => {
+          const J = window.__JAMT__, T = window.__T;
+          if (T.carry()) T.drop();
+          J.state.groundItems = [];
+          T.teleport(95, 700); J.snapCamera();
+          const stock0 = T.sources().find(s => s.id === 'ice-src').stock;
+          J.startHold();
+          for (let i = 0; i < 15; i++) J.stepHold(0.04);
+          const during = J.action;
+          J.cancelHold();
+          for (let i = 0; i < 12; i++) J.stepHold(0.04);
+          const after = J.action;
+          J.startHold();
+          const restarted = J.action;
+          J.cancelHold();
+          return { during: !!during, after, carry: T.carry(),
+                   stock: T.sources().find(s => s.id === 'ice-src').stock, stock0,
+                   hidden: J.sourceHidden('ice-src'), restarted: !!restarted };
+        }""")
+        check("A5 early release cancels with no item, no stock loss and no stuck state",
+              early["during"] and early["after"] is None and early["carry"] is None
+              and early["stock"] == early["stock0"] and early["hidden"] is False
+              and early["restarted"] is True, str(early))
+
+        dctx2, dpage = new_page(browser, 1280, 720, "?debug&level=1.3", action_errors)
+        dpage.wait_for_function("() => window.__jamtLoad && window.__jamtLoad.done >= window.__jamtLoad.total",
+                                timeout=7000)
+        dig = js(dpage, """() => {
+          const J = window.__JAMT__, T = window.__T;
+          window.__JAMT_FREEZE = true; J.startEVA(); T.teleport(355, 330); J.snapCamera();
+          J.startHold();
+          const samples = [];
+          for (let i = 0; i < 30; i++) {
+            J.stepHold(0.04);
+            if (J.action) samples.push({ anim: J.action.anim, frame: J.action.frame,
+              p: J.action.progress, phase: J.action.phase });
+          }
+          const mid = { carry: T.carry() };
+          for (let i = 0; i < 40; i++) {
+            J.stepHold(0.04);
+            if (J.action) samples.push({ anim: J.action.anim, frame: J.action.frame,
+              p: J.action.progress, phase: J.action.phase });
+          }
+          return { samples, mid, end: J.action, carry: T.carry(),
+                   stock: T.sources().find(s => s.id === 'soil-src').stock };
+        }""")
+        dig_frames = [s["frame"] for s in dig["samples"] if s["anim"] == "dig"]
+        bag_frames = [s["frame"] for s in dig["samples"] if s["anim"] == "bag"]
+        dig_order = all(b == a or b == (a + 1) % 3 for a, b in zip(dig_frames, dig_frames[1:]))
+        bag_order = all(b == a or b == a + 1 for a, b in zip(bag_frames, bag_frames[1:]))
+        first_bag = next((s["p"] for s in dig["samples"] if s["anim"] == "bag"), None)
+        check("A5 dig: dig 1-3 loop then bag 1-5 play in order",
+              set(dig_frames) == {0, 1, 2} and dig_order and set(bag_frames) == {0, 1, 2, 3, 4}
+              and bag_order and first_bag is not None and first_bag >= 0.69,
+              f"dig={sorted(set(dig_frames))} bag={sorted(set(bag_frames))} firstBag={first_bag}")
+        check("A5 dig: item arrives only at completion",
+              dig["mid"]["carry"] is None and dig["carry"] == "bag" and dig["stock"] == 4,
+              f"mid={dig['mid']} end={dig['carry']} stock={dig['stock']}")
+
+        # touch ACT on a phone viewport
+        tctx = browser.new_context(viewport={"width": 390, "height": 844},
+                                   has_touch=True, is_mobile=True)
+        tpage = tctx.new_page()
+        touch_errors = []
+        tpage.on("pageerror", lambda e: touch_errors.append(str(e)))
+        tpage.on("console", lambda m: touch_errors.append(m.text) if m.type == "error" else None)
+        tpage.goto((LIVE_URL or URL) + "?debug&level=1.1")
+        tpage.wait_for_timeout(1200)
+        tpage.wait_for_function("() => window.__jamtLoad && window.__jamtLoad.done >= window.__jamtLoad.total",
+                                timeout=7000)
+        touch = js(tpage, """() => {
+          const J = window.__JAMT__, T = window.__T;
+          window.__JAMT_FREEZE = true; J.startEVA(); T.teleport(95, 700); J.snapCamera();
+          const btn = document.getElementById('act-btn');
+          btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 11, pointerType: 'touch' }));
+          const started = !!J.action;
+          for (let i = 0; i < 70; i++) J.stepHold(0.04);
+          btn.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 11, pointerType: 'touch' }));
+          return { started, action: J.action, carry: T.carry(),
+                   visible: !document.getElementById('touch-controls').hidden };
+        }""")
+        check("A5 phone ACT button starts and completes ice mining",
+              touch["started"] is True and touch["carry"] == "ice", str(touch))
+        check("A5 phone action has no console errors",
+              len([e for e in touch_errors if not any(s in e.lower() for s in IGNORE)]) == 0,
+              str(touch_errors[:2]))
+        tctx.close()
+
+        # fallback: a missing action frame must not block the hold effect
+        fbctx = browser.new_context(viewport={"width": 1280, "height": 720})
+        fbpage = fbctx.new_page()
+        fberrs, fbwarns = [], []
+        fbpage.on("pageerror", lambda e: fberrs.append(str(e)))
+        fbpage.on("console", lambda m: fbwarns.append(m.text) if m.type == "warning" else None)
+        fbpage.route("**/ice_mine_03.png", lambda route: route.abort())
+        fbpage.goto((LIVE_URL or URL) + "?debug&level=1.1")
+        fbpage.wait_for_timeout(1200)
+        fbpage.wait_for_function("() => window.__jamtLoad && window.__jamtLoad.done >= window.__jamtLoad.total",
+                                 timeout=7000)
+        fb = js(fbpage, """() => {
+          const J = window.__JAMT__, T = window.__T;
+          window.__JAMT_FREEZE = true;
+          J.startEVA(); T.teleport(95, 700); J.snapCamera(); J.startHold();
+          const started = !!J.action;
+          for (let i = 0; i < 70; i++) J.stepHold(0.04);
+          return { started, action: J.action, carry: T.carry() };
+        }""")
+        check("A5 missing ice frame skips animation but still yields the item",
+              fb["started"] is False and fb["action"] is None and fb["carry"] == "ice", str(fb))
+        check("A5 action fallback warns and does not break",
+              any("unavailable" in w.lower() for w in fbwarns) and not fberrs,
+              f"warns={fbwarns[:2]} errs={fberrs[:2]}")
+        fbctx.close()
+
+        # action proof: 0 / 50 / 100% for both actions
+        def action_clip(pg):
+            info = js(pg, "() => window.__jamtActionDraw")
+            rect = js(pg, """() => { const r = document.getElementById('scene').getBoundingClientRect();
+              return { x: r.x, y: r.y, w: r.width, h: r.height }; }""")
+            vp = pg.viewport_size
+            if not info:
+                return None
+            sx = rect["x"] + info["screenX"] * rect["w"] / 640
+            sy = rect["y"] + info["screenY"] * rect["h"] / 360
+            w, h = 480, 400
+            return {"x": int(max(0, min(vp["width"] - w, sx - w / 2))),
+                    "y": int(max(0, min(vp["height"] - h, sy - h * 0.72))),
+                    "width": w, "height": h}
+
+        action_shots = []
+        for kind, query, tx, ty in (("ice", "?debug&level=1.1", 95, 700),
+                                    ("dig", "?debug&level=1.3", 300, 350)):
+            sctx, spage = new_page(browser, 1280, 720, query)
+            spage.wait_for_function("() => window.__jamtLoad && window.__jamtLoad.done >= window.__jamtLoad.total",
+                                    timeout=7000)
+            js(spage, f"""() => {{
+              const J = window.__JAMT__, T = window.__T;
+              window.__JAMT_FREEZE = true; J.startEVA(); T.teleport({tx}, {ty}); J.snapCamera(); J.startHold();
+              document.getElementById('panel').hidden = true;
+              const tr = document.getElementById('tracker'); if (tr) tr.hidden = true;
+            }}""")
+            spage.wait_for_timeout(140)
+            totals = [0, 28, 59 if kind == "ice" else 56]
+            labels = ["0pct", "50pct", "100pct"]
+            previous = 0
+            for label, total in zip(labels, totals):
+                steps = total - previous
+                previous = total
+                if steps:
+                    js(spage, f"() => {{ const J = window.__JAMT__; for (let i = 0; i < {steps}; i++) J.stepHold(0.04); }}")
+                    spage.wait_for_timeout(120)
+                clip = action_clip(spage)
+                path = os.path.join(SHOTS, f"action_{kind}_{label}.png")
+                if clip:
+                    spage.screenshot(path=path, clip=clip)
+                    action_shots.append((kind, label, path))
+            sctx.close()
+
+        if action_shots:
+            cells = []
+            for kind, label, path in action_shots:
+                cells.append((f"{kind.upper()} {label.replace('pct', '%')}", Image.open(path).convert("RGB")))
+            cw, ch, pad, lab = 480, 400, 10, 22
+            comp = Image.new("RGB", (pad + 3 * (cw + pad), pad + 2 * (ch + lab + pad)), (10, 13, 22))
+            cd = _Draw.Draw(comp)
+            for i, (label, im) in enumerate(cells):
+                col = i % 3
+                row = i // 3
+                x = pad + col * (cw + pad)
+                y = pad + row * (ch + lab + pad)
+                cd.text((x, y + 4), label, fill=(235, 240, 255))
+                comp.paste(im, (x, y + lab))
+            os.makedirs(os.path.join(ROOT, "tools", "out"), exist_ok=True)
+            comp.save(os.path.join(ROOT, "tools", "out", "action_check.png"))
+        check("A5 action_check.png written (0/50/100% both actions)",
+              len(action_shots) == 6 and os.path.isfile(os.path.join(ROOT, "tools", "out", "action_check.png")),
+              f"{len(action_shots)} shots")
+        check("A5 action animations cause no console errors",
+              len([e for e in action_errors if not any(s in e.lower() for s in IGNORE)]) == 0,
+              str(action_errors[:2]))
+        dctx2.close()
+        actx.close()
+
+        # extend the debug-page check with the action scrub
+        check("A5 ?debug#anim has ice/dig loops + progress scrub",
+              dbg.get("actionPanels") == 4 and abs(dbg.get("img12Scale", 0) - 0.2082945881) < 1e-6,
+              str(dbg))
 
         # -------------------------------------------------------- version
         html = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()

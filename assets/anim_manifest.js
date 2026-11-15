@@ -65,7 +65,8 @@ window.ANIMS = {
     ],
     "loop": true,
     "strideDistance": 0,
-    "frameCount": 1
+    "frameCount": 1,
+    "helmetWidth": 140
   },
   "kneel_reach": {
     "sheet": "img10",
@@ -556,7 +557,8 @@ window.ANIMS = {
     ],
     "loop": true,
     "strideDistance": 0,
-    "frameCount": 8
+    "frameCount": 8,
+    "helmetWidth": 152
   },
   "ice_mine": {
     "sheet": "img12",
@@ -612,7 +614,8 @@ window.ANIMS = {
     ],
     "loop": true,
     "strideDistance": 0,
-    "frameCount": 8
+    "frameCount": 8,
+    "helmetWidth": 152
   },
   "rover_turn": {
     "sheet": "img11",

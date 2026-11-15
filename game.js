@@ -85,6 +85,9 @@
   const ANIM_TARGET_HEIGHT = currentPlayerDrawHeight();
   const ANIM_IDLE_H = (ANIMS.idle && ANIMS.idle.h && ANIMS.idle.h[0]) || 283;
   const ANIM_SCALE = ANIM_TARGET_HEIGHT / ANIM_IDLE_H;
+  // img12 is drawn on a slightly larger source grid; match helmet widths.
+  const IMG12_SCALE = ((ANIMS.idle && ANIMS.idle.helmetWidth) || 140) * ANIM_SCALE
+    / ((ANIMS.ice_mine && ANIMS.ice_mine.helmetWidth) || 152);
 
   /* ================================================================ rules == */
   // kind:'real' = verified on a NASA source (named); kind:'game' = tuned for play.
@@ -213,6 +216,7 @@
     sweepSol: 0,
     panelDeployed: false,
     panelBonus: 0, bags: 0, carry: null, groundItems: [], sources: [], slots: [], snap: null, atSwitchboard: false,
+    action: null,
     carryingPanel: false,
     carryingTape: false,
     isolated: false,
@@ -1018,16 +1022,16 @@
     const a = ANIMS[name];
     return !!(a && a.loaded);
   }
-  function drawAnimFrameTo(g, name, idx, x, footY, flip) {
+  function drawAnimFrameTo(g, name, idx, x, footY, flip, scale = ANIM_SCALE) {
     const a = ANIMS[name];
     if (!a || !a.loaded) return false;
     const i = Math.max(0, Math.min(a.imgs.length - 1, idx | 0));
     const rec = a.imgs[i];
     if (!rec || !rec.ok || !rec.img) return false;
-    const fx = (a.footX[i] || a.w[i] / 2) * ANIM_SCALE;
-    const fy = (a.footY[i] || a.h[i]) * ANIM_SCALE;
-    const w = a.w[i] * ANIM_SCALE;
-    const h = a.h[i] * ANIM_SCALE;
+    const fx = (a.footX[i] || a.w[i] / 2) * scale;
+    const fy = (a.footY[i] || a.h[i]) * scale;
+    const w = a.w[i] * scale;
+    const h = a.h[i] * scale;
     g.save();
     g.imageSmoothingEnabled = false;
     g.translate(Math.round(x), Math.round(footY));
@@ -1130,6 +1134,8 @@
   }
 
   function drawSource(src) {
+    // the ice_mine frames contain the ice block; hide the world icon only while mining
+    if (state.action && state.action.hiddenSourceId === src.id) return;
     const m = ITEM_META[src.item];
     const bob = Math.sin(performance.now() / 500 + src.x) * 1.5;
     drawAsset(m.sprite, src.x, src.y - 4 + bob, 20, 20);
@@ -1188,6 +1194,7 @@
   }
 
   function drawPlayer() {
+    window.__jamtActionDraw = null;
     if (state.rover && state.rover.mounted) {
       const ring = walkBackRadius();
       const baseX = 512, baseY = 420;
@@ -1202,6 +1209,32 @@
       drawAsset('crew/walk', player.x, player.y - 16, 30, 56, { flip: player.facing < 0 });
       ellipse(player.x, player.y + 2, 16, 4, 'rgba(8,10,18,.35)');
       return;
+    }
+    if (state.action) {
+      const info = actionFrameInfo(state.action);
+      if (info) {
+        const mirror = state.action.site.x < player.x;
+        drawSoftShadow(player.x, player.y + 2,
+          info.anim === 'ice_mine' ? 16 : 13, info.anim === 'ice_mine' ? 5.4 : 4.6);
+        const drew = drawAnimFrameTo(ctx, info.anim, info.frame, player.x, player.y, mirror, info.scale);
+        if (drew) {
+          window.__jamtAnimDraw = {
+            name: info.anim, frame: info.frame, x: player.x, y: player.y,
+            footX: player.x, footY: player.y, flipped: mirror, scale: info.scale,
+            screenX: player.x - Math.round(camera.x),
+            screenY: player.y - Math.round(camera.y),
+          };
+          window.__jamtActionDraw = {
+            anim: info.anim, frame: info.frame, phase: state.action.phase,
+            progress: state.action.progress, x: player.x, y: player.y,
+            footX: player.x, footY: player.y, mirror, scale: info.scale,
+            site: { ...state.action.site }, hiddenSourceId: state.action.hiddenSourceId,
+            screenX: player.x - Math.round(camera.x),
+            screenY: player.y - Math.round(camera.y),
+          };
+          return;
+        }
+      }
     }
     if (state.carry) {
       drawAsset(ITEM_META[state.carry].sprite, player.x, player.y - 74, 18, 18);
@@ -1521,6 +1554,7 @@
 
   function startHold() {
     if (state.screen !== 'game' || state.phase !== 'eva') return;
+    if (state.action) return; // finish the current action first
     const st = nearestInteractable();
     const action = actionFor(st);
     if (!action || action.disabled) { Sound.warn(); return; }
@@ -1528,18 +1562,125 @@
     if (action.minutes === 0) { action.run(); render(); return; }
     hold.active = true; hold.t = 0; hold.action = action; hold.station = st;
     els.interact.classList.add('is-holding');
+    const src = st && st.id && st.id.endsWith('-src') ? st : null;
+    if (!state.rover.mounted && src && src.hold && (src.item === 'ice' || src.item === 'bag')) {
+      startMiningAction(src, action);
+    }
   }
-  function cancelHold() {
+  const ACTION_FRAME_DT = 0.12;
+  let actionWarned = false;
+
+  function warnActionFallback(kind) {
+    if (actionWarned) return;
+    actionWarned = true;
+    console.warn(`[anim] ${kind} frames unavailable; the hold still completes without the action animation.`);
+  }
+
+  function actionAssetsReady(kind) {
+    if (kind === 'ice') return animLoaded('ice_mine');
+    return animLoaded('dig') && animLoaded('bag');
+  }
+
+  function startMiningAction(src, action) {
+    const kind = src.item === 'ice' ? 'ice' : 'bag';
+    if (!actionAssetsReady(kind)) {
+      warnActionFallback(kind === 'ice' ? 'ice mining' : 'regolith digging');
+      return false;
+    }
+    state.action = {
+      anim: kind === 'ice' ? 'ice_mine' : 'dig',
+      startedAt: performance.now() / 1000,
+      progress: 0,
+      site: { id: src.id, item: src.item, x: src.x, y: src.y },
+      src,
+      run: action.run,
+      phase: 'loop',
+      elapsed: 0,
+      finishElapsed: 0,
+      bagElapsed: 0,
+      mirror: src.x < player.x,
+      hiddenSourceId: kind === 'ice' ? src.id : null,
+      currentAnim: kind === 'ice' ? 'ice_mine' : 'dig',
+      frame: 0,
+    };
+    return true;
+  }
+
+  function cancelAction() {
+    if (state.action) state.action = null;
+  }
+
+  function actionFrameInfo(a = state.action) {
+    if (!a) return null;
+    if (a.anim === 'ice_mine') {
+      const frame = a.phase === 'finish'
+        ? 6 + Math.min(1, Math.floor(a.finishElapsed / ACTION_FRAME_DT))
+        : Math.floor(a.elapsed / ACTION_FRAME_DT) % 6;
+      return { anim: 'ice_mine', frame, scale: IMG12_SCALE };
+    }
+    if (a.phase === 'bag' || a.phase === 'finish') {
+      const frame = Math.max(0, Math.min(4, Math.floor(a.bagElapsed / ACTION_FRAME_DT)));
+      return { anim: 'bag', frame, scale: ANIM_SCALE };
+    }
+    return { anim: 'dig', frame: Math.floor(a.elapsed / ACTION_FRAME_DT) % 3, scale: ANIM_SCALE };
+  }
+
+  function updateAction(dt) {
+    const a = state.action;
+    if (!a) return;
+    a.elapsed += dt;
+    if (a.phase === 'bag' || a.phase === 'finish') a.bagElapsed += dt;
+    if (a.phase === 'finish') a.finishElapsed += dt;
+    const info = actionFrameInfo(a);
+    if (info) { a.currentAnim = info.anim; a.frame = info.frame; }
+    if (a.phase === 'finish') {
+      // strictly greater so the last finish frame gets at least one drawn frame
+      if (a.anim === 'ice_mine' && a.finishElapsed > ACTION_FRAME_DT * 2) completeAction();
+      else if (a.anim === 'dig' && a.frame >= 4 && a.finishElapsed > 0.15) completeAction();
+    }
+  }
+
+  function completeAction() {
+    const a = state.action;
+    state.action = null;
     hold.active = false; hold.t = 0; hold.action = null; hold.station = null;
     els.interact.classList.remove('is-holding');
     if (els.interactProgress) els.interactProgress.style.width = '0%';
+    if (a && a.run) a.run();
+    render();
+  }
+
+  function cancelHold() {
+    const early = hold.active;
+    hold.active = false; hold.t = 0; hold.action = null; hold.station = null;
+    els.interact.classList.remove('is-holding');
+    if (els.interactProgress) els.interactProgress.style.width = '0%';
+    if (early) cancelAction();
   }
   function updateHold(dt) {
     if (!hold.active || !hold.action) return;
     hold.t += dt;
-    const pct = Math.min(1, hold.t / RULES.holdSeconds.value) * 100;
+    const progress = Math.min(1, hold.t / RULES.holdSeconds.value);
+    if (state.action) {
+      state.action.progress = progress;
+      if (state.action.anim === 'dig' && progress >= 0.7 && state.action.phase === 'loop') {
+        state.action.phase = 'bag';
+        state.action.bagElapsed = 0;
+      }
+    }
+    const pct = progress * 100;
     if (els.interactProgress) els.interactProgress.style.width = `${pct}%`;
     if (hold.t >= RULES.holdSeconds.value) {
+      if (state.action) {
+        // hold complete: the finish frames play before the effect fires
+        state.action.progress = 1;
+        state.action.phase = 'finish';
+        state.action.finishElapsed = 0;
+        hold.active = false; hold.t = 0; hold.action = null; hold.station = null;
+        els.interact.classList.remove('is-holding');
+        if (els.interactProgress) els.interactProgress.style.width = '100%';
+        return;
+      }
       const action = hold.action;
       cancelHold();
       action.run();
@@ -1876,6 +2017,7 @@
     buildInteractions();
     player.x = 512; player.y = 430; player.path = []; player.facing = 1;
     player.animDist = 0; player.animFrame = 0; player.animMode = 'idle';
+    s.action = null;
     for (const n of npcs) { n.x = n.id === 'npc1' ? 470 : 620; n.y = n.id === 'npc1' ? 400 : 420; n.tx = n.x; n.ty = n.y; n.atBunker = false; }
     snapCamera();
 
@@ -1998,6 +2140,7 @@
     const L = s.level;
     s.phase = 'resolve';
     cancelHold();
+    cancelAction();
     const runId = s.runId;
     const sol = s.sol;
     const alloc = { ...s.alloc };
@@ -2480,7 +2623,10 @@
     if (state.screen === 'game') {
       updatePlayer(dt);
       updateNPCs(dt);
-      updateHold(dt);
+      if (!window.__JAMT_FREEZE) {
+        updateHold(dt);
+        updateAction(dt);
+      }
       updateInteractPrompt();
     }
     drawScene(t);
@@ -2492,6 +2638,7 @@
   const q = new URLSearchParams(location.search);
   const DEBUG = q.has('debug');
   window.__JAMT_AUTO_EVA = false;
+  window.__JAMT_FREEZE = false;
 
   window.__T = {
     teleport(x, y) { player.x = x; player.y = y; snapCamera(); },
@@ -2541,6 +2688,21 @@
       };
     },
     resetAnim() { player.animDist = 0; player.animFrame = 0; player.animMode = 'idle'; },
+    get action() {
+      const a = state.action;
+      if (!a) return null;
+      return {
+        anim: a.currentAnim, baseAnim: a.anim, frame: a.frame, phase: a.phase,
+        progress: a.progress, mirror: a.mirror, hiddenSourceId: a.hiddenSourceId,
+        site: { ...a.site }, elapsed: a.elapsed,
+      };
+    },
+    get actionDraw() { return window.__jamtActionDraw || null; },
+    img12Scale: IMG12_SCALE,
+    startHold, cancelHold,
+    stepHold(dt) { updateHold(dt); updateAction(dt); },
+    holdActive() { return hold.active; },
+    sourceHidden(id) { return !!(state.action && state.action.hiddenSourceId === id); },
     get camera() { return camera; },
     get npcs() { return npcs; },
     get consolePx() { return consolePx; },
@@ -2604,7 +2766,7 @@
 
 
   /* ============ iteration 2: loading, menus, briefing, pause, touch ====== */
-  const BUILD_VERSION = '3.1.2';
+  const BUILD_VERSION = '3.1.3';
   const TIPS = [
     'Did you know? ISS life support recovers about 98% of the crew’s water (NASA ECLSS).',
     'Did you know? Water ice hides in permanently shadowed craters at the lunar south pole (LRO/LCROSS).',
@@ -2913,8 +3075,77 @@
       requestAnimationFrame(loop);
     };
     requestAnimationFrame(loop);
+
+    // action strips + scrub slider
+    const actionGrid = document.getElementById('anim-action-grid');
+    const scrub = document.getElementById('anim-scrub');
+    const scrubVal = document.getElementById('anim-scrub-val');
+    const actionPanels = [];
+    for (const theme of ['dark', 'light']) {
+      const row = document.createElement('section');
+      row.className = `anim-row ${theme}`;
+      const head = document.createElement('h2');
+      head.textContent = `${theme.toUpperCase()} BACKGROUND`;
+      row.append(head);
+      const cells = document.createElement('div');
+      cells.className = 'anim-cells anim-cells--two';
+      for (const kind of ['ice', 'dig']) {
+        const stage = document.createElement('div');
+        stage.className = 'anim-stage';
+        const canvas = document.createElement('canvas');
+        canvas.width = 220; canvas.height = 180;
+        const cap = document.createElement('span');
+        stage.append(canvas, cap);
+        cells.append(stage);
+        actionPanels.push({ canvas, g: canvas.getContext('2d'), kind, theme, cap });
+      }
+      row.append(cells);
+      actionGrid.append(row);
+    }
+    const previewInfo = (kind, p) => {
+      if (kind === 'ice') {
+        const frame = p >= 1 ? 7 : Math.min(5, Math.floor(p * 6));
+        return { anim: 'ice_mine', frame, scale: IMG12_SCALE, label: 'ICE MINE', count: 8 };
+      }
+      if (p < 0.7) {
+        return { anim: 'dig', frame: Math.min(2, Math.floor((p / 0.7) * 3)),
+                 scale: ANIM_SCALE, label: 'DIG', count: 3 };
+      }
+      return { anim: 'bag', frame: Math.min(4, Math.floor(((p - 0.7) / 0.3) * 5)),
+               scale: ANIM_SCALE, label: 'BAG', count: 5 };
+    };
+    const renderActions = () => {
+      const p = scrub ? Number(scrub.value) / 100 : 0.5;
+      if (scrubVal) scrubVal.textContent = `${Math.round(p * 100)}%`;
+      for (const a of actionPanels) {
+        const info = previewInfo(a.kind, p);
+        a.g.clearRect(0, 0, 220, 180);
+        a.g.fillStyle = a.theme === 'dark' ? 'rgba(255,255,255,.16)' : 'rgba(10,14,25,.16)';
+        a.g.fillRect(24, 158, 172, 1);
+        a.g.save();
+        a.g.translate(110, 160);
+        a.g.scale(1, 0.26);
+        const grad = a.g.createRadialGradient(0, 0, 2, 0, 0, 30);
+        grad.addColorStop(0, 'rgba(0,0,0,.4)');
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        a.g.fillStyle = grad;
+        a.g.beginPath(); a.g.arc(0, 0, 30, 0, Math.PI * 2); a.g.fill();
+        a.g.restore();
+        if (!drawAnimFrameTo(a.g, info.anim, info.frame, 110, 158, false, info.scale)) {
+          a.g.fillStyle = a.theme === 'dark' ? '#e8edff' : '#141a28';
+          a.g.font = '12px monospace';
+          a.g.fillText('loading frames...', 62, 88);
+        }
+        a.cap.textContent = `${info.label} ${info.frame + 1}/${info.count} · ${Math.round(p * 100)}%`;
+      }
+    };
+    if (scrub) scrub.addEventListener('input', renderActions);
+    renderActions();
+    setInterval(renderActions, 250);
+
     window.__animDebug = {
       speeds: speeds.map((s) => s.v), panels: panels.length,
+      actionPanels: actionPanels.length, img12Scale: IMG12_SCALE,
       scale: ANIM_SCALE, targetHeight: ANIM_TARGET_HEIGHT,
     };
   }

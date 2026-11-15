@@ -715,3 +715,14 @@ body.touch-on .tracker { top: 52px; }
   .anim-cells { grid-template-columns: 1fr; }
   .anim-debug { padding: 10px; }
 }
+
+.anim-action-controls {
+  display: flex; align-items: center; gap: 12px; margin: 16px 0 10px;
+  padding: 8px 10px; border: 1px solid #2a3450; background: #0a0e1a;
+  font-size: 10px; letter-spacing: 1.2px; color: #9fb0d6;
+}
+.anim-action-controls input[type="range"] { flex: 1; accent-color: #ffb454; }
+.anim-action-controls span { min-width: 38px; text-align: right; color: #e8edff; }
+
+.anim-cells--two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 640px) { .anim-cells--two { grid-template-columns: 1fr; } }
