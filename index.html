@@ -23,16 +23,34 @@
 
   <div class="app" id="app">
     <div class="loading" id="screen-loading">
+      <div class="load-nebula" aria-hidden="true"></div>
+      <div class="load-stars" aria-hidden="true"></div>
+      <div class="load-space" aria-hidden="true">
+        <img class="load-sprite ls-orange" data-loading-sprite="loading/planet_orange" alt="">
+        <img class="load-sprite ls-blue" data-loading-sprite="loading/planet_blue" alt="">
+        <img class="load-sprite ls-ring" data-loading-sprite="loading/planet_ring" alt="">
+        <img class="load-sprite ls-bottom" data-loading-sprite="loading/planet_bottom" alt="">
+        <img class="load-sprite ls-sat-top" data-loading-sprite="loading/satellite_top" alt="">
+        <img class="load-sprite ls-sat-left" data-loading-sprite="loading/satellite_left" alt="">
+        <img class="load-sprite ls-ast-right" data-loading-sprite="loading/asteroid_right" alt="">
+        <img class="load-sprite ls-ast-left" data-loading-sprite="loading/asteroid_left" alt="">
+      </div>
       <div class="loading-card">
         <p class="kicker">NASA Space Apps 2026</p>
         <h1 class="loading-title">SPACE BUDDY</h1>
-        <div class="load-track">
-          <div class="load-bar" id="load-bar"></div>
+        <div class="load-run-wrap">
+          <div class="load-track">
+            <div class="load-bar" id="load-bar"></div>
+          </div>
+          <div class="load-runner" id="load-runner" aria-hidden="true">
+            <img id="load-astronaut" data-loading-sprite="loading/astronaut" alt="">
+            <span class="load-dust"></span>
+          </div>
         </div>
-        <p class="load-count" id="load-count">Loading outpost…</p>
+        <p class="load-count" id="load-count">Loading... 0/0</p>
         <p class="load-tip" id="load-tip"></p>
         <button class="btn btn-primary btn-lg gate" id="start-gate" type="button" disabled>PRESS TO START</button>
-        <p class="loading-version" id="load-version">v3.2.6 · offline by default · Buddy cloud is opt-in</p>
+        <p class="loading-version" id="load-version">v3.2.6 - offline by default - Buddy cloud is opt-in</p>
       </div>
     </div>
     <div class="viewport" id="viewport">

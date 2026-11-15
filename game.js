@@ -3480,7 +3480,8 @@
 
   const flowEls = {
     loading: $('#screen-loading'), gate: $('#start-gate'), bar: $('#load-bar'),
-    count: $('#load-count'), tip: $('#load-tip'),
+    count: $('#load-count'), tip: $('#load-tip'), track: $('#screen-loading .load-track'),
+    runner: $('#load-runner'), astronaut: $('#load-astronaut'),
     brief: $('#screen-brief'), briefTitle: $('#brief-title'), briefKicker: $('#brief-kicker'),
     briefGoal: $('#brief-goal'), briefWhy: $('#brief-why'), briefTable: $('#brief-table'),
     briefControls: $('#brief-controls'),
@@ -4935,23 +4936,50 @@
   }
 
   function initLoading() {
+    for (const img of document.querySelectorAll('[data-loading-sprite]')) {
+      const key = img.dataset.loadingSprite;
+      const rec = manifest[key];
+      if (rec && rec.src) img.src = rec.src;
+    }
     const started = performance.now();
     let tipIdx = 0;
+    let finished = false;
     flowEls.tip.textContent = TIPS[0];
     const tipTimer = setInterval(() => { tipIdx = (tipIdx + 1) % TIPS.length; flowEls.tip.textContent = TIPS[tipIdx]; }, 2600);
-    const timer = setInterval(() => {
-      const L = window.__jamtLoad || { done: 1, total: 1 };
-      const pct = Math.max(4, Math.min(100, Math.round((L.done / L.total) * 100)));
+    const placeRunner = (pct) => {
+      if (!flowEls.runner || !flowEls.track) return;
+      const w = flowEls.track.clientWidth || 0;
+      const rw = flowEls.runner.offsetWidth || 58;
+      const x = Math.max(0, Math.min(Math.max(0, w - rw), (w - rw) * pct / 100));
+      flowEls.runner.style.left = `${Math.round(x)}px`;
+    };
+    const paint = (done, total, forceDone = false) => {
+      const pct = total > 0 ? Math.max(0, Math.min(100, Math.round((done / total) * 100))) : 0;
       flowEls.bar.style.width = `${pct}%`;
-      flowEls.count.textContent = `Loading outpost… ${L.done}/${L.total}`;
-      if (L.done >= L.total || performance.now() - started > 7000) {
+      placeRunner(pct);
+      flowEls.count.textContent = `Loading... ${done}/${total}`;
+      const doneNow = forceDone || (total > 0 && done >= total);
+      if (doneNow && !finished) {
+        finished = true;
         clearInterval(timer); clearInterval(tipTimer);
-        flowEls.count.textContent = 'Ready, Commander.';
+        flowEls.runner?.classList.add('is-done');
         flowEls.bar.style.width = '100%';
+        placeRunner(100);
+        flowEls.count.textContent = 'Ready, Commander.';
         flowEls.gate.disabled = false;
         flowEls.gate.textContent = 'TAP / PRESS TO START';
       }
-    }, 120);
+      return pct;
+    };
+    const timer = setInterval(() => {
+      const L = window.__jamtLoad || { done: 1, total: 1 };
+      paint(L.done, L.total, performance.now() - started > 7000);
+    }, 100);
+    window.__jamtLoadingSet = (done, total) => {
+      window.__jamtLoad = { done, total };
+      const pct = paint(done, total);
+      return { pct, left: flowEls.runner?.style.left };
+    };
     flowEls.gate.addEventListener('click', () => {
       Sound.init(); Sound.click();
       flowEls.loading.hidden = true;

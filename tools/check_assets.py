@@ -45,6 +45,13 @@ for name in ROVER_SPRITES:
     if f'"rover/{name}"' not in text:
         print(f"manifest missing rover/{name}")
         sys.exit(1)
+LOADING_SPRITES = ("astronaut", "planet_orange", "planet_blue", "planet_ring", "planet_bottom",
+                   "satellite_top", "satellite_left", "asteroid_right", "asteroid_left")
+for name in LOADING_SPRITES:
+    refs.add(f"assets/loading/{name}.png")
+    if f'"loading/{name}"' not in text:
+        print(f"manifest missing loading/{name}")
+        sys.exit(1)
 
 missing = []
 for ref in sorted(refs):
