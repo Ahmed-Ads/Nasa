@@ -11,8 +11,9 @@ used when the player turns on **Settings → Let Buddy ask the cloud helper**.
 - Caps the question at 300 characters and the answer at 150 output tokens.
 - Applies a simple in-memory per-IP rate limit (12 requests/minute).
 - Never logs questions or answers.
-- Calls an OpenAI-compatible chat endpoint. The API key stays in the Worker
-  environment; it is never sent to the browser or committed to this repository.
+- Calls Gemini through Google's OpenAI-compatible endpoint. The Gemini API key
+  stays in the Worker environment; it is never sent to the browser or committed
+  to this repository.
 
 ## Deploy
 
@@ -21,19 +22,53 @@ used when the player turns on **Settings → Let Buddy ask the cloud helper**.
    npm install -g wrangler
    wrangler login
    ```
-2. Set secrets (do not put these in the repo):
+2. Set the secret. Use the exact name **`GEMINI_API_KEY`**:
    ```bash
-   wrangler secret put OPENAI_API_KEY
-   # optional:
-   wrangler secret put OPENAI_MODEL      # default: gpt-4o-mini
-   wrangler secret put OPENAI_BASE_URL   # default: https://api.openai.com/v1/chat/completions
+   wrangler secret put GEMINI_API_KEY
+   # optional overrides:
+   wrangler secret put GEMINI_MODEL      # default: gemini-3.5-flash-lite
+   wrangler secret put GEMINI_BASE_URL   # default: Gemini OpenAI-compatible endpoint
    ```
+   The Worker also accepts `GEMENI_API_KEY` as a temporary migration fallback
+   for the common misspelling. Rename it to `GEMINI_API_KEY` when convenient.
+
 3. Deploy from this `server/` folder:
    ```bash
    wrangler deploy worker.js --name jamt-buddy
    ```
-4. Copy the `https://…workers.dev` URL into the single client constant
-   `BUDDY_PROXY_URL` near the top of `game.js`, then bump the `?v=` cache tag.
+
+   If you created the Worker in the Cloudflare dashboard instead, paste the
+   contents of `worker.js` into the Worker editor, add an encrypted secret named
+   `GEMINI_API_KEY`, and deploy.
+
+4. Copy the `https://<name>.<account>.workers.dev` URL into the single client
+   constant `BUDDY_PROXY_URL` near the top of `game.js`. Bump the `?v=` cache
+   tag on the changed script. Do not put the Gemini key in `game.js`.
+
+## Test it
+
+CORS is checked against the browser `Origin`, so include it when testing with
+`curl`:
+
+```bash
+curl -i https://jamt-buddy.<account>.workers.dev/ \
+  -H "Origin: https://ahmed-ads.github.io" \
+  -H "content-type: application/json" \
+  -d '{"question":"How do I get more air?","language":"en","state":{"level":"1.1","day":1}}'
+```
+
+A healthy response is HTTP 200 with `{"answer":"..."}`. For a browser smoke test,
+open the deployed game, go to **Settings**, turn on **Let Buddy ask the cloud
+helper**, and ask Buddy a question.
+
+Expected errors:
+
+| Response | Meaning |
+| --- | --- |
+| `403 {"error":"origin"}` | The page origin is not in `ALLOWED_ORIGINS`. |
+| `503 {"error":"unavailable"}` | `GEMINI_API_KEY` is missing from the Worker. |
+| `502 {"error":"upstream"}` | The key, model, or Gemini endpoint was rejected. |
+| `429 {"error":"rate"}` | More than 12 requests/minute from that IP. |
 
 ## CORS / custom domain
 
