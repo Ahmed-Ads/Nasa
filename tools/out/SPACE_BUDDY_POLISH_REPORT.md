@@ -18,9 +18,10 @@
 | `e4c8c6c` | `fix(ui): finish HUD, thumb panels and coach controls` |
 | `8b41f4b` | `fix(loading): remove background plates from img14 cutouts` |
 | `85421d8` | `test(qa): cover panel polish, loading runner and icons` |
+| `705c737` | `fix(ui): reset dock toggle labels on a new level` |
 
-The final documentation/screenshot commit is the commit that adds this report. Each
-feature above is independently revertable with `git revert <hash>`.
+The documentation/screenshot commit adds this report; `705c737` is the last small
+UI-reset fix. Each feature above is independently revertable with `git revert <hash>`.
 
 ## Panels
 
