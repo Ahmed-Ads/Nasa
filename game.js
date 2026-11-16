@@ -122,7 +122,7 @@
   };
 
   // Single client-side proxy setting. Empty = scripted Buddy only (offline).
-  const BUDDY_PROXY_URL = '';
+  const BUDDY_PROXY_URL = 'https://space-buddy.der-ingenieur-ahmed.workers.dev/';
   const MAX_HEARTS = 3;
   const CRITICAL = 20;
 
@@ -3342,7 +3342,7 @@
 
 
   /* ============ iteration 2: loading, menus, briefing, pause, touch ====== */
-  const BUILD_VERSION = '3.2.6';
+  const BUILD_VERSION = '3.2.7';
   const TIPS = [
     'Did you know? ISS life support recovers about 98% of the crew’s water (NASA ECLSS).',
     'Did you know? Water ice hides in permanently shadowed craters at the lunar south pole (LRO/LCROSS).',
@@ -3428,7 +3428,7 @@
   }
   function closePause() { flowEls.pause.hidden = true; state.paused = false; buddy?.onPause(false); }
 
-  const UI_SAD = 'assets/ui/sad_astronaut.png?v=3.2.6';
+  const UI_SAD = 'assets/ui/sad_astronaut.png?v=3.2.7';
   function askConfirm(text, onYes, art = null) {
     flowEls.confirmText.textContent = text;
     if (flowEls.confirmArt) {
