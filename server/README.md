@@ -48,7 +48,8 @@ used when the player turns on **Settings → Let Buddy ask the cloud helper**.
 ## Test it
 
 CORS is checked against the browser `Origin`, so include it when testing with
-`curl`:
+`curl`. Test the game from GitHub Pages or a local HTTP server (`localhost:8000`
+or `localhost:8765` are allowlisted), not from a `file://` URL:
 
 ```bash
 curl -i https://jamt-buddy.<account>.workers.dev/ \
