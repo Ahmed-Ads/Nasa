@@ -1,12 +1,12 @@
 {
  "runs": 600,
- "buildVersion": "3.2.7",
+ "buildVersion": "3.3.1",
  "table": {
   "1.1": {
    "random": {
-    "win": 15.3,
-    "three": 0.3,
-    "avg_score": 299.9
+    "win": 17.8,
+    "three": 0.0,
+    "avg_score": 300.0
    },
    "even": {
     "win": 0.0,
@@ -37,8 +37,8 @@
   "1.2": {
    "random": {
     "win": 12.5,
-    "three": 3.0,
-    "avg_score": 204.4
+    "three": 4.2,
+    "avg_score": 209.9
    },
    "even": {
     "win": 0.0,
@@ -70,7 +70,7 @@
    "random": {
     "win": 8.3,
     "three": 0.0,
-    "avg_score": 297.5
+    "avg_score": 293.3
    },
    "even": {
     "win": 0.0,
@@ -95,7 +95,7 @@
    "good": {
     "win": 100.0,
     "three": 100.0,
-    "avg_score": 284.7
+    "avg_score": 285.1
    }
   }
  },

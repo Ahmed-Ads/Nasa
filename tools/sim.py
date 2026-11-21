@@ -32,10 +32,8 @@ from pathlib import Path
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 OUT = os.path.join(HERE, "sim_results.json")
-BUILD_VERSION = re.search(
-    r"BUILD_VERSION = '([^']+)'",
-    Path(ROOT, "game.js").read_text(encoding="utf-8"),
-).group(1)
+BUILD_VERSION = re.search(r"BUILD_VERSION = '([^']+)'",
+                          Path(ROOT, "game.js").read_text(encoding="utf-8")).group(1)
 
 # ---------------------------------------------------------------- constants
 R = {
