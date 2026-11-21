@@ -1,0 +1,12 @@
+level 1.1: state={'level': '1.1', 'screen': 'game', 'load': {'total': 191, 'done': 191}}
+  console/page errors: 0
+  4xx/5xx responses: 0
+  failed requests: 0
+level 1.2: state={'level': '1.2', 'screen': 'game', 'load': {'total': 191, 'done': 191}}
+  console/page errors: 0
+  4xx/5xx responses: 0
+  failed requests: 0
+level 1.3: state={'level': '1.3', 'screen': 'game', 'load': {'total': 191, 'done': 191}}
+  console/page errors: 0
+  4xx/5xx responses: 0
+  failed requests: 0
