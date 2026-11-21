@@ -1,8 +1,9 @@
 /**
  * Tiny Buddy cloud helper for the static Space Buddy game.
  *
- * Deploy as a Cloudflare Worker. The API key lives only in the Worker
- * environment (`OPENAI_API_KEY`); it is never shipped to the browser.
+ * Deploy as a Cloudflare Worker. The Gemini API key lives only in the Worker
+ * environment (`GEMINI_API_KEY`); it is never shipped to the browser. Upstream
+ * calls use Gemini's OpenAI-compatible chat endpoint.
  *
  * Privacy rules implemented here:
  *  - no request/answer logging
@@ -16,6 +17,8 @@ const ALLOWED_ORIGINS = new Set([
   // local development only; remove if you deploy a custom domain
   'http://localhost:8000',
   'http://127.0.0.1:8000',
+  'http://localhost:8765',
+  'http://127.0.0.1:8765',
 ]);
 
 const WINDOW_MS = 60_000;
@@ -99,10 +102,13 @@ export default {
       .slice(-8)
       .map((m) => ({ role: m.role, content: String(m.content || '').slice(0, 300) }));
 
-    const key = env.OPENAI_API_KEY;
+    // Prefer GEMINI_API_KEY. The misspelled fallback keeps an existing
+    // deployment working while the secret is renamed; remove it later.
+    const key = env.GEMINI_API_KEY || env.GEMENI_API_KEY;
     if (!key) return json({ error: 'unavailable' }, 503, origin);
-    const base = env.OPENAI_BASE_URL || 'https://api.openai.com/v1/chat/completions';
-    const model = env.OPENAI_MODEL || 'gpt-4o-mini';
+    const base = env.GEMINI_BASE_URL
+      || 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+    const model = env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
 
     const messages = [
       { role: 'system', content: SYSTEM_PROMPT },
@@ -121,8 +127,8 @@ export default {
         body: JSON.stringify({
           model,
           messages,
-          temperature: 0.35,
           max_tokens: 150,
+          stream: false,
         }),
       });
     } catch {

@@ -25,6 +25,21 @@ tools/       slice_assets.py · sim.py · qa.py
 
 
 
+## v3.3.1 - Live Gemini cloud helper
+
+- Buddy's optional cloud helper now uses Gemini through the deployed Cloudflare
+  Worker (`space-buddy.der-ingenieur-ahmed.workers.dev`) and Google's
+  OpenAI-compatible endpoint.
+- The Worker secret is **`GEMINI_API_KEY`**; the default model is
+  `gemini-3.5-flash-lite`. `server/README.md` covers deployment, CORS, local
+  testing and the 403/429/502/503 failure meanings.
+- `BUDDY_PROXY_URL` is now set to the Worker. Cloud chat is still opt-in, and the
+  scripted offline brain is unchanged.
+- Version: **3.3.1** everywhere; cache tags were bumped.
+- QA: **166/166** in `tools/qa.py`; the live Worker returned HTTP 200 for an
+  allowlisted `ahmed-ads.github.io` origin, and the game received an answer
+  through the real `BUDDY_PROXY_URL`.
+
 ## v3.3.0 - Space Buddy polish
 
 - **Panels**: a persistent HUD goal/air/hearts/day strip, critical alerts, and one free **P**
@@ -105,8 +120,9 @@ auto-speak is OFF by default. Unsupported browsers keep text chat and show a one
 
 The scripted intents are tried first. Only an unmatched typed or spoken question is sent to
 the cloud helper, and only when **Settings → Let Buddy ask the cloud helper** is ON. The helper
-URL is the single constant `BUDDY_PROXY_URL` near the top of `game.js`; it is empty by default.
-With an empty or unreachable URL, Buddy shows the confused state and offers the chips. There is
+URL is the single constant `BUDDY_PROXY_URL` near the top of `game.js`; it points at the
+deployed Gemini Worker. Set it to an empty string to force the offline-only build. With an
+empty or unreachable URL, Buddy shows the confused state and offers the chips. There is
 an 8 s timeout with one retry. See [`server/README.md`](server/README.md) for the Cloudflare
 Worker, CORS allowlist, per-IP rate limit, 300-character question cap, 150-token answer cap,
 fixed system prompt, and deployment steps. The API key is a Worker secret and is never in this
